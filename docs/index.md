@@ -1,5 +1,5 @@
-# mars.ninja
+# Jaseci Labs
 
-<meta http-equiv="refresh" content="0; url=./blog/" />
+<meta http-equiv="refresh" content="0; url=https://www.jaseci.org/" />
 
-Redirecting to [blog](./blog/)...
+Redirecting to [Jaseci Home Page](https://www.jaseci.org/)...

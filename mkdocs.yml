@@ -1,17 +1,17 @@
-site_name: mars.ninja
-site_url: https://mars.ninja
+site_name: Jaseci Labs
+site_url: https://www.jaseci.org/
 use_directory_urls: true
 
 nav:
-  - blog/index.md
+  - Jaseci Labs: index.md
   - Blog:
     - blog/index.md
   - About: about.md
 
 theme:
   name: material
-  logo: assets/ninjaavatar.png
-  favicon: assets/ninjaavatar.png
+  logo: assets/jaseci_labs_logo.jpg
+  favicon: assets/jaseci_labs_logo.jpg
   font:
     text: Nunito
     code: Fira Code
@@ -64,6 +64,7 @@ extra_css:
 
 extra:
   generator: false
+  homepage: https://www.jaseci.org/
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/yourusername
