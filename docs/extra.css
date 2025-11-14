@@ -1,0 +1,260 @@
+/* Jac Code Block Execution Styles */
+.code-block {
+    margin: 1em 0;
+    padding: 1em;
+    background: var(--md-code-bg-color);
+    color: var(--md-code-fg-color);
+    border-radius: 4px;
+    border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.code-block .run-code-btn,
+.code-block .serve-code-btn,
+.code-block .dot-code-btn {
+    margin-top: 0.5em;
+    padding: 0.4em 1.2em;
+    background: linear-gradient(90deg, #ff9800 0%, #ffab40 100%);
+    color: #1e1e1e;
+    border: none;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 1em;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    outline: none;
+    letter-spacing: 0.03em;
+}
+
+.code-block .run-code-btn:hover,
+.code-block .run-code-btn:focus {
+    background: linear-gradient(90deg, #ffa726 0%, #ffd180 100%);
+    color: #111;
+    box-shadow: 0 4px 16px rgba(255, 171, 64, 0.15);
+}
+
+.code-block .serve-code-btn:hover,
+.code-block .serve-code-btn:focus {
+    background: linear-gradient(90deg, #29b6f6 0%, #4fc3f7 100%);
+    color: #111;
+    box-shadow: 0 4px 16px rgba(255, 171, 64, 0.15);
+}
+
+.code-block .run-code-btn:active {
+    background: #ff9800;
+    color: #fff;
+}
+
+.code-block .serve-code-btn:active {
+    background: #0288d1;
+    color: #fff;
+}
+
+.code-block .dot-code-btn {
+    background: linear-gradient(90deg, #b859e0ff 0%, #df76f1ff 100%);
+}
+
+.code-block .dot-code-btn:hover,
+.code-block .dot-code-btn:focus {
+    background: linear-gradient(90deg, #c76ae6 0%, #e58ff5 100%);
+    color: #111;
+    box-shadow: 0 4px 16px rgba(184, 89, 224, 0.25);
+}
+
+.code-block .dot-code-btn:active {
+    background: #7b1fa2;
+    color: #fff;
+}
+
+.code-block .code-output {
+    margin-top: 0.5em;
+    background: var(--md-code-bg-color);
+    color: var(--md-code-fg-color);
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--md-default-fg-color--lightest);
+    font-family: var(--md-code-font-family);
+    max-height: 1000px;
+    overflow: auto;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s, background 0.2s, color 0.2s;
+    font-size: 13px;
+}
+
+.code-block .code-output[style*="display: none"] {
+    max-height: 0;
+    padding: 0;
+    overflow: hidden;
+    margin-top: 0;
+}
+
+/* Input dialog styling */
+.code-block .input-dialog {
+    background: var(--md-code-bg-color);
+    border: 1px solid var(--md-accent-fg-color);
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px var(--md-shadow-z3);
+    transition: background 0.2s, border 0.2s;
+}
+
+.code-block .input-dialog .submit-input {
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+    white-space: nowrap;
+}
+
+.code-block .input-dialog .submit-input:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+}
+
+.code-block .input-dialog .cancel-input {
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #666 0%, #555 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    white-space: nowrap;
+}
+
+.code-block .input-dialog .cancel-input:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #777 0%, #666 100%);
+}
+
+.code-block .input-prompt {
+    color: var(--md-default-fg-color);
+    font-family: var(--md-text-font-family);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.code-block .user-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--md-code-bg-color);
+    border: 1px solid var(--md-default-fg-color--lighter);
+    color: var(--md-default-fg-color);
+    border-radius: 6px;
+    font-family: var(--md-code-font-family);
+    font-size: 13px;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.code-block .user-input:focus {
+    border-color: var(--md-accent-fg-color) !important;
+    box-shadow: 0 0 0 2px var(--md-accent-fg-color--transparent) !important;
+    background: var(--md-code-bg-color) !important;
+}
+
+/* Logo - Full height in navbar */
+.md-header__button.md-logo {
+    padding: 0;
+    margin: 0;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+    height: 100%;
+    width: auto;
+    max-height: 2.4rem;  /* Adjust this value to control logo size */
+    display: block;
+}
+
+/* Graph visualization styles */
+.viz-viewport {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.viz-viewport.grabbing {
+    cursor: grabbing;
+}
+
+.graph-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 120;
+    display: flex;
+    gap: 6px;
+}
+
+.graph-reset-btn {
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s ease;
+}
+
+.graph-reset-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.graph-container {
+    position: relative;
+}
+
+/* Responsive adjustments for small screens */
+@media (max-width: 600px) {
+    .graph-controls {
+        top: 4px;
+        right: 4px;
+    }
+
+    .graph-reset-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}
+
+/* Darker background for dark mode */
+[data-md-color-scheme="slate"] {
+    --md-default-bg-color: #0a0a0a;
+    --md-default-fg-color: hsla(0, 0%, 90%, 1);
+    --md-default-fg-color--light: hsla(0, 0%, 70%, 1);
+    --md-default-fg-color--lighter: hsla(0, 0%, 50%, 1);
+    --md-default-fg-color--lightest: hsla(0, 0%, 30%, 1);
+    --md-code-bg-color: #121212;
+    --md-code-fg-color: #e0e0e0;
+}
+
+/* Dark mode graph controls */
+[data-md-color-scheme="slate"] .graph-reset-btn {
+    background: rgba(50, 50, 50, 0.95);
+    color: #e0e0e0;
+}
+
+[data-md-color-scheme="slate"] .graph-reset-btn:hover {
+    background: rgba(60, 60, 60, 1);
+}

@@ -1,0 +1,128 @@
+name: Build and Deploy Mars Blog
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+  schedule:
+    # Rebuild documentation daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-mars-blog:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for changelog generation
+
+      # Set up QEMU for multi-architecture builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Set up Docker Buildx for multi-architecture builds
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # Cache pip dependencies
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Install documentation dependencies
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # Configure AWS credentials using access keys
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      # Login to AWS ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Extract tag name from GitHub ref (use semantic versioning on push like jac-lang)
+      - name: Get tag name
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual dispatch - use timestamp
+            TAG="manual-$(date +%Y%m%d-%H%M%S)"
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            # Release event - use tag name
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            TAG="$TAG_NAME"
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # For scheduled builds, use date-based versioning
+            TAG="nightly-$(date +'%Y%m%d')"
+          else
+            # For push builds, create a versioned tag: v1.<commit_count>.<short_sha>
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            SHORT_SHA=$(git rev-parse --short=8 HEAD)
+            TAG="v1.${COMMIT_COUNT}.${SHORT_SHA}"
+          fi
+
+          echo "Tag: $TAG"
+          echo "Event: ${{ github.event_name }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      # Prepare documentation for serving
+      - name: Prepare documentation for serving
+        run: |
+          echo "Preparing MkDocs for serving..."
+
+          # Create build info file in docs directory
+          echo "Build Information:" > docs/build-info.txt
+          echo "Version: ${{ steps.tag.outputs.tag }}" >> docs/build-info.txt
+          echo "Built: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> docs/build-info.txt
+          echo "Commit: ${{ github.sha }}" >> docs/build-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> docs/build-info.txt
+          echo "Trigger: ${{ github.event_name }}" >> docs/build-info.txt
+
+          echo "Documentation prepared for serving"
+
+      # Build and push Docker image
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: 776241927220.dkr.ecr.us-east-2.amazonaws.com
+          ECR_REPOSITORY: mars-blog
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          echo "Building and pushing to: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          
+          # Build and push multi-architecture image
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            --push \
+            .
+
