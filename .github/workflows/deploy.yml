@@ -12,6 +12,7 @@ on:
     - cron: '0 2 * * *'
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
@@ -19,6 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       # Checkout the repository
@@ -56,13 +61,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      # Configure AWS credentials using access keys
+      # Configure AWS credentials using OIDC
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.2.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
+          role-to-assume: arn:aws:iam::776241927220:role/GitHubActionsSharedECRRole
+          role-session-name: GitHubActions
+          audience: sts.amazonaws.com
 
       # Login to AWS ECR
       - name: Login to Amazon ECR
@@ -113,7 +119,7 @@ jobs:
       - name: Build and push Docker image
         env:
           ECR_REGISTRY: 776241927220.dkr.ecr.us-east-2.amazonaws.com
-          ECR_REPOSITORY: mars-blog
+          ECR_REPOSITORY: jaseci-blogs
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
         run: |
           echo "Building and pushing to: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
