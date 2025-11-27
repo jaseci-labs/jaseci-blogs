@@ -6,7 +6,6 @@ nav:
   - Jaseci Labs: index.md
   - Blog:
     - blog/index.md
-  - About: about.md
 
 theme:
   name: material
