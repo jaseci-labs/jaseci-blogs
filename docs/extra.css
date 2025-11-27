@@ -258,3 +258,43 @@
 [data-md-color-scheme="slate"] .graph-reset-btn:hover {
     background: rgba(60, 60, 60, 1);
 }
+
+/* Blog preview author hover tooltip */
+.md-author {
+    position: relative;
+    cursor: pointer;
+}
+
+.md-author:hover {
+    background: rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.md-author img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: fill;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.md-author img:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+/* Dark mode adjustments */
+[data-md-color-scheme="slate"] .md-author {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-md-color-scheme="slate"] .md-author:hover {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-md-color-scheme="slate"] .md-author img {
+    border-color: rgba(255, 255, 255, 0.2);
+}
