@@ -123,46 +123,68 @@ window.jaclangMonarchSyntax = {
 
 // Define the theme rules and colors for Monaco Editor (Dark Theme)
 window.jacThemeRulesDark = [
-  { token: 'keyword.function', foreground: '569CD6' },
-  { token: 'keyword.variable', foreground: '569CD6' },
-  { token: 'keyword.type', foreground: '569CD6' },
-  { token: 'keyword.control', foreground: 'C586C0' },
-  { token: 'function.identifier', foreground: '9CDCFE' },
-  { token: 'type.identifier', foreground: '4EC9B0' },
-  { token: 'operator.logical', foreground: '569CD6' },
-  { token: 'string', foreground: 'CE9178' },
-  { token: 'number', foreground: 'B5CEA8' },
-  { token: 'comment', foreground: '6A9955' },
-  { token: 'operator', foreground: 'D4D4D4' },
-  { token: 'delimiter.bracket', foreground: 'D4D4D4' },
+  { token: 'keyword.function', foreground: 'ff6b35' },  // Primary orange
+  { token: 'keyword.variable', foreground: 'ff6b35' },  // Primary orange
+  { token: 'keyword.type', foreground: 'ff6b35' },     // Primary orange
+  { token: 'keyword.control', foreground: 'f7931e' },  // Secondary orange
+  { token: 'function.identifier', foreground: 'cccccc' }, // Text secondary
+  { token: 'type.identifier', foreground: '9CDCFE' },  // Light blue
+  { token: 'operator.logical', foreground: 'ff6b35' },  // Primary orange
+  { token: 'string', foreground: 'CE9178' },           // Warm string color
+  { token: 'number', foreground: 'B5CEA8' },           // Green for numbers
+  { token: 'comment', foreground: '6A9955' },          // Green for comments
+  { token: 'constant.language', foreground: 'f7931e' }, // Secondary orange for True/False/None
+  { token: 'operator', foreground: 'ffffff' },         // White for operators
+  { token: 'delimiter.bracket', foreground: 'cccccc' }, // Text secondary for brackets
+  { token: 'identifier', foreground: 'e6edf3' },       // Light text for identifiers
 ];
 
 // Define the theme colors for Monaco Editor (Dark Theme)
 window.jacThemeColorsDark = {
-  'editor.foreground': '#D4D4D4',
-  'editor.background': '#1E1E1E'
+  'editor.foreground': '#e6edf3',           // Code text color
+  'editor.background': '#0d1117',          // Code background
+  'editor.lineHighlightBackground': '#1c2128',
+  'editor.selectionBackground': '#264f78',
+  'editor.inactiveSelectionBackground': '#1c2128',
+  'editorCursor.foreground': '#ff6b35',    // Orange cursor
+  'editorWhitespace.foreground': '#30363d',
+  'editorIndentGuide.background': '#30363d',
+  'editorIndentGuide.activeBackground': '#404040',
+  'editorLineNumber.foreground': '#484f58',
+  'editorLineNumber.activeForeground': '#cccccc',
 };
 
 // Define the theme rules for Monaco Editor (Light Theme)
 window.jacThemeRulesLight = [
-  { token: 'keyword.function', foreground: '0000FF' },
-  { token: 'keyword.variable', foreground: '0000FF' },
-  { token: 'keyword.type', foreground: '0000FF' },
-  { token: 'keyword.control', foreground: 'AF00DB' },
-  { token: 'function.identifier', foreground: '001080' },
-  { token: 'type.identifier', foreground: '267F99' },
-  { token: 'operator.logical', foreground: '0000FF' },
-  { token: 'string', foreground: 'A31515' },
-  { token: 'number', foreground: '098658' },
-  { token: 'comment', foreground: '008000' },
-  { token: 'operator', foreground: '000000' },
-  { token: 'delimiter.bracket', foreground: '000000' },
+  { token: 'keyword.function', foreground: 'ff6b35' },  // Primary orange
+  { token: 'keyword.variable', foreground: 'ff6b35' },  // Primary orange
+  { token: 'keyword.type', foreground: 'ff6b35' },     // Primary orange
+  { token: 'keyword.control', foreground: 'f7931e' },  // Secondary orange
+  { token: 'function.identifier', foreground: '000000' }, // Black for functions
+  { token: 'type.identifier', foreground: '267F99' },  // Blue for types
+  { token: 'operator.logical', foreground: 'ff6b35' },  // Primary orange
+  { token: 'string', foreground: 'A31515' },           // Red for strings
+  { token: 'number', foreground: '098658' },           // Green for numbers
+  { token: 'comment', foreground: '008000' },          // Green for comments
+  { token: 'constant.language', foreground: 'f7931e' }, // Secondary orange for True/False/None
+  { token: 'operator', foreground: '000000' },         // Black for operators
+  { token: 'delimiter.bracket', foreground: '333333' }, // Dark gray for brackets
+  { token: 'identifier', foreground: '000000' },       // Black for identifiers
 ];
 
 // Define the theme colors for Monaco Editor (Light Theme)
 window.jacThemeColorsLight = {
-  'editor.foreground': '#000000',
-  'editor.background': '#FFFFFF'
+  'editor.foreground': '#000000',           // Black text
+  'editor.background': '#ffffff',          // White background
+  'editor.lineHighlightBackground': '#f0f0f0',
+  'editor.selectionBackground': '#add8e6',
+  'editor.inactiveSelectionBackground': '#e0e0e0',
+  'editorCursor.foreground': '#ff6b35',    // Orange cursor
+  'editorWhitespace.foreground': '#d0d0d0',
+  'editorIndentGuide.background': '#e0e0e0',
+  'editorIndentGuide.activeBackground': '#cccccc',
+  'editorLineNumber.foreground': '#237893',
+  'editorLineNumber.activeForeground': '#ff6b35',
 };
 
 // Backward compatibility

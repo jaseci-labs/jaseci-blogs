@@ -1,4 +1,4 @@
-site_name: Jaseci Labs
+site_name: Blogs from Jaseci Labs
 site_url: https://blogs.jaseci.org/
 use_directory_urls: true
 
@@ -9,26 +9,20 @@ nav:
 
 theme:
   name: material
-  logo: assets/jaseci_labs_logo.jpg
-  favicon: assets/jaseci_labs_logo.jpg
+  logo: assets/jaseci_labs_logo.PNG
+  favicon: assets/jaseci_labs_logo.PNG
   font:
-    text: Nunito
-    code: Fira Code
+    text: Roboto
+    code: Roboto Mono
   palette:
     # Palette toggle for light mode
     - scheme: default
       primary: black
-      accent: deep orange
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
+      accent: custom orange
     # Palette toggle for dark mode
     - scheme: slate
       primary: black
-      accent: deep orange
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+      accent: custom orange
   features:
     - content.code.copy
 
@@ -70,7 +64,7 @@ extra:
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/yourusername
 
-copyright: Copyright &copy; 2025 Jason Mars
+copyright: Copyright &copy; 2025 Jaseci Labs. All rights reserved.
 
 extra_javascript:
   - https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js
