@@ -9,7 +9,7 @@ categories:
 slug: agentic-object-spatial-programming
 ---
 
-# Agents on Graphs: Agentic Object-Spatial Programming with Jaseci
+# Your AI Agent Needs a Graph, Not a Chain
 
 *Four architecture patterns for AI agents that build context over time*
 
@@ -27,7 +27,7 @@ We started with a single question:
 
     If an agent is a context that builds over time, **what shape does that context take?**
 
-That question led us to **Object-Spatial Programming** and four architecture patterns that answer it in fundamentally different ways.
+That question led us to **Object-Spatial Programming** and four architecture patterns that answer it in very different ways.
 
 ---
 
@@ -48,14 +48,18 @@ Three primitives:
 Jac is the language built for OSP. With Jac, this is all it takes:
 
 ```jac
-node Expert    { has knowledge: list[str] = []; }
-walker advisor { has query: str; }
+node TaskNode { 
+    has memory: list[str] = [];
+}
+walker agent { 
+    has query: str;
+}
 
-root ++> Expert();                    # connect a node to the graph
-advisor(query="recommend a film") spawn root;  # launch a walker
+root ++> TaskNode();  # connect a node to the graph
+agent(query="plan my trip") spawn root;  # launch a walker
 ```
 
-Four lines. A graph with an expert node. A walker that traverses it. No framework setup. No routing middleware. The code structure *is* the agent architecture.
+That's it. A node with state, a walker that traverses to it, and an edge connecting them. You don't need a framework or routing middleware; the code structure directly describes the agent architecture.
 
 ---
 
@@ -86,12 +90,14 @@ This is what we call **Meaning-Typed Programming**. The semantics of your code *
 This is where OSP becomes truly agentic. Instead of writing routing logic with switch statements, enum-based dispatchers, or chain configurations, the walker asks the LLM to choose where to go:
 
 ```jac
-visit [-->] by llm(incl_info={"User query": self.query});
+visit [-->] by llm(
+    incl_info={"User query": self.query}
+);
 ```
 
 One line. The LLM reads every connected node, understands what each one does, and chooses the right destination. Add a new capability tomorrow? Just connect a new node to the graph. The LLM discovers it automatically.
 
-No routing tables. No orchestration code. The graph *is* the router.
+You don't write routing tables or orchestration code - the graph topology handles that for you.
 
 !!! info "Independent of the patterns below"
 
@@ -109,7 +115,7 @@ With walkers, nodes, edges, `by llm()`, and `visit by llm()`, four architecture 
 
 !!! note "Reading the diagrams"
 
-    **Circles** represent nodes (stateful locations in the graph). **Teal rounded rectangles** represent walkers (agents that traverse). Dashed arrows show spawning or traversal, and the **amber highlight** marks whichever element is currently active.
+    **Rounded rectangles** are agents that move. **Circles** are locations where work happens. **Arrows** show the flow. The **amber highlight** marks whichever element is currently active.
 
 ---
 
@@ -117,9 +123,9 @@ With walkers, nodes, edges, `by llm()`, and `visit by llm()`, four architecture 
 
 !!! abstract ""
 
-    *Walkers spawn walkers. No nodes. Results bubble up.*
+    *Walkers spawn walkers. No custom nodes. Results bubble up.*
 
-To demonstrate this, we built a **trip planner**. Give it a city and it researches food, sights, and transit in parallel, then combines everything into a complete itinerary. The entire pattern lives in walker-space - no graph edges, only spawn relationships.
+To demonstrate this, we built a **trip planner**. Give it a city and it spawns separate walkers to research food, sights, and transit, then combines everything into a complete itinerary. The entire pattern lives in walker-space - no graph edges, only spawn relationships.
 
 <figure markdown="span">
   ![Worker Bee Pattern](../../assets/diagrams/worker_bee.gif){ loading=lazy }
@@ -149,7 +155,8 @@ Children work independently, report back, and the parent synthesizes everything 
 
     # The parent walker - spawns children, merges results
     walker plan_trip {
-        has city: str = "Tokyo";
+        has city: str = "Tokyo",
+            result: str = "";
 
         def build_itinerary(food: str, sights: str, transit: str) -> str by llm();
 
@@ -160,20 +167,16 @@ Children work independently, report back, and the parent synthesizes everything 
             transit = research_transit(city=self.city) spawn root;
 
             # Merge results into a final itinerary
-            plan    = self.build_itinerary(food.result, sights.result, transit.result);
+            self.result = self.build_itinerary(food.result, sights.result, transit.result);
         }
     }
     ```
 
-`plan_trip` is a walker. `research_food` is a walker. Walkers spawning walkers. No graph needed - the hierarchy lives entirely in walker-space.
+`plan_trip` is a walker. `research_food` is a walker. The whole hierarchy is just walkers spawning walkers - no graph edges needed. If your task can be split into independent subtasks that get merged at the end - research pipelines, multi-source analysis, multi-part generation - this is the pattern.
 
 !!! success "Where context lives"
 
     **Context builds in walkers**, split and merged across layers. Each child adds its own specialized research. The parent's final context is richer than any individual child's because it synthesizes across all branches.
-
-!!! tip "When to use"
-
-    Tasks that naturally decompose into multiple parts, such as research, analysis, or multi-part generation. Anywhere "divide and conquer" applies.
 
 ---
 
@@ -183,7 +186,7 @@ Children work independently, report back, and the parent synthesizes everything 
 
     *One walker carries all context through stateless toolbox nodes.*
 
-To demonstrate this, we built a **developer assistant chatbot**. Ask it a Python question and it routes to the right toolbox - DocSearch for concepts, CodeHelper for running and linting code, or QnA for general conversation. The `chatbot` walker starts at root and the LLM picks which toolbox node to visit next. The walker's context grows at every stop.
+Picture a **developer assistant chatbot**. You ask it a Python question and it routes to the right toolbox - DocSearch for concepts, CodeHelper for running and linting code, or QnA for general conversation. The `chatbot` walker starts at root and the LLM picks which toolbox node to visit next. The walker's context grows at every stop.
 
 <figure markdown="span">
   ![Traveler Pattern](../../assets/diagrams/traveler.gif){ loading=lazy }
@@ -220,11 +223,21 @@ Each node is a *toolbox* with a focused set of 2–3 related tools. The node doe
 
     node CodeHelper { ... }  # same shape, different tools
     node QnA { ... }
+
+    with entry {
+        # Wire up the graph - each node becomes a reachable toolbox
+        root ++> DocSearch();
+        root ++> CodeHelper();
+        root ++> QnA();
+
+        # Launch
+        chatbot(query="How do I parse JSON in Python?") spawn root;
+    }
     ```
 
 The walker's journey through the graph *is* the chain-of-thought. The path taken is the reasoning trace.
 
-Why not give one agent all tools in a flat list? Because the graph acts as **guardrails**. Tools are spatially separated into focused toolboxes. The LLM first picks the right toolbox, then the toolbox picks from its small set. Two-level decision making. Fewer wrong tool calls.
+Why not give one agent all tools in a flat list? Because the graph acts as **guardrails**. Tools are spatially separated into focused toolboxes, so the LLM first picks the right toolbox, then works with just 2–3 tools instead of everything at once. In practice, this means fewer wrong tool calls.
 
 !!! success "Where context lives"
 
@@ -234,6 +247,8 @@ Why not give one agent all tools in a flat list? Because the graph acts as **gua
 
     Tool-heavy agents, chatbots with diverse capabilities, any system where spatially organizing tools improves reliability.
 
+> **Full implementation:** [jac-gpt-fullstack](https://github.com/jaseci-labs/Agentic-AI/tree/main/jac-gpt-fullstack) — a multi-mode Jac chatbot with RAG, Q&A, coding, and debugging toolbox nodes, routed via `visit [-->] by llm()`.
+
 ---
 
 ### 3. Expert { #expert }
@@ -242,14 +257,14 @@ Why not give one agent all tools in a flat list? Because the graph acts as **gua
 
     *Domain nodes get smarter with every visit. The walker is just a courier.*
 
-To demonstrate this, we built a **personal movie advisor**. Ask it for film recommendations and it routes to genre-specific experts: an ActionExpert for thrillers and martial arts, a ComedyExpert for rom-coms and satire. Each expert remembers every past recommendation *and* user feedback, so its suggestions genuinely adapt over time.
+We tried this with a **personal movie advisor**. Ask it for film recommendations and it routes to genre-specific experts: an ActionExpert for thrillers and martial arts, a ComedyExpert for rom-coms and satire. Each expert remembers every past recommendation *and* user feedback, so its suggestions genuinely adapt over time.
 
 <figure markdown="span">
   ![Expert Pattern](../../assets/diagrams/expert.gif){ loading=lazy }
   <figcaption>Expert nodes remember every interaction and deepen their knowledge</figcaption>
 </figure>
 
-Unlike Traveler where nodes forget, Expert nodes *remember*. Every visit enriches them. The walker brings a query - and optionally a rating of a previous suggestion - so the node reasons using accumulated knowledge that includes real user preferences, not just logged history.
+Unlike Traveler where nodes forget, Expert nodes *remember*. Every visit enriches them. The walker brings a query and can also carry a rating of a previous suggestion. This means the node reasons using accumulated knowledge that includes real user preferences, not just logged history.
 
 ??? example "Expert - Code Sketch"
 
@@ -280,17 +295,32 @@ Unlike Traveler where nodes forget, Expert nodes *remember*. Every visit enriche
     }
 
     node ComedyExpert { ... }  # same shape, different domain
+
+    with entry {
+        # Wire up the graph - each expert is reachable from root
+        root ++> ActionExpert();
+        root ++> ComedyExpert();
+
+        # Launch
+        advisor(query="Recommend something like John Wick") spawn root;
+    }
     ```
 
-Visit 1: a generic recommendation. Visit 5: the user rates a suggestion ("loved the choreography, hated the gore"), and the node adjusts. Visit 50: deeply personalized, drawing on a rich history of *actual preferences*, not just logged queries. The node *is* the expert. Not the walker. Not the model.
+Here's the difference that makes. Visit 1, the node knows nothing:
+
+> **Q:** "Recommend something like John Wick"
+> **A:** "Try *The Raid* - intense martial arts action."
+
+Visit 10, after several ratings and queries:
+
+> **Q:** "Something for tonight?"
+> **A:** "Based on your preference for choreography over gore, try *Ip Man* - clean martial arts with a strong storyline. You rated similar films highly."
+
+The node *is* the expert. Not the walker. Not the model. Use this for recommendation systems, personalized assistants, or any domain-specific advisor that should get sharper the more it's used.
 
 !!! success "Where context lives"
 
-    **Context builds in the nodes.** A node visited fifty times is fundamentally more capable than one visited once. The walker is a courier that triggers and feeds the nodes.
-
-!!! tip "When to use"
-
-    Recommendation systems, personalized assistants, domain-specific advisors - anything that should get better at a domain the more it's used.
+    **Context builds in the nodes.** A node visited fifty times is far more capable than one visited once. The walker is a courier that triggers and feeds the nodes.
 
 ---
 
@@ -298,16 +328,16 @@ Visit 1: a generic recommendation. Visit 5: the user rates a suggestion ("loved 
 
 !!! abstract ""
 
-    *Peer nodes. No supervisor. Each agent decides locally who else to involve.*
+    *Peer nodes own their own logic. The graph edges define the workflow. Feedback loops let the system self-correct.*
 
-To demonstrate this, we built a **blog post creator**. Drop a topic and the Researcher gathers information, the Writer drafts a post, and the Reviewer evaluates quality. If the draft isn't good enough, the Reviewer sends feedback back to the Writer for revision. There is no supervisor agent - instead, peers make local decisions about who should work next.
+Here's what this looks like as a **blog post creator**. Drop a topic and the Researcher gathers information, the Writer drafts a post, and the Reviewer evaluates quality. If the draft isn't good enough, the Reviewer sends feedback back to the Writer for revision - the Reviewer→Writer edge in the graph creates a feedback loop that allows iterative refinement. There is no central orchestrator managing this flow; each peer's ability contains its own routing logic.
 
 <figure markdown="span">
   ![Collab Pattern](../../assets/diagrams/collab.gif){ loading=lazy }
-  <figcaption>Peer nodes collaborate without a supervisor - the path emerges from local decisions</figcaption>
+  <figcaption>Peer nodes connected in a pipeline with a feedback loop - each peer owns its routing logic</figcaption>
 </figure>
 
-Every node is an equal. There is no coordinator deciding who talks to whom. Each peer finishes its work, looks at what it produced, and decides which peer should see it next.
+The graph edges define who talks to whom: Researcher→Writer→Reviewer, with Reviewer looping back to Writer when revisions are needed. Each peer owns its own logic - what to do with incoming work and where to send it next. This is different from frameworks like CrewAI or LangGraph where routing is defined in a central orchestrator separate from the agents.
 
 ??? example "Collab - Code Sketch"
 
@@ -321,12 +351,10 @@ Every node is an equal. There is no coordinator deciding who talks to whom. Each
 
     # Researcher - researches, then sends walker to Writer
     node Researcher {
-        has findings: str = "";
         def research(topic: str) -> str by llm();
 
         can handle with message entry {
-            self.findings = self.research(visitor.content);
-            visitor.content = self.findings;
+            visitor.content = self.research(visitor.content);
             visitor.sender = "Researcher";
             visit [-->](?:Writer);
         }
@@ -370,9 +398,24 @@ Every node is an equal. There is no coordinator deciding who talks to whom. Each
             }
         }
     }
+
+    with entry {
+        # Wire up the pipeline - edges define who talks to whom
+        researcher = Researcher();
+        writer = Writer();
+        reviewer = Reviewer();
+
+        root ++> researcher;
+        researcher ++> writer;
+        writer ++> reviewer;
+        reviewer ++> writer;  # the feedback loop
+
+        # Launch
+        message(content="Write about AI agents") spawn root;
+    }
     ```
 
-Three things to notice. First, each peer decides locally where the walker goes next - `visit [-->](?:Writer)`, `visit [-->](?:Reviewer)` - no central coordinator. Second, the Reviewer's `review` function returns a `ReviewResult` with an explicit `Decision` enum, not free text - the type system enforces the choice. Third, every peer builds its own context: the Writer accumulates `revision_history`, the Reviewer accumulates `past_feedback`. No single peer has the full picture. Together, they do.
+Three things to notice. First, each peer's routing logic lives inside its own ability - `visit [-->](?:Writer)` and `visit [-->](?:Reviewer)` are written in the nodes themselves, not in a separate orchestrator. Adding a new role (say, an Editor between Writer and Reviewer) means adding a node, connecting edges, and writing its ability. Second, the Reviewer's `review` function returns a `ReviewResult` with an explicit `Decision` enum, not free text - the type system enforces the choice. Third, every peer builds its own context: the Writer accumulates `revision_history`, the Reviewer accumulates `past_feedback`. The system's knowledge is distributed, not centralized.
 
 !!! success "Where context lives"
 
@@ -380,7 +423,7 @@ Three things to notice. First, each peer decides locally where the walker goes n
 
 !!! tip "When to use"
 
-    Creative workflows, research teams, any domain where experts need to collaborate flexibly without rigid process.
+    Multi-step workflows where different roles need to pass work to each other - content pipelines, code review systems, or any process where iterative feedback improves the output.
 
 ---
 
@@ -393,12 +436,10 @@ Four patterns. One question. Four answers.
 | **Worker Bee** | Multiple walkers | Split and merge across layers | Tree | `spawn` |
 | **Traveler** | The walker | Accumulates at each stop | Path | `visit by llm()` |
 | **Expert** | The nodes | Deepens with every visit | Depth | node state |
-| **Collab** | All peers | Lateral sharing between equals | Mesh | peer-to-peer `visit` |
+| **Collab** | All peers | Lateral sharing between equals | Pipeline + loop | peer-to-peer `visit` |
 
-Each pattern captures a fundamentally different shape of context. Worker Bee builds a tree. Traveler builds a path. Expert builds depth. Collab builds a mesh.
+Each pattern captures a fundamentally different shape of context. Worker Bee builds a tree. Traveler builds a path. Expert builds depth. Collab builds a pipeline with feedback loops.
 
-And these patterns compose. A Collab network where each peer is an Expert that remembers. A Worker Bee whose children are Travelers navigating tool graphs. A system that starts as one pattern and evolves into another as requirements grow.
+These patterns also compose well together. You could build a Collab network where each peer is an Expert that remembers, or a Worker Bee whose children are Travelers navigating tool graphs. Most real systems will start with one pattern and mix in others as they grow.
 
-The agent isn't the model. It's the graph the model walks. And the shape of that graph - the shape of the context - is the real design decision.
-
-Object-Spatial Programming gives you the primitives to make that decision explicit, composable, and surprisingly concise. Each pattern above fits in fewer lines of code than most configuration files. No boilerplate. No framework ceremony. Just the architecture, expressed directly.
+The real design decision isn't which model to use or which framework to pick. It's what shape your agent's context should take. Object-Spatial Programming gives you the primitives to make that decision explicit and composable, and each pattern above fits in fewer lines of code than most config files - the code reads like a direct description of the architecture.
