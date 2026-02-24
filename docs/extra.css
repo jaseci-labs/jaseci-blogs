@@ -808,3 +808,10 @@
 .md-button--primary:hover {
     background: var(--gradient-primary-hover);
 }
+
+/* Centered images in blog posts */
+.md-content img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
