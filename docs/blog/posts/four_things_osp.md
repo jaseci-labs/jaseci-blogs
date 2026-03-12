@@ -5,7 +5,6 @@ authors:
 categories:
   - Jac Programming
   - Tutorials
-  - Object-Spatial Programming
 slug: four-things-object-spatial-programming
 ---
 
