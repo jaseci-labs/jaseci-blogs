@@ -229,7 +229,7 @@ ProtoMCP is fully open source. Explore it live, or run your own instance.
 
 **[protomcp.io](https://protomcp.io/)**
 
-**[GitHub repository](https://github.com/jaseci-labs/jac-mcp-playground)**
+**[GitHub repository](https://github.com/SahanUday/ProtoMCP)**
 
 This is the starting point, not the finish line. Pick an issue, open a PR, or just try it and tell me what's missing. The goal is to build the MCP testing tool that developers actually want to use.
 
