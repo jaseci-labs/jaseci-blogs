@@ -121,11 +121,11 @@ So I built one.
 
 After a few late nights of debugging MCP servers, I realized the tool I wanted didn't exist.
 
-So I built ProtoMCP — a browser-based playground for connecting to MCP servers and seeing everything they expose without writing JSON.
+So I built ProtoMCP, a browser-based playground for connecting to MCP servers and seeing everything they expose without writing JSON.
 
 ![MCP ProtoLab Landing Page](../../assets/mcp-protolab/landing-page.png)
 
-Once connected, ProtoMCP automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly — no scripts, no curl commands, no guessing the payload format.
+Once connected, ProtoMCP automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly. No scripts, no curl commands, no guessing the payload format.
 
 ![MCP Server Registry](../../assets/mcp-protolab/playground.png)
 
@@ -190,7 +190,7 @@ For this project, UI components are written in Jac, backend proxy walkers handle
 
 AI was more than a code generator for this project — it was like a design partner that I kept interrogating.
 
-For the initial design, I guided Claude through the requirements, described what I wanted, challenged its proposals, and iterated until the architecture felt right. For the UI, I had reference designs in mind — the Postman layout, the dark-themed developer tool aesthetic — and AI generated components that were close to what I had in mind. Where a UI component might have taken me hours of CSS trial and error, AI got me most of the way there in minutes.
+For the initial design, I guided Claude through the requirements, described what I wanted, challenged its proposals, and iterated until the architecture felt right. For the UI, I had reference designs in mind - the Postman layout, the dark-themed developer tool aesthetic, and AI generated components that were close to what I had in mind. Where a UI component might have taken me hours of CSS trial and error, AI got me most of the way there in minutes.
 
 For technical problems, AI often surprised me with clean, direct solutions. When I was working through the CORS challenge, we debated approaches and landed on something elegant. Rather than fight the browser's restrictions, the Jac backend acts as a relay, forwarding requests to the MCP server and passing the response back. The browser only ever talks to the backend.
 
