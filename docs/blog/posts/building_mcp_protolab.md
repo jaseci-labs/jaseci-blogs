@@ -123,9 +123,16 @@ After a few late nights of debugging MCP servers, I realized the tool I wanted d
 
 So I built ProtoMCP — a browser-based playground for connecting to MCP servers and seeing everything they expose without writing JSON.
 
+![MCP ProtoLab Landing Page](../../assets/mcp-protolab/landing-page.png)
+
 Once connected, ProtoMCP automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly — no scripts, no curl commands, no guessing the payload format.
 
+![MCP Server Registry](../../assets/mcp-protolab/playground.png)
+
 There's also a built-in registry of official MCP servers. Browse by transport type, search by name, and connect with one click.
+
+
+![MCP Server Registry](../../assets/mcp-protolab/tool2.png)
 
 | Capability | What it does |
 |---|---|
