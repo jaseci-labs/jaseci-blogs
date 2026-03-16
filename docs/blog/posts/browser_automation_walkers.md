@@ -17,7 +17,7 @@ You write `page.goto()`, then `page.fill()`, then `page.click()`. Each call succ
 
 This is where browser automation sits in 2026. Playwright, Selenium, Browser-use, Stagehand, they all give you good primitives. None of them give you a model for what a browser session actually *is*. State lives in local variables. Context evaporates between function calls. The relationship between a session, its pages, and their elements exists only in your head.
 
-I built [jac-browser](https://github.com/ahzan-dev/jac-browser) to try to fix this. It's a browser automation library written entirely in Jac, 153 walkers that wrap Playwright. But the wrapper isn't really the point. The point is that browser sessions are graphs, and Jac gives you graphs as a first-class language construct. The result is a library where the data model *is* the automation framework.
+I built [jac-browser](https://github.com/jaseci-labs/jac-agentbrowser) to try to fix this. It's a browser automation library written entirely in Jac, 153 walkers that wrap Playwright. But the wrapper isn't really the point. The point is that browser sessions are graphs, and Jac gives you graphs as a first-class language construct. The result is a library where the data model *is* the automation framework.
 
 <!-- more -->
 
@@ -741,6 +741,6 @@ playwright install chromium
 jac run examples/01_hello_browser.jac
 ```
 
-The code is open source at [github.com/ahzan-dev/jac-browser](https://github.com/ahzan-dev/jac-browser). The examples cover everything from "hello browser" to AI agent loops. If browser automation has frustrated you (and honestly, it's frustrated all of us), this is a different way to think about the problem.
+The code is open source at [github.com/jaseci-labs/jac-agentbrowser](https://github.com/jaseci-labs/jac-agentbrowser). The examples cover everything from "hello browser" to AI agent loops. If browser automation has frustrated you (and honestly, it's frustrated all of us), this is a different way to think about the problem.
 
 The browser isn't a function call target. It's a graph. Start treating it like one.
