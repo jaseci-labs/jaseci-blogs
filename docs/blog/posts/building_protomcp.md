@@ -6,39 +6,26 @@ categories:
   - Developers
   - Jac Programming
   - Web Development
-slug: building-mcp-protolab
+slug: building-protomcp
 ---
-# **ProtoMCP: The MCP Tool I Built After Fighting the Inspector for Hours**
+# I Built a Postman for MCP Servers. Here's the Story.
 
-The first time I tried testing an MCP server, I thought I was doing something wrong.
+It started in a Jaseci weekly sync. We were discussing the jac-mcp server when someone brought up the idea of an MCP playground — a place to test MCP servers the way Postman lets you test REST APIs. The idea stuck with me, but it didn't feel real until I ran into the problem myself.
 
-I connected to the server.  
-Tried running a tool.  
-Got an error.
+I was connecting jac-mcp to GitHub Copilot, trying to understand how tools were being called and what they returned. The answer was: I had no idea. Copilot called tools based on whatever prompt and model it chose, and I was left guessing.
 
-So I tweaked the JSON.
-
-Tried again.
-
-Another error.
-
-At some point I realized I wasn't building anything anymore. I was just debugging JSON-RPC plumbing.
+When I started building the jac-shadcn MCP server, I hit the same wall. Testing through an LLM client meant my results depended on the model and prompt, not the server itself. That's not testing. That's hoping.
 
 <!-- more -->
 
-If you've worked with the **Model Context Protocol (MCP)** recently, this experience might feel familiar. The protocol itself is elegant. The tooling around it is… still evolving.
+I went looking for a better way. What I found was:
+- curl and hand-written JSON-RPC
+- MCP Inspector (powerful, but rough)
+- Browser playgrounds (unstable, limited)
 
-And the moment that really pushed me over the edge was using **MCP Inspector**.
+That's when I realized: if I wanted a Postman for MCP, I'd have to build it.
 
-Technically it works. But practically, it felt like trying to debug a distributed system through a keyhole.
-
-That frustration is what led to **[ProtoMCP](https://protomcp.io/)**.
-
-The idea actually started in a Jaseci weekly sync. We were discussing MCP tooling when someone mentioned the need for a Postman-style playground. The idea stuck, but it didn't feel real until I ran into the problem myself.
-
-I was connecting the jac-mcp server to GitHub Copilot, trying to understand what tools were being called, what parameters they needed, what results they returned. The answer was: I had no idea. Copilot would call tools based on whatever prompt and model it chose, and I was left guessing.
-
-That's not testing. That's hoping.
+So I built **[ProtoMCP](https://protomcp.io/)**.
 
 ```mermaid
 flowchart LR
@@ -67,42 +54,6 @@ flowchart LR
 
 None of them gave me everything I needed.
 
-## The Moment Everything Broke
-
-While building MCP integrations, my workflow started looking like this:
-
-1. Connect to a server  
-2. Inspect the tool schema  
-3. Manually construct a JSON-RPC request  
-4. Send it  
-5. Get an error  
-6. Guess what went wrong  
-
-Typical request:
-
-```json
-{
-  "method": "tools/call",
-  "params": { ... }
-}
-```
-
-If anything changed — the schema, authentication, headers — the whole request had to be rewritten.
-
-Then debugging started. Was the session header wrong? Did the server expect streaming? Was the schema slightly different? Did the response fail halfway through a stream?
-
-The worst part wasn't the errors.
-
-It was the lack of visibility.
-
-When something failed, I'd add logs, restart the server, retry the request, and repeat. It worked, but it was slow. Painfully slow.
-
-I kept thinking:
-
-*"Why does testing MCP servers feel like writing a debugging tool every time?"*
-
-That was the moment ProtoMCP started.
-
 ## What I Wanted Instead
 
 I didn’t want another CLI.
@@ -114,8 +65,6 @@ What I wanted was something that felt like Postman for MCP — a place where you
 Basically:
 
 *A proper developer UI for MCP.*
-
-So I built one.
 
 ## Introducing ProtoMCP
 
@@ -232,6 +181,3 @@ ProtoMCP is fully open source. Explore it live, or run your own instance.
 **[GitHub repository](https://github.com/SahanUday/ProtoMCP)**
 
 This is the starting point, not the finish line. Pick an issue, open a PR, or just try it and tell me what's missing. The goal is to build the MCP testing tool that developers actually want to use.
-
-
-
