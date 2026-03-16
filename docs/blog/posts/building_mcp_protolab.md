@@ -3,31 +3,42 @@ date: 2026-03-16
 authors:
   - sahan
 categories:
+  - Developers
   - Jac Programming
   - Web Development
-  - Developers
 slug: building-mcp-protolab
 ---
+# **ProtoMCP: The MCP Tool I Built After Fighting the Inspector for Hours**
 
-# I Built a Postman for MCP Servers. Here's the Story.
+The first time I tried testing an MCP server, I thought I was doing something wrong.
 
-It started in a Jaseci weekly sync. We were discussing the jac-mcp server when brought up the idea of an MCP playground, a place to test MCP servers the way Postman lets you test REST APIs. The idea stuck with me, but it didn't feel real until I ran into the problem myself.
+I connected to the server.  
+Tried running a tool.  
+Got an error.
 
-I was connecting the jac-mcp server to GitHub Copilot, trying to understand how tools were being called, what parameters they needed, what results they returned, whether the server was actually behaving the way I expected. The answer was I had no idea. Copilot would call tools based on whatever prompt and model it chose, and I was left guessing. When I started building the jac-shadcn MCP server and needed to test it, I hit the same wall. Testing through an LLM client meant my results depended on the selected model and the prompt I gave it, not on the server itself. That's not testing. That's hoping.
+So I tweaked the JSON.
 
-That's when I thought, if I had a Postman-style tool where I could connect to any MCP server, see its tools, fill in the parameters myself, and hit execute, I could actually see what my server was doing. So I went looking for one.
+Tried again.
+
+Another error.
+
+At some point I realized I wasn't building anything anymore. I was just debugging JSON-RPC plumbing.
 
 <!-- more -->
 
-## The Problem Isn't That Tools Don't Exist
+If you've worked with the **Model Context Protocol (MCP)** recently, this experience might feel familiar. The protocol itself is elegant. The tooling around it is… still evolving.
 
-I searched. Tools exist. But every option I tried felt like a partial solution.
+And the moment that really pushed me over the edge was using **MCP Inspector**.
 
-I started with `curl`. That lasted a while. MCP uses JSON-RPC, which means every request needs a carefully structured body with the right fields in the right format. If the server requires authentication, it gets worse. I found myself digging into codebases just to figure out what to put in the request. It works technically. It's also one of the least productive ways to spend time.
+Technically it works. But practically, it felt like trying to debug a distributed system through a keyhole.
 
-I looked at the official MCP Inspector. The setup process wasn't intuitive for me. `npx` commands and local Node.js configuration that I wasn't familiar with. I couldn't get comfortable with it fast enough to make it useful for my workflow.
+That frustration is what led to **[ProtoMCP](https://protomcp.io/)**.
 
-Other browser-based playgrounds I found were either unstable, didn't support locally running MCP servers, or required spinning up yet another local project just to test. None of them gave me what I actually wanted, which was to open a browser tab, paste a URL, connect, and start testing. The way Postman felt the first time I used it for REST APIs.
+The idea actually started in a Jaseci weekly sync. We were discussing MCP tooling when someone mentioned the need for a Postman-style playground. The idea stuck, but it didn't feel real until I ran into the problem myself.
+
+I was connecting the jac-mcp server to GitHub Copilot, trying to understand what tools were being called, what parameters they needed, what results they returned. The answer was: I had no idea. Copilot would call tools based on whatever prompt and model it chose, and I was left guessing.
+
+That's not testing. That's hoping.
 
 ```mermaid
 flowchart LR
@@ -39,25 +50,82 @@ flowchart LR
     C --> F2["Unfamiliar setup\nprocess"]
     D --> F3["Results depend on\nmodel and prompt"]
     E --> F4["No stable, guided\nexperience"]
+    F --> G["Enter ProtoMCP"]
+    F2 --> G
+    F3 --> G
+    F4 --> G
 ```
 
-What I wanted was a single, stable, browser-first tool built specifically for MCP. Not adapted from REST tooling. Not dependent on an LLM's interpretation. Not requiring a local Node.js setup. It didn't exist the way I needed it to, so I decided to build it.
-
-## What I Built
-
-MCP ProtoLab is an interactive playground for the Model Context Protocol. Connect to any MCP server, explore its capabilities, execute tools, invoke prompts, browse resources, all from the browser.
-
-![MCP ProtoLab Landing Page](../../assets/mcp-protolab/landing-page.png)
-
-The core experience is a three-panel workspace. The left sidebar lists your connected servers. The center panel lets you browse and search through tools, prompts, and resources. The right panel shows a real-time log of every request and response with timing data, status indicators, and full payload inspection.
-
-![MCP Server Registry](../../assets/mcp-protolab/playground.png)
+| Tool Type            | Example Tool   | Local MCP Servers                                  | Browser UI                                        | Auth Support                    | Request / Message Inspection                 | MCP-Aware |
+| -------------------- | -------------- | -------------------------------------------------- | ------------------------------------------------- | ------------------------------- | -------------------------------------------- | --------- |
+| CLI HTTP Client      | Curl           | ✅                                                  | ❌                                                 | ✅                               | Raw (verbose / trace output)                 | ❌         |
+| MCP Debugging Tool   | MCP Inspector  | ✅                                                  | Partial (UI runs in browser but launched locally) | ✅                               | Basic (tool calls, payloads, logs)           | ✅         |
+| API Testing Platform | Postman        | ✅                                                  | ✅                                                 | Strong (tokens, OAuth, headers) | Strong (request/response inspector, history) | ❌         |
+| API Testing Platform | Insomnia       | ✅                                                  | ❌ (desktop app)                                   | Strong                          | Strong                                       | ❌         |
+| Web MCP Playground   | MCP Playground | Mixed (often requires hosted endpoints or proxies) | ✅                                                 | Varies                          | Minimal–Moderate                             | Partial   |
 
 
-When you select a tool, MCP ProtoLab reads its schema and auto-generates a form with the right input fields. Fill them in, hit execute, and see the raw response immediately. No guessing what the LLM decided to send. You control exactly what goes to the server.
-![MCP Server Registry](../../assets/mcp-protolab/tool2.png)
+None of them gave me everything I needed.
 
-There is also a built-in registry of official MCP servers. Browse by transport type, search by name, and connect with one click.
+## The Moment Everything Broke
+
+While building MCP integrations, my workflow started looking like this:
+
+1. Connect to a server  
+2. Inspect the tool schema  
+3. Manually construct a JSON-RPC request  
+4. Send it  
+5. Get an error  
+6. Guess what went wrong  
+
+Typical request:
+
+```json
+{
+  "method": "tools/call",
+  "params": { ... }
+}
+```
+
+If anything changed — the schema, authentication, headers — the whole request had to be rewritten.
+
+Then debugging started. Was the session header wrong? Did the server expect streaming? Was the schema slightly different? Did the response fail halfway through a stream?
+
+The worst part wasn't the errors.
+
+It was the lack of visibility.
+
+When something failed, I'd add logs, restart the server, retry the request, and repeat. It worked, but it was slow. Painfully slow.
+
+I kept thinking:
+
+*"Why does testing MCP servers feel like writing a debugging tool every time?"*
+
+That was the moment ProtoMCP started.
+
+## What I Wanted Instead
+
+I didn’t want another CLI.
+
+I didn’t want another JSON editor.
+
+What I wanted was something that felt like Postman for MCP — a place where you could connect to a server instantly, see all available tools, run them without writing JSON, inspect requests and responses, and debug everything visually.
+
+Basically:
+
+*A proper developer UI for MCP.*
+
+So I built one.
+
+## Introducing ProtoMCP
+
+After a few late nights of debugging MCP servers, I realized the tool I wanted didn't exist.
+
+So I built ProtoMCP — a browser-based playground for connecting to MCP servers and seeing everything they expose without writing JSON.
+
+Once connected, ProtoMCP automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly — no scripts, no curl commands, no guessing the payload format.
+
+There's also a built-in registry of official MCP servers. Browse by transport type, search by name, and connect with one click.
 
 | Capability | What it does |
 |---|---|
@@ -70,17 +138,35 @@ There is also a built-in registry of official MCP servers. Browse by transport t
 | Auth support | Bearer token, API key, Basic auth |
 | Dual transport | Streamable HTTP and SSE |
 
-## The Build Story
+## What Using ProtoMCP Actually Feels Like
 
-**Investigating before building**
+The workflow becomes dramatically simpler.
 
-I didn't start coding immediately. I spent more time on research than I expected, understanding how MCP server testing works, what tools already existed, and whether building a browser-based testing platform was actually feasible. I used AI extensively for that investigation. I debated architecture decisions with ChatGPT and Claude, asked them to challenge my approach, and used them to map out the technical landscape. After reviewing what AI suggested, I verified facts by browsing documentation and existing projects myself. That research phase gave me the confidence that the gap was real and the approach was worth pursuing.
+1. Connect to a server
+2. Explore everything the server exposes
+3. Run tools without writing JSON
+4. Inspect every request and response
 
-**Why I chose Jac**
+One of the most useful parts of ProtoMCP is something simple:
 
-I had been working with Jac and had built projects using jac-client before. What made Jac the obvious choice for MCP ProtoLab is that I could build the entire application in one language. Frontend components, backend proxy, routing, state management, all in Jac. No switching between JavaScript and Python. No separate frontend and backend repos with their own configurations. One `jac.toml` file covers everything.
+**transparent request logging.**
 
-This matters more than it sounds. When I am debugging a request flow from a button click all the way through the backend and out to the MCP server, I am reading one language the whole time. I understand the full picture without any mental translation. And when working with AI to generate or refactor code, the single-language context means the suggestions stay consistent across the stack.
+Every request the UI sends is visible.
+
+So when something fails, you can instantly see the exact JSON-RPC request, the server response, whether streaming broke, and how long execution took.
+
+That visibility completely changes the debugging process.
+Instead of guessing what's wrong, you can actually see it.
+
+## Built Entirely in Jac
+
+Another interesting part of this project is how it was built.
+
+ProtoMCP is written entirely in Jac, the full-stack language from the Jaseci ecosystem. The same language powers the frontend UI, backend logic, and MCP transport handling. In practice this removed an entire layer of complexity — there's no separate React frontend, Python backend, or API glue layer. Everything lives in one coherent system.
+
+This matters more than it sounds. When I'm debugging a request flow from a button click all the way through the backend and out to the MCP server, I'm reading one language the whole time. I understand the full picture without any mental translation.
+
+A typical full-stack project comes with `package.json`, `tsconfig.json`, `vite.config.ts`, `requirements.txt`, and a pile of other config files. ProtoMCP has `jac.toml`. Dependencies, build config, deployment settings — all in one place. Less configuration means less friction.
 
 ```jac
 def:pub mcp_proxy(
@@ -91,46 +177,27 @@ def:pub mcp_proxy(
 ) -> dict;
 ```
 
-A typical full-stack project comes with `package.json`, `tsconfig.json`, `vite.config.ts`, `requirements.txt`, and a pile of other config files. MCP ProtoLab has `jac.toml`. Dependencies, build config, deployment settings, PWA metadata, all in one place. Less configuration means less friction, and less friction means faster iteration.
+For this project, UI components are written in Jac, backend proxy walkers handle CORS and sessions, and MCP transport logic runs directly in the runtime. It made building the whole playground much faster than expected.
 
-**Building with AI as a collaborator**
+## Building with AI as a Collaborator
 
-AI was not just a code generator for this project. It was more like a design partner that I kept interrogating.
+AI was more than a code generator for this project — it was like a design partner that I kept interrogating.
 
-For the initial design, I guided Claude through the requirements, described what I wanted, challenged its proposals, and iterated until the architecture felt right. Then I reviewed the output and cross-checked the facts by reading documentation myself.
+For the initial design, I guided Claude through the requirements, described what I wanted, challenged its proposals, and iterated until the architecture felt right. For the UI, I had reference designs in mind — the Postman layout, the dark-themed developer tool aesthetic — and AI generated components that were close to what I had in mind. Where a UI component might have taken me hours of CSS trial and error, AI got me most of the way there in minutes.
 
-For the UI, AI was genuinely fast. I had reference designs in mind, the Postman layout, the dark-themed developer tool aesthetic. I described these and AI generated components that were close to what I had in my head. Where a UI component might have taken me hours of CSS trial and error, AI got me most of the way there in minutes. I refined the rest.
-
-For technical problems, AI often surprised me with clean, direct solutions. When I was working through the CORS challenge, we debated approaches and landed on something elegant. Rather than fight the browser's restrictions, the Jac backend acts as a relay, forwarding requests to the MCP server and passing the response back. The browser only ever talks to the backend. AI suggested this quickly and it held up.
+For technical problems, AI often surprised me with clean, direct solutions. When I was working through the CORS challenge, we debated approaches and landed on something elegant. Rather than fight the browser's restrictions, the Jac backend acts as a relay, forwarding requests to the MCP server and passing the response back. The browser only ever talks to the backend.
 
 But I reviewed everything, especially the backend logic. AI accelerated the build. The judgment calls were still mine.
 
-```mermaid
-flowchart TD
-    A["Idea: MCP testing tool"] --> B["Research with AI\nfeasibility and landscape"]
-    B --> C["Design architecture\nAI-guided, human-reviewed"]
-    C --> D["Build UI components\nAI-generated, refined"]
-    D --> E["Solve technical challenges\nAI-assisted debugging"]
-    E --> F["Review and verify\nhuman judgment"]
-    F -->|"Iterate"| D
-    F --> G["Launch-ready"]
-```
+## The Hardest Problem: CORS
 
-**Technical challenges**
+The trickiest technical challenge was CORS. Browsers block requests made to arbitrary external URLs, which means a browser-based tool cannot talk directly to an MCP server hosted somewhere else.
 
-The hardest problem was CORS. Browsers block requests made to arbitrary external URLs, which means a browser-based tool cannot talk directly to an MCP server hosted somewhere else. The fix was building a proxy into the Jac backend. Every request from the browser goes to the backend first, the backend forwards it to the MCP server, and the response comes back through the same path. Simple idea, and it worked cleanly.
-
-The forms were a satisfying problem to solve. Each MCP tool describes its parameters in a standard schema format. MCP ProtoLab reads that schema and builds the right input fields automatically, text inputs for strings, number fields, toggle switches for booleans, and even a full code editor when it detects the parameter is code. No manual configuration needed.
-
-**How it came together quickly**
-
-From idea to something launch-ready took about a week. But more of that time went into research and design than into actual coding. Understanding the landscape, checking feasibility, and finalizing the architecture before writing a line of code made the build phase move fast.
-
-The Jaseci team helped throughout. They shared ideas, pointed me to resources, and gave feedback that made the project sharper than what I would have built on my own.
+The solution was building a proxy into the Jac backend. Every request from the browser goes to the backend first, the backend forwards it to the MCP server, and the response comes back through the same path. Simple idea, and it worked cleanly.
 
 ## What's Next
 
-MCP ProtoLab today is the initial release, a solid foundation to build on. There is more coming.
+ProtoMCP today is a solid foundation, but there's more coming.
 
 **Coming Soon**
 
@@ -149,10 +216,15 @@ MCP ProtoLab today is the initial release, a solid foundation to build on. There
 | Protocol compliance scorecard | One-click validation of your server against the MCP spec |
 | OAuth 2.1 flow support | Visual auth flow testing for remote MCP servers |
 
-This is an open source project. The initial release is the starting point, not the finish line. If any of these features interest you, or if you have ideas I have not thought of, contributions are welcome.
+## Try It Yourself
 
-**Try MCP ProtoLab:** [jac-mcp-playground.jaseci.org](https://jac-mcp-playground.jaseci.org/)
+ProtoMCP is fully open source. Explore it live, or run your own instance.
 
-**GitHub:** [github.com/jaseci-labs/jac-mcp-playground](https://github.com/jaseci-labs/jac-mcp-playground)
+**[protomcp.io](https://protomcp.io/)**
 
-Pick an issue, open a PR, or just try it and tell me what is missing. The goal is to build the MCP testing tool that developers actually want to use.
+**[GitHub repository](https://github.com/jaseci-labs/jac-mcp-playground)**
+
+This is the starting point, not the finish line. Pick an issue, open a PR, or just try it and tell me what's missing. The goal is to build the MCP testing tool that developers actually want to use.
+
+
+
