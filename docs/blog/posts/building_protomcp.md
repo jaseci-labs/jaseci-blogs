@@ -76,6 +76,8 @@ So I built ProtoMCP, a browser-based playground for connecting to MCP servers an
 
 Once connected, ProtoMCP automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly. No scripts, no curl commands, no guessing the payload format.
 
+You can also test your server through agent mode, where an actual LLM interacts with your tools and lets you see exactly how it interprets and invokes them, instead of manually filling forms.
+
 ![MCP Server Registry](../../assets/mcp-protolab/playground.png)
 
 There's also a built-in registry of official MCP servers. Browse by transport type, search by name, and connect with one click.
@@ -89,6 +91,7 @@ There's also a built-in registry of official MCP servers. Browse by transport ty
 | Tool execution | Auto-generated forms, direct execution |
 | Prompt invocation | Fill arguments, invoke prompts, inspect results |
 | Resource browsing | Browse resources with MIME type detection |
+| Agent mode | Test with real AI model calls, see how LLMs interact with your tools |
 | Request history | Real-time logs with timing, status badges, full JSON payloads |
 | Server registry | Pre-configured list of official MCP servers, one-click connect |
 | Auth support | Bearer token, API key, Basic auth |
@@ -159,7 +162,6 @@ ProtoMCP today is a solid foundation, but there's more coming.
 
 | Feature | What it enables |
 |---|---|
-| LLM agent integration | Test MCP servers with real AI model calls and see how an actual LLM interacts with your tools |
 | Saved collections | Persist connections and parameter presets across sessions |
 | Desktop agent | Connect to localhost and stdio MCP servers directly from the browser |
 
