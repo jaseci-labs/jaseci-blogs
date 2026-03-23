@@ -74,9 +74,11 @@ So I built ProtoMCP, a browser-based playground for connecting to MCP servers an
 
 ![MCP ProtoLab Landing Page](../../assets/mcp-protolab/landing-page.png)
 
-Once connected, ProtoMCP automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly. No scripts, no curl commands, no guessing the payload format.
+ProtoMCP has two modes: **Explore** and **Agent**.
 
-You can also test your server through agent mode, where an actual LLM interacts with your tools and lets you see exactly how it interprets and invokes them, instead of manually filling forms.
+**Explore Mode** is your interactive capability browser. Once connected, it automatically discovers tools, prompts, and resources. Each tool generates an interactive form from its schema, so you can run it instantly. 
+
+**Agent Mode** turns your connected MCP servers into an AI-powered assistant. An LLM autonomously selects and executes tools, chains multiple calls together, and reasons through complex tasks while you watch every step unfold in real time.
 
 ![MCP Server Registry](../../assets/mcp-protolab/playground.png)
 
@@ -96,6 +98,8 @@ There's also a built-in registry of official MCP servers. Browse by transport ty
 | Server registry | Pre-configured list of official MCP servers, one-click connect |
 | Auth support | Bearer token, API key, Basic auth |
 | Dual transport | Streamable HTTP and SSE |
+| Local support | Connect to localhost servers via ngrok tunnel |
+| Built-in servers | jac-mcp and jasketch available via builtin:// protocol |
 
 ## What Using ProtoMCP Actually Feels Like
 
