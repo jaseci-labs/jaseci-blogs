@@ -5,7 +5,7 @@ authors:
 categories:
   - Jac Programming
   - Fixing the Broken
-slug: why-jac-client-should-drop-meta-packages
+slug: why-jac-client-dropped-meta-packages
 ---
 
 # Sometimes, Meta-Packages Need to Go. Here's Why.
