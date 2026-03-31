@@ -5,22 +5,20 @@ authors:
 categories:
   - Jac Programming
   - Fixing the Broken
-slug: why-jac-client-dropped-meta-packages
+slug: why-jac-client-should-drop-meta-packages
 ---
 
-# Why We Ripped Out jac-client's Meta-Packages (And You Should Care)
+# jac-client's Meta-Packages Need to Go. Here's Why.
 
 If you've used `jac create --use client` to scaffold a Jac full-stack project, you've seen `jac-client-node` and `@jac-client/dev-deps` in your `jac.toml`. They're npm meta-packages — packages that exist solely to declare a list of other packages as dependencies. The idea: one line in your config gives you React, Vite, TypeScript, and everything else you need.
 
-Sounds clean. In practice, it's a trap.
-
-We just replaced both meta-packages with direct dependency injection, and this post explains why that matters — not just for Jac, but as a general argument against meta-packages in dependency management.
+Sounds clean. In practice, it's a trap. I think we should replace both meta-packages with direct dependency injection, and I want to make the case for why.
 
 <!-- more -->
 
-## What Was There Before
+## What's There Today
 
-Your `jac.toml` used to look like this:
+Your `jac.toml` currently looks like this:
 
 ```toml
 [dependencies.npm]
@@ -30,9 +28,9 @@ jac-client-node = "1.0.7"
 "@jac-client/dev-deps" = "2.0.0"
 ```
 
-Two lines. Behind the scenes, `jac-client-node` pulled in React, React DOM, React Router, React Error Boundary, React Hook Form, Zod, and Hookform Resolvers. `@jac-client/dev-deps` pulled in Vite, the Vite React plugin, TypeScript, and React type definitions.
+Two lines. Behind the scenes, `jac-client-node` pulls in React, React DOM, React Router, React Error Boundary, React Hook Form, Zod, and Hookform Resolvers. `@jac-client/dev-deps` pulls in Vite, the Vite React plugin, TypeScript, and React type definitions.
 
-This worked fine — until it didn't.
+This works fine — until it doesn't.
 
 ## The Problems
 
@@ -46,13 +44,13 @@ This isn't hypothetical. React is particularly nasty here because having two cop
 
 ### 2. Version Pinning Is Impossible
 
-Want to pin React to `18.2.0` exactly because `18.3.0` broke something in your app? Too bad. You don't control the React version — the meta-package does. Your options are:
+Say React `18.3.0` breaks something in your app and you need to pin to `18.2.0`. Right now? Too bad. You don't control the React version — the meta-package does. Your options are:
 
 - Override it in your `jac.toml` and hope the override takes precedence (it might not, depending on the package manager)
 - Fork the meta-package (absurd for what's just a dependency list)
 - Wait for us to publish a new meta-package version (slow, and we might disagree on the right version)
 
-With direct dependencies:
+With direct dependencies, you'd just write:
 
 ```toml
 [dependencies.npm]
@@ -63,7 +61,7 @@ Done. You control it. No ambiguity.
 
 ### 3. The Publishing Tax
 
-Every time we wanted to bump a single dependency — say, Vite from `6.3.0` to `6.4.1` — we had to:
+Every time we want to bump a single dependency — say, Vite from `6.3.0` to `6.4.1` — we have to:
 
 1. Update the meta-package's `package.json`
 2. Bump the meta-package version
@@ -71,13 +69,13 @@ Every time we wanted to bump a single dependency — say, Vite from `6.3.0` to `
 4. Update the version reference in the Jac plugin
 5. Release
 
-That's a full release cycle to change a version string. For a package whose entire purpose is a list of version strings. The meta-packages had no code. No logic. Just `dependencies` in a `package.json`. We were publishing empty boxes to npm and asking users to install them.
+That's a full release cycle to change a version string. For a package whose entire purpose is a list of version strings. These meta-packages have no code. No logic. Just `dependencies` in a `package.json`. We're publishing empty boxes to npm and asking users to install them.
 
 ### 4. The Opacity Problem
 
 When a new developer looks at `jac.toml` and sees `jac-client-node = "1.0.7"`, they learn nothing. What does this project actually depend on? They have to go find the meta-package's `package.json` (or install it and inspect `node_modules`) to answer that question. The config file, which should be the source of truth for "what does this project need," is hiding the answer behind an indirection.
 
-Compare with the new format:
+Compare with what direct dependencies would look like:
 
 ```toml
 [dependencies.npm]
@@ -99,11 +97,11 @@ typescript = "^5.3.3"
 
 More lines? Yes. But now you can actually read what your project needs. A developer seeing this for the first time knows immediately: this is a React app built with Vite and TypeScript. They know the versions. They know what to upgrade. No detective work required.
 
-## The Fix
+## What I'm Proposing
 
-The [change](https://github.com/jaseci-labs/jaseci/pull/5398) touches a few areas:
+I've put together [PR #5398](https://github.com/jaseci-labs/jaseci/pull/5398) that makes this change. Here's what it does:
 
-**The config loader** now injects individual packages instead of meta-packages. Dependencies are split into three clear categories:
+**The config loader** injects individual packages instead of meta-packages. Dependencies are split into three clear categories:
 
 | Category | Packages | Always Injected? |
 |----------|----------|-------------------|
@@ -111,9 +109,11 @@ The [change](https://github.com/jaseci-labs/jaseci/pull/5398) touches a few area
 | Optional runtime | react-hook-form, zod, @hookform/resolvers | Yes (separable later) |
 | Dev/build | vite, @vitejs/plugin-react, typescript, @types/react, @types/react-dom | Yes |
 
-**The migration path** handles existing projects automatically. If `jac-client-node` or `@jac-client/dev-deps` appears in your `jac.toml`, the plugin removes them and injects the individual packages on next load. No manual migration needed — it just happens.
+**Existing projects migrate automatically.** If `jac-client-node` or `@jac-client/dev-deps` appears in your `jac.toml`, the plugin removes them and injects the individual packages on next load. No manual steps, no breakage.
 
 **Error diagnostics** now reference specific packages instead of meta-packages, so when something's missing, the error message tells you exactly which package to add.
+
+**The meta-package directories are deleted.** No more `@jac-client/jac-client-deps/` and `jac-client-devDeps/` sitting in the repo as `package.json` files with nothing but a dependency list.
 
 ## The Broader Lesson
 
@@ -132,6 +132,8 @@ The npm ecosystem is littered with meta-packages that seemed like a good idea: `
 
 Direct dependencies aren't glamorous. They take up more vertical space in your config file. But they're honest, and in software, honesty scales better than cleverness.
 
----
+## The Ask
 
-*This change landed in [PR #5398](https://github.com/jaseci-labs/jaseci/pull/5398). Existing projects are migrated automatically — just update your Jac installation and the plugin handles the rest.*
+If this argument holds up, I'd appreciate eyes on [PR #5398](https://github.com/jaseci-labs/jaseci/pull/5398). The change is backward compatible, existing projects auto-migrate, and the meta-packages can be unpublished from npm once it lands. Every `jac.toml` becomes more readable, every version conflict becomes more debuggable, and we stop maintaining two npm packages that contain zero code.
+
+Let's kill the meta-packages.
