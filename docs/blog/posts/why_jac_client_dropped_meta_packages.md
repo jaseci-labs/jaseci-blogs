@@ -8,7 +8,7 @@ categories:
 slug: why-jac-client-should-drop-meta-packages
 ---
 
-# jac-client's Meta-Packages Need to Go. Here's Why.
+# Sometimes, Meta-Packages Need to Go. Here's Why.
 
 If you've used `jac create --use client` to scaffold a Jac full-stack project, you've seen `jac-client-node` and `@jac-client/dev-deps` in your `jac.toml`. They're npm meta-packages — packages that exist solely to declare a list of other packages as dependencies. The idea: one line in your config gives you React, Vite, TypeScript, and everything else you need.
 
