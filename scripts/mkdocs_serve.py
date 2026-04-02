@@ -164,9 +164,9 @@ def serve_with_watch() -> None:
     app.add_middleware(SecurityHeadersMiddleware)
 
     # Add health check endpoint
-    @app.route("/health")
     async def health_check(request: Request) -> Response:
         return Response("healthy\n", media_type="text/plain")
+    app.add_route("/health", health_check)
 
     app.mount("/", StaticFiles(directory=site_dir, html=True), name="static")
 
