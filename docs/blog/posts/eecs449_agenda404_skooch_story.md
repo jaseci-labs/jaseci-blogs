@@ -5,7 +5,6 @@ authors:
 categories:
   - Developers
   - AI
-  - Productivity
 slug: eecs449-agenda404-skooch-story
 ---
 # Building Skooch.ai in EECS 449: What Actually Happened Behind the Demo
