@@ -95,7 +95,7 @@ node Todo {
 }
 ```
 
-A `node` is a persistent data object in Jac's graph. You declare fields with types and defaults. The runtime handles storage. There's no ORM because there's no object-relational gap to bridge - the graph *is* the database.
+A `node` object, when connected to `root()`, is a persistent data object in Jac's graph. You declare fields with types and defaults. The runtime handles storage. There's no ORM because there's no object-relational gap to bridge - the graph *is* the database when connected to `root()`.
 
 ### SOTA - 14 lines
 
