@@ -8,15 +8,15 @@ categories:
 slug: jac-vs-sota-todo-app
 ---
 
-# Same App, 4x the Code: Anatomy of a Full-Stack Polyglot Tax
+# Same App, 5x the Code: Anatomy of a Full-Stack Polyglot Tax
 
 We built the exact same app twice. Once in Jac. Once with FastAPI, SQLAlchemy, LangChain, React, TypeScript, Vite, and Bun — the state-of-the-art (SOTA) stack that a senior engineer would reach for today. Same features, same UI, same AI-powered categorization, same persistence. Both QA-verified to behave identically.
 
-The Jac version is **2 files, 82 lines**. The SOTA version is **16 files, 311 lines**.
+The Jac version is **1 file, 46 lines** of application code. The SOTA version is **11 files, 233 lines**.
 
 These are good tools. FastAPI is arguably the best Python API framework. SQLAlchemy is the most mature Python ORM. LangChain is the dominant LLM orchestration library. React and TypeScript need no introduction. We picked the best of each category on purpose — this isn't a comparison against straw men.
 
-And yet, building with the best-in-class version of every tool still produces nearly 4x more code across 8x more files than expressing the same idea in a language designed to handle the full stack. We're calling this the **polyglot tax** — the code you write not to solve your problem, but to make your tools talk to each other across language, runtime, and type-system boundaries. This article is a line-by-line anatomy of where that tax shows up and what it costs.
+And yet, building with the best-in-class version of every tool still produces ~5x more application code across 11x more files than expressing the same idea in a language designed to handle the full stack. We're calling this the **polyglot tax** — the code you write not to solve your problem, but to make your tools talk to each other across language, runtime, and type-system boundaries. This article is a line-by-line anatomy of where that tax shows up and what it costs.
 
 <!-- more -->
 
@@ -39,13 +39,9 @@ def categorize(title: str) -> Category by llm();
 
 def:pub add_todo(title: str) -> Todo {
     try {
-        result = categorize(title);
-        category = str(result).split(".")[-1].lower();
-    } except Exception {
-        category = "other (setup AI key)";
-    }
-    todo = Todo(title=title, category=category);
-    root() ++> todo;
+        category = str(categorize(title)).split(".")[-1].lower();
+    } except Exception { }
+    root() ++> (todo := Todo(title=title, category=category));
     return todo;
 }
 
@@ -74,19 +70,11 @@ cl def:pub app -> JsxElement {
             <input
                 value={text}
                 onChange={lambda e: ChangeEvent { text = e.target.value;}}
-                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" {
-                    add();
-                }}}
+                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" { add(); }}}
                 placeholder="Add a todo..."
             />
-            <button onClick={add}>
-                Add
-            </button>
-            {[
-                <p key={jid(t)}>
-                    {t.title} ({t.category})
-                </p> for t in todos
-            ]}
+            <button onClick={add}>Add</button>
+            {[<p key={jid(t)}>{t.title} ({t.category})</p> for t in todos]}
         </div>;
 }
 ```
@@ -244,18 +232,14 @@ The deeper issue is about what the right interface to an LLM looks like. A type 
 
 ## Section 3: The API Layer
 
-### Jac — 12 lines
+### Jac — 10 lines
 
 ```jac
 def:pub add_todo(title: str) -> Todo {
     try {
-        result = categorize(title);
-        category = str(result).split(".")[-1].lower();
-    } except Exception {
-        category = "other (setup AI key)";
-    }
-    todo = Todo(title=title, category=category);
-    root() ++> todo;
+        category = str(categorize(title)).split(".")[-1].lower();
+    } except Exception { }
+    root() ++> (todo := Todo(title=title, category=category));
     return todo;
 }
 
@@ -363,7 +347,7 @@ That last part — `TodoResponse(id=todo.id, title=todo.title, ...)` — is part
 
 **Static file serving** (lines 64-69) — The backend serving the frontend's compiled assets. This exists because the frontend is a separate application. In Jac, `cl def` compiles into the server's asset pipeline — there's nothing to serve separately.
 
-**Expansion factor: ~5.8x**
+**Expansion factor: ~7x**
 
 ---
 
@@ -393,19 +377,11 @@ cl def:pub app -> JsxElement {
             <input
                 value={text}
                 onChange={lambda e: ChangeEvent { text = e.target.value;}}
-                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" {
-                    add();
-                }}}
+                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" { add(); }}}
                 placeholder="Add a todo..."
             />
-            <button onClick={add}>
-                Add
-            </button>
-            {[
-                <p key={jid(t)}>
-                    {t.title} ({t.category})
-                </p> for t in todos
-            ]}
+            <button onClick={add}>Add</button>
+            {[<p key={jid(t)}>{t.title} ({t.category})</p> for t in todos]}
         </div>;
 }
 ```
@@ -636,183 +612,19 @@ Seven dependencies for a todo app frontend. Notice `@types/react` and `@types/re
 
 ---
 
-## Section 5: Project Configuration — One Config vs Five
-
-Every project needs configuration. Dependencies, build settings, compiler options, runtime behavior. The question is how many separate config systems you're managing.
-
-### Jac — 34 lines, 1 file
-
-```toml
-[project]
-name = "mini-todo"
-version = "1.0.0"
-description = "Minimal full-stack AI todo app"
-entry-point = "main.jac"
-
-[dependencies.npm]
-react = "^18.2.0"
-react-dom = "^18.2.0"
-
-[dependencies.npm.dev]
-vite = "^6.4.1"
-"@vitejs/plugin-react" = "^4.2.1"
-typescript = "^5.3.3"
-"@types/react" = "^18.2.0"
-"@types/react-dom" = "^18.2.0"
-
-[dev-dependencies]
-watchdog = ">=3.0.0"
-
-[serve]
-base_route_app = "app"
-
-[plugins.scale]
-
-[plugins.client]
-
-[plugins.byllm.model]
-default_model = "claude-sonnet-4-20250514"
-```
-
-One file declares everything: Python dependencies, npm dependencies, dev dependencies, server config, plugin config, and LLM model selection. `jac start` reads this and does the rest — installs packages across both ecosystems, builds the frontend, starts the server.
-
-The key observation: both Python and JavaScript dependencies live in the same file. There's no cognitive split between "backend config" and "frontend config" because there's no backend/frontend split.
-
-### SOTA — 78 lines across 5 files
-
-The same concerns are spread across five files in two different ecosystems.
-
-**`pyproject.toml`** — Python dependencies:
-
-```toml
-[project]
-name = "mini-todo-sota"
-version = "1.0.0"
-description = "Minimal full-stack AI todo app (SOTA stack)"
-requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.121.0",
-    "uvicorn>=0.38.0",
-    "sqlalchemy>=2.0.49",
-    "aiosqlite>=0.22.0",
-    "langchain>=1.2.0",
-    "langchain-anthropic>=1.4.0",
-]
-```
-
-Six runtime dependencies for the backend alone: a web framework, a server, an ORM, a database driver, and two LangChain packages. Each of these pulls in its own transitive dependency tree. Jac's backend has zero Python dependencies beyond the Jac runtime itself — the framework, ORM, and LLM integration are language features, not library choices.
-
-**`frontend/package.json`** — JavaScript dependencies and build scripts:
-
-```json
-{
-  "name": "frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.4"
-  }
-}
-```
-
-Seven npm dependencies. The `scripts` section defines build commands — `"build": "tsc -b && vite build"` chains two separate tools. The `@types/*` packages exist because React's runtime and its type definitions are maintained by different teams.
-
-**`frontend/vite.config.ts`** — Build tool configuration:
-
-```typescript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': 'http://localhost:8001',
-    },
-  },
-})
-```
-
-The proxy config is the tell: `'/api': 'http://localhost:8001'` exists because the frontend and backend are separate processes. This is configuration that manages the seam between two applications pretending to be one.
-
-**`frontend/tsconfig.json`** and **`frontend/tsconfig.app.json`** — TypeScript compiler configuration:
-
-```json
-{
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" }
-  ]
-}
-```
-
-```json
-{
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "es2023",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "module": "esnext",
-    "types": ["vite/client"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": ["src"]
-}
-```
-
-31 lines configuring how TypeScript compiles. Target version, module resolution, JSX transform, linting rules. Every setting is a negotiation between TypeScript, Vite, and React. Projects copy these from templates and tweak them, because getting the combination right from scratch requires understanding how three tools interact.
-
-### What this reveals
-
-The Jac config is one file because Jac owns the full stack. It doesn't need to negotiate between independent tools because there aren't independent tools to negotiate between.
-
-The SOTA config is five files because five tools need to be told about each other. The `pyproject.toml` doesn't know about `package.json`. The `tsconfig` doesn't know about `pyproject.toml`. The `vite.config.ts` needs to know about both the TypeScript compiler and the backend server. Each file is a point of configuration for a tool that was designed in isolation, and the developer's job is to make them agree.
-
-This is the polyglot tax applied to configuration. Each tool is well-designed on its own. The tax comes from the spaces between them.
-
-**Expansion factor: ~2.3x**
-
----
-
 ## The Full Scorecard
 
 | Section | Jac | SOTA | Factor |
 |---------|-----|------|--------|
 | Data model | 5 lines | 14 lines, 1 file | 2.8x |
 | AI categorization | 3 lines | 48 lines, 1 file | 16x |
-| API + server | 12 lines | 70 lines, 1 file | 5.8x |
+| API + server | 10 lines | 70 lines, 1 file | 7x |
 | Frontend | 28 lines | 101 lines, 8 files | 3.6x |
-| Configuration | 34 lines, 1 file | 78 lines, 5 files | 2.3x |
-| **Total** | **82 lines, 2 files** | **311 lines, 16 files** | **3.8x**
+| **Total** | **46 lines, 1 file** | **233 lines, 11 files** | **~5x**
 
 ---
 
-## Where the Extra 229 Lines Come From
+## Where the Extra 187 Lines Come From
 
 The extra code isn't random — it falls into clear categories:
 
@@ -828,7 +640,7 @@ None of this code is *wrong*. Every line exists for a reason. The SOTA tools are
 
 ## Types Across Every Boundary
 
-The thread that connects all five sections is **types**, and what happens to them at boundaries.
+The thread that connects all four sections is **types**, and what happens to them at boundaries.
 
 In the SOTA version, the `Todo` type exists in four representations: a SQLAlchemy class, a Pydantic model, a TypeScript interface, and (implicitly) the structure the LLM prompt describes in English. These representations are maintained independently, in different languages, by different tools. When they agree, the app works. When they drift, the bugs are silent — wrong fields, missing data, miscategorized items — because the failures happen at runtime across process boundaries where no compiler is watching.
 
@@ -851,7 +663,7 @@ Both versions are open source and runnable. The full code lives at [github.com/m
 - **`jac/`** — The Jac version. Run with `jac start`.
 - **`sota/`** — The SOTA version. Run with `./run.sh` (requires Python 3.12+, Bun, and an `ANTHROPIC_API_KEY`).
 
-We QA-tested both with the same automated browser test suite — add via button, add via Enter, empty/whitespace rejection, XSS safety, AI categorization across all five categories, and data persistence after reload. Both pass every test. Same app, same behavior, same results. One takes 82 lines and the other takes 311.
+We QA-tested both with the same automated browser test suite — add via button, add via Enter, empty/whitespace rejection, XSS safety, AI categorization across all five categories, and data persistence after reload. Both pass every test. Same app, same behavior, same results. One takes 46 lines and the other takes 233.
 
 ## What This Comparison Is and Isn't
 
@@ -863,4 +675,31 @@ Every era of developer tooling has eliminated a category of this kind of code. C
 
 Jac eliminates the polyglot tax by eliminating the polyglot. One language across storage, API, frontend, and AI. It's not magic — it's a compiler that owns the full stack, so it can enforce types and generate plumbing across boundaries that no single SOTA tool can see.
 
-The 229 extra lines aren't wrong. They're just not doing what you hired them to do.
+The 187 extra lines aren't wrong. They're just not doing what you hired them to do.
+
+---
+
+## Bonus: The Configuration Tax
+
+The scorecard above covers application code only. But the polyglot tax extends to project configuration too — and the ratio there tells its own story.
+
+### Jac — 34 lines, 1 file
+
+`jac.toml` declares everything in one place: Python dependencies, npm dependencies, dev dependencies, server config, plugin config, and LLM model selection. Both ecosystems, one file. `jac start` reads it and does the rest.
+
+### SOTA — 78 lines across 5 files
+
+The same concerns are spread across five files in two ecosystems:
+
+- **`pyproject.toml`** (13 lines) — Six Python runtime dependencies: web framework, server, ORM, database driver, two LangChain packages.
+- **`frontend/package.json`** (22 lines) — Seven npm dependencies. Build scripts chain two tools: `"build": "tsc -b && vite build"`.
+- **`frontend/vite.config.ts`** (12 lines) — The dev proxy `'/api': 'http://localhost:8001'` exists because frontend and backend are separate processes.
+- **`frontend/tsconfig.json`** + **`frontend/tsconfig.app.json`** (31 lines) — TypeScript compiler configuration negotiating between TypeScript, Vite, and React.
+
+### The pattern
+
+The Jac config is one file because Jac owns the full stack. The SOTA config is five files because five tools need to be told about each other. The `pyproject.toml` doesn't know about `package.json`. The `tsconfig` doesn't know about `pyproject.toml`. The `vite.config.ts` needs to know about both. Each file is a point of configuration for a tool designed in isolation, and the developer's job is to make them agree.
+
+**Configuration expansion: 34 lines → 78 lines (2.3x), 1 file → 5 files.**
+
+Including configuration, the full totals become **80 lines, 2 files** (Jac) vs **311 lines, 16 files** (SOTA) — still roughly a 4x gap.
