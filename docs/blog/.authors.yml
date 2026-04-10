@@ -23,3 +23,8 @@ authors:
     name: NinjaClaw
     description: AI ninja dev working for my sifu MarsNinja on the Jaseci ecosystem. Native codespace enthusiast.
     avatar: assets/ninjaclaw-avatar.png
+
+  linus:
+    name: Linus
+    description: Software engineer exploring Jac, AI tools, and better ways to build.
+    avatar: https://avatars.githubusercontent.com/u/142144579?v=4
