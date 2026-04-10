@@ -10,9 +10,9 @@ slug: jac-vs-sota-todo-app
 
 # Same App, 5x the Code: Anatomy of a Full-Stack Polyglot Tax
 
-We built the exact same app twice. Once in Jac. Once with FastAPI, SQLAlchemy, LangChain, React, TypeScript, Vite, and Bun - the state-of-the-art (SOTA) stack that a senior engineer would reach for today. Same features, same UI, same AI-powered categorization, same persistence. Both QA-verified to behave identically.
+We built the exact same app twice. Once with FastAPI, SQLAlchemy, LangChain, React, TypeScript, Vite, and Bun - the state-of-the-art (SOTA) stack that a senior engineer would reach for today. Once in Jac. Same features, same UI, same AI-powered categorization, same persistence. Both QA-verified to behave identically.
 
-The Jac version is **1 file, 46 lines** of application code. The SOTA version is **11 files, 233 lines**.
+The SOTA version is **11 files, 233 lines** of application code. The Jac version is **1 file, 46 lines**.
 
 These are good tools. FastAPI is arguably the best Python API framework. SQLAlchemy is the most mature Python ORM. LangChain is the dominant LLM orchestration library. React and TypeScript need no introduction. We picked the best of each category on purpose - this isn't a comparison against straw men.
 
@@ -20,66 +20,7 @@ And yet, building with the best-in-class version of every tool still produces ~5
 
 <!-- more -->
 
-## The Complete Jac App
-
-Here's the whole thing. One source file.
-
-### `main.jac`
-
-```jac
-node Todo {
-    has title: str,
-        category: str = "other",
-        done: bool = False;
-}
-
-enum Category { WORK, PERSONAL, SHOPPING, HEALTH, OTHER }
-
-def categorize(title: str) -> Category by llm();
-
-def:pub add_todo(title: str) -> Todo {
-    try {
-        category = str(categorize(title)).split(".")[-1].lower();
-    } except Exception { }
-    root() ++> (todo := Todo(title=title, category=category));
-    return todo;
-}
-
-def:pub get_todos -> list[Todo] {
-    return [root()-->][?:Todo];
-}
-
-cl def:pub app -> JsxElement {
-    has todos: list[Todo] = [],
-        text: str = "";
-
-    async can with entry {
-        todos = await get_todos();
-    }
-
-    async def add {
-        if text.strip() {
-            todo = await add_todo(text.strip());
-            todos = todos + [todo];
-            text = "";
-        }
-    }
-
-    return
-        <div>
-            <input
-                value={text}
-                onChange={lambda e: ChangeEvent { text = e.target.value;}}
-                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" { add(); }}}
-                placeholder="Add a todo..."
-            />
-            <button onClick={add}>Add</button>
-            {[<p key={jid(t)}>{t.title} ({t.category})</p> for t in todos]}
-        </div>;
-}
-```
-
-Now let's walk through each section and see what the same intent looks like in the SOTA stack.
+Let's walk through the app section by section - Jac first to show the intent, then the SOTA equivalent to show the cost.
 
 ---
 
@@ -676,6 +617,67 @@ Every era of developer tooling has eliminated a category of this kind of code. C
 Jac eliminates the polyglot tax by eliminating the polyglot. One language across storage, API, frontend, and AI. It's not magic - it's a compiler that owns the full stack, so it can enforce types and generate plumbing across boundaries that no single SOTA tool can see.
 
 The 187 extra lines aren't wrong. They're just not doing what you hired them to do.
+
+---
+
+## The Complete Jac App
+
+You've now seen each piece in context. Here's the whole thing - one file, 46 lines:
+
+```jac
+node Todo {
+    has title: str,
+        category: str = "other",
+        done: bool = False;
+}
+
+enum Category { WORK, PERSONAL, SHOPPING, HEALTH, OTHER }
+
+def categorize(title: str) -> Category by llm();
+
+def:pub add_todo(title: str) -> Todo {
+    try {
+        category = str(categorize(title)).split(".")[-1].lower();
+    } except Exception { }
+    root() ++> (todo := Todo(title=title, category=category));
+    return todo;
+}
+
+def:pub get_todos -> list[Todo] {
+    return [root()-->][?:Todo];
+}
+
+cl def:pub app -> JsxElement {
+    has todos: list[Todo] = [],
+        text: str = "";
+
+    async can with entry {
+        todos = await get_todos();
+    }
+
+    async def add {
+        if text.strip() {
+            todo = await add_todo(text.strip());
+            todos = todos + [todo];
+            text = "";
+        }
+    }
+
+    return
+        <div>
+            <input
+                value={text}
+                onChange={lambda e: ChangeEvent { text = e.target.value;}}
+                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" { add(); }}}
+                placeholder="Add a todo..."
+            />
+            <button onClick={add}>Add</button>
+            {[<p key={jid(t)}>{t.title} ({t.category})</p> for t in todos]}
+        </div>;
+}
+```
+
+Data model, AI categorization, API, and full-stack reactive UI. No ORM, no prompt template, no fetch ceremony, no type mirroring. One type system from database to browser to LLM.
 
 ---
 
