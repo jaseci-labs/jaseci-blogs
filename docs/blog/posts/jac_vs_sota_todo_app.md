@@ -20,7 +20,64 @@ And yet, building with the best-in-class version of every tool still produces ~5
 
 <!-- more -->
 
-Let's walk through the app section by section - Jac first to show the intent, then the SOTA equivalent to show the cost.
+## The Complete Jac App
+
+Here's the Jac version. One file, 46 lines:
+
+```jac
+node Todo {
+    has title: str,
+        category: str = "other",
+        done: bool = False;
+}
+
+enum Category { WORK, PERSONAL, SHOPPING, HEALTH, OTHER }
+
+def categorize(title: str) -> Category by llm();
+
+def:pub add_todo(title: str) -> Todo {
+    try {
+        category = str(categorize(title)).split(".")[-1].lower();
+    } except Exception { }
+    root() ++> (todo := Todo(title=title, category=category));
+    return todo;
+}
+
+def:pub get_todos -> list[Todo] {
+    return [root()-->][?:Todo];
+}
+
+cl def:pub app -> JsxElement {
+    has todos: list[Todo] = [],
+        text: str = "";
+
+    async can with entry {
+        todos = await get_todos();
+    }
+
+    async def add {
+        if text.strip() {
+            todo = await add_todo(text.strip());
+            todos = todos + [todo];
+            text = "";
+        }
+    }
+
+    return
+        <div>
+            <input
+                value={text}
+                onChange={lambda e: ChangeEvent { text = e.target.value;}}
+                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" { add(); }}}
+                placeholder="Add a todo..."
+            />
+            <button onClick={add}>Add</button>
+            {[<p key={jid(t)}>{t.title} ({t.category})</p> for t in todos]}
+        </div>;
+}
+```
+
+Now let's walk through each section and see what the same intent costs in the SOTA stack.
 
 ---
 
@@ -617,67 +674,6 @@ Every era of developer tooling has eliminated a category of this kind of code. C
 Jac eliminates the polyglot tax by eliminating the polyglot. One language across storage, API, frontend, and AI. It's not magic - it's a compiler that owns the full stack, so it can enforce types and generate plumbing across boundaries that no single SOTA tool can see.
 
 The 187 extra lines aren't wrong. They're just not doing what you hired them to do.
-
----
-
-## The Complete Jac App
-
-You've now seen each piece in context. Here's the whole thing - one file, 46 lines:
-
-```jac
-node Todo {
-    has title: str,
-        category: str = "other",
-        done: bool = False;
-}
-
-enum Category { WORK, PERSONAL, SHOPPING, HEALTH, OTHER }
-
-def categorize(title: str) -> Category by llm();
-
-def:pub add_todo(title: str) -> Todo {
-    try {
-        category = str(categorize(title)).split(".")[-1].lower();
-    } except Exception { }
-    root() ++> (todo := Todo(title=title, category=category));
-    return todo;
-}
-
-def:pub get_todos -> list[Todo] {
-    return [root()-->][?:Todo];
-}
-
-cl def:pub app -> JsxElement {
-    has todos: list[Todo] = [],
-        text: str = "";
-
-    async can with entry {
-        todos = await get_todos();
-    }
-
-    async def add {
-        if text.strip() {
-            todo = await add_todo(text.strip());
-            todos = todos + [todo];
-            text = "";
-        }
-    }
-
-    return
-        <div>
-            <input
-                value={text}
-                onChange={lambda e: ChangeEvent { text = e.target.value;}}
-                onKeyPress={lambda e: KeyboardEvent { if e.key == "Enter" { add(); }}}
-                placeholder="Add a todo..."
-            />
-            <button onClick={add}>Add</button>
-            {[<p key={jid(t)}>{t.title} ({t.category})</p> for t in todos]}
-        </div>;
-}
-```
-
-Data model, AI categorization, API, and full-stack reactive UI. No ORM, no prompt template, no fetch ceremony, no type mirroring. One type system from database to browser to LLM.
 
 ---
 
