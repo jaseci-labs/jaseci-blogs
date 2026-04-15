@@ -100,6 +100,7 @@ plugins:
         - AI
         - Web Development
         - Developers
+        - Community
       authors: true
       authors_file: "{blog}/.authors.yml"
       pagination: true
