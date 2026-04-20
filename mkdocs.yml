@@ -103,6 +103,7 @@ plugins:
         - Web Development
         - Developers
         - Hackathon
+        - Community
       authors: true
       authors_file: "{blog}/.authors.yml"
       pagination: true
