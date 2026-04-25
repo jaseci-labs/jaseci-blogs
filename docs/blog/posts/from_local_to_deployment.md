@@ -1,7 +1,7 @@
 ---
 date: 2026-04-25
 authors:
-  - Zicong
+  - zicong
 categories:
   - Reflection
   - Engineering
