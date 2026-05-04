@@ -89,7 +89,7 @@ Whether you’re a developer curious about AI-native programming, a university l
 
 * **Star us on GitHub:** [github.com/Jaseci-Labs](https://github.com/Jaseci-Labs)
 
-* **Join the community:** *\[Discord/Slack/Forum link\]*
+* **Join the community:** [Discord](https://discord.com/invite/6j3QNdtcN6)
 
 * **Install Jac:** pip install jaclang
 
