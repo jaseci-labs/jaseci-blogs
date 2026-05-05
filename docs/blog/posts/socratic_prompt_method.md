@@ -5,6 +5,7 @@ authors:
 categories:
   - Jac Programming
   - Developers
+image: /assets/jaseci_labs_logo.jpg
 slug: socratic-prompt-method
 ---
 

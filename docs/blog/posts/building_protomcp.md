@@ -6,6 +6,7 @@ categories:
   - Developers
   - Jac Programming
   - Web Development
+image: /assets/mcp-protolab/landing-page.png
 slug: building-protomcp
 ---
 # I Built a Postman for MCP Servers. Here's the Story.

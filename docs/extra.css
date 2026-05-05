@@ -806,3 +806,131 @@
     margin-left: auto;
     margin-right: auto;
 }
+
+/* ── Medium-Style Blog Thumbnails ── */
+
+/* Blog post cards - clean Medium style */
+article.md-post {
+    padding: var(--space-8) 0;
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: var(--space-8);
+    border-bottom: 1px solid var(--border);
+}
+
+/* Top section wrapper for title + image */
+.md-post__header-section {
+    display: flex;
+    gap: 5%;
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+    width: 100%;
+}
+
+/* Title area - 70% width */
+.md-post__title-area {
+    width: 70%;
+    flex-shrink: 0;
+}
+
+/* Blog post title - balanced font size with proper wrapping */
+.md-post__title,
+.md-post__title-container h1,
+.md-post__title-container h2,
+.md-post__title-container h3 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    line-height: 1.3;
+    margin: 0 !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Target title container specifically */
+.md-post__title-container {
+    width: 70% !important;
+    flex-shrink: 0 !important;
+}
+
+/* Ensure title container children have proper sizing */
+.md-post__title-container > * {
+    font-size: 1.5rem !important;
+}
+
+/* Thumbnail area - 25% width */
+.md-post__thumbnail {
+    width: 25%;
+    height: 120px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-base);
+    margin-top: var(--space-2);
+}
+
+.md-post__thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Content area - full width below header */
+.md-post__content-area {
+    width: 100%;
+}
+
+/* Desktop layout */
+@media (min-width: 768px) {
+    .md-post__header-section {
+        flex-direction: row;
+    }
+
+    /* Title takes 70% */
+    .md-post__title {
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Thumbnail takes 25% */
+    .md-post__thumbnail {
+        width: 25%;
+        height: 120px;
+    }
+}
+
+/* Large desktop - slightly larger images */
+@media (min-width: 1200px) {
+    .md-post__thumbnail {
+        height: 140px;
+    }
+}
+
+/* Mobile: Stack title and image, content below */
+@media (max-width: 767px) {
+    article.md-post {
+        padding: var(--space-6) 0;
+    }
+
+    .md-post__header-section {
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    .md-post__title-area {
+        width: 100%;
+    }
+
+    .md-post__thumbnail {
+        width: 100%;
+        height: 180px;
+        margin-top: 0;
+    }
+
+    .md-post__content-area {
+        width: 100%;
+    }
+}

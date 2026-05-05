@@ -6,6 +6,7 @@ categories:
   - Jac Programming
   - Web Development
   - AI
+image: /assets/jaseci_labs_logo.jpg
 slug: browser-automation-walkers-fix-it
 ---
 

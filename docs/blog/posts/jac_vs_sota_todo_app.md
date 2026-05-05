@@ -5,6 +5,7 @@ authors:
 categories:
   - Jac Programming
   - Web Development
+image: /assets/jaseci_labs_logo.jpg
 slug: jac-vs-sota-todo-app
 ---
 

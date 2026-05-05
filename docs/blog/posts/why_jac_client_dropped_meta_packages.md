@@ -5,6 +5,7 @@ authors:
 categories:
   - Jac Programming
   - Fixing the Broken
+image: /assets/jaseci_labs_logo.jpg
 slug: why-jac-client-should-drop-meta-packages
 ---
 

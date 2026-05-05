@@ -5,6 +5,7 @@ authors:
 categories:
   - Jac Programming
   - Tutorials
+image: /assets/jaseci_labs_logo.jpg
 slug: python-getting-jacd
 ---
 

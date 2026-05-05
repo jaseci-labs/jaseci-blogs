@@ -4,6 +4,7 @@ authors:
   - asim
 categories:
   - Jac Programming
+image: /assets/jaseci_labs_logo.jpg
 slug: making-jac-scale-traversals-faster
 ---
 
