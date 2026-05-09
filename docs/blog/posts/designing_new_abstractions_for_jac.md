@@ -42,9 +42,10 @@ graph TD
     TOP -. "depends on" .-> MID
     BOT -. "depends on" .-> MID
 
-    style TOP fill:#e3f2fd,stroke:#1565c0,color:#000
-    style MID fill:#fff8e1,stroke:#f57f17,color:#000
-    style BOT fill:#e3f2fd,stroke:#1565c0,color:#000
+    classDef appLayer fill:#1565c0,stroke:#0d47a1,color:#ffffff
+    classDef coreLayer fill:#e65100,stroke:#bf360c,color:#ffffff
+    class A,C,D,E,F,G appLayer
+    class B coreLayer
 ```
 
 The **top layer** is user code — the applications people build with Jac. It consumes abstractions but doesn't define them. The **middle layer** is the Jac language and runtime itself — it *defines and exposes* the abstractions that make Jac what it is. The **bottom layer** is the plugin ecosystem — packages like `jac-scale` (scaling and persistence), `byllm` (LLM integrations), `jac-client` (full-stack web), and `jac-mcp` (AI dev tooling) that provide implementations and capabilities without changing the core language semantics. All plugins register via `[project.entry-points."jac"]` and can override runtime behavior, but they never alter what keywords or builtins exist.
@@ -76,9 +77,12 @@ graph BT
     S -- "promote only when..." --> B
     B -- "promote only when..." --> K
 
-    style S fill:#d4edda,stroke:#28a745,color:#000
-    style B fill:#fff3cd,stroke:#ffc107,color:#000
-    style K fill:#f8d7da,stroke:#dc3545,color:#000
+    classDef green fill:#1b5e20,stroke:#2e7d32,color:#ffffff
+    classDef yellow fill:#a1660a,stroke:#ffb300,color:#ffffff
+    classDef red fill:#7f1d1d,stroke:#c62828,color:#ffffff
+    class S green
+    class B yellow
+    class K red
 ```
 
 The gravity should always pull downward. Here's why: a keyword you regret is nearly impossible to remove without breaking the world. A builtin you regret is painful to deprecate. A standard library module you regret is just a deprecation notice and a migration guide. The cost of being wrong increases dramatically as you move up the ladder.
@@ -298,10 +302,10 @@ flowchart TD
     Q8 -- "Plugin-specific" --> PL["🟢 <b>Standard Library</b><br/><i>in plugin's namespace</i><br/>e.g. jac_scale.abstractions"]
     Q8 -- "Cross-cutting" --> SL["🟢 <b>Standard Library</b><br/><i>in jac core</i><br/>e.g. jaclang modules"]
 
-    style KW fill:#f8d7da,stroke:#dc3545,color:#000
-    style BI fill:#fff3cd,stroke:#ffc107,color:#000
-    style SL fill:#d4edda,stroke:#28a745,color:#000
-    style PL fill:#d4edda,stroke:#28a745,color:#000
+    style KW fill:#7f1d1d,stroke:#c62828,color:#ffffff
+    style BI fill:#a1660a,stroke:#ffb300,color:#ffffff
+    style SL fill:#1b5e20,stroke:#2e7d32,color:#ffffff
+    style PL fill:#1b5e20,stroke:#2e7d32,color:#ffffff
 ```
 
 ### Keyword checklist — all must be true
