@@ -51,13 +51,15 @@ The **top layer** is user code — the applications people build with Jac. It co
 
 Notice the critical property: the two lower layers are both labeled "nothing app-specific." This means no business logic leaks into the platform layers. And the top and bottom layers are *independent of each other* — a Jac program runs identically whether `jac-scale` is installed or not.
 
-Within the middle layer — Jac itself — abstractions further subdivide into three categories:
+Across the middle and bottom layers, the abstractions available to Jac programmers subdivide into three categories:
 
 1. **Language-level keywords** — `walker`, `node`, `edge`, `can`, `has`, `spawn`, `visit`, `entry`, `exit`
 2. **Builtins** — `jid()`, `jobj()`, `grant()`, `revoke()`, `allroots()`, `save()`, `commit()`, `printgraph()`
-3. **Standard library** — importable modules that ship with Jac but require explicit `import from`
+3. **Standard library** — importable modules that require explicit `import from`, provided by `jac` core *and* the standard ecosystem plugins (`byllm`, `jac-scale`, `jac-client`, `jac-mcp`, etc.)
 
-These aren't arbitrary categories. Each one has a fundamentally different relationship with the programmer, the compiler, and the runtime. Getting the placement wrong has compounding consequences.
+That third category is important to understand correctly. The standard library isn't confined to the `jac` package — it spans the entire standard Jaseci ecosystem. When you `import from byllm.lib { Model }` or `import from jac_scale.abstractions { DatabaseProvider }`, you're importing from the standard library. These plugins are distributed as separate packages, but they're part of the official platform. The defining characteristic of a standard library abstraction isn't *which package* it lives in — it's that **it requires an explicit import**.
+
+These three categories aren't arbitrary. Each one has a fundamentally different relationship with the programmer, the compiler, and the runtime. Getting the placement wrong has compounding consequences.
 
 ## The Promotion Ladder
 
@@ -207,9 +209,14 @@ If your proposed builtin wouldn't make sense across different runtime backends, 
 
 The standard library is where **everything else** goes. This should be the presumed destination for any new abstraction unless there's a compelling argument to promote it.
 
+Crucially, the standard library spans the entire Jaseci ecosystem — it's not just what's inside the `jac` core package. Abstractions in `byllm`, `jac-scale`, `jac-client`, `jac-mcp`, and other official plugins are all part of the standard library. They're distributed as separate packages for modularity, but from a design perspective they share the same category: **import-required abstractions provided by the standard Jaseci platform.**
+
+This means when you're adding a new abstraction to *any* standard ecosystem plugin, you're contributing to the standard library. The same design principles apply whether the code lands in `jac/jaclang/`, `byllm/`, or `jac_scale/`.
+
 The standard library is for:
 
-- **Domain-specific utilities** — LLM interfaces, HTTP clients, file I/O, data processing
+- **Domain-specific utilities** — LLM interfaces (`byllm`), HTTP clients, file I/O, data processing
+- **Platform capabilities** — scaling and persistence (`jac-scale`), full-stack web (`jac-client`), dev tooling (`jac-mcp`)
 - **Features with multiple reasonable implementations** — a user might want to swap one library for another
 - **Anything where not every program needs it** — if the typical Jac program doesn't use it, it shouldn't be a builtin or keyword
 - **Features where explicit imports improve readability** — when you see `import from byllm.lib Model`, you immediately know this file does LLM work; that's a signal that keywords and builtins can't provide
@@ -232,29 +239,29 @@ Nobody is surprised by `import from http.client { Request }`. They *would* be su
 
 4. **Lower review bar.** Adding a standard library module requires careful API design but doesn't require grammar changes, compiler modifications, or runtime interface updates. This means faster iteration.
 
-## The Plugin Rule: Always Standard Library
+## The Plugin Rule: Imports Required, No Exceptions
 
-This deserves its own section because it's a hard rule with no exceptions:
+Whether a plugin is part of the standard Jaseci ecosystem or a third-party community contribution, one hard rule applies universally:
 
-**Any abstraction introduced by a plugin must live in the plugin's own importable namespace and require explicit imports.**
+**Any new abstraction introduced by a plugin must live in the plugin's own importable namespace and require explicit imports.**
 
-`jac-scale` gets this right. Its abstractions live under `jac_scale.abstractions`:
+No plugin — standard or otherwise — gets to inject new builtins or keywords. The standard ecosystem plugins (`jac-scale`, `byllm`, `jac-client`, `jac-mcp`) are part of the standard library, but they're still *import-required*. Their abstractions live in their own namespaces:
 
 ```jac
 import from jac_scale.abstractions { DatabaseProvider }
 import from jac_scale.abstractions { DeploymentTarget }
-import from jac_scale.abstractions { ImageRegistry }
+import from byllm.lib { Model }
 ```
 
 The reasoning is airtight:
 
-**Plugins are optional by definition.** If a plugin could inject something into builtins or keywords, you'd break the contract that a Jac program's meaning is stable regardless of installed plugins. Code that works on your machine shouldn't break on someone else's because they don't have the plugin.
+**Plugins are modular by design.** Even standard ecosystem plugins aren't guaranteed to be installed in every environment. If a plugin could inject into builtins or keywords, you'd break the contract that a Jac program's core behavior is stable regardless of which plugins are present.
 
-**Explicit imports make dependencies visible.** When you see `import from jac_scale.abstractions DatabaseProvider`, you *know* this code requires `jac-scale`. If it were a magically-appearing builtin, you'd have invisible dependencies — the worst kind of coupling.
+**Explicit imports make dependencies visible.** When you see `import from jac_scale.abstractions DatabaseProvider`, you *know* this code requires `jac-scale`. If it were a magically-appearing builtin, you'd have invisible dependencies — the worst kind of coupling. This applies equally to standard and community plugins.
 
-**The entry-point hook is for implementations, not API surface.** Plugins register via `[project.entry-points."jac"]` in their `pyproject.toml`. This mechanism exists so plugins can *override how existing abstractions work* (like `jac-scale` replacing the execution context with `JScaleExecutionContext` backed by MongoDB). It does **not** exist for plugins to expand the core API.
+**The entry-point hook is for implementations, not API surface.** Plugins register via `[project.entry-points."jac"]` in their `pyproject.toml`. This mechanism exists so plugins can *override how existing abstractions work* (like `jac-scale` replacing the execution context with `JScaleExecutionContext` backed by MongoDB, or `byllm` providing LLM runtime hooks). It does **not** exist for plugins to expand the set of builtins or keywords.
 
-The principle: **plugins can override implementations of existing abstractions, but any new abstractions they introduce must live in their own importable namespace.**
+The principle: **plugins can override implementations of existing abstractions, but any new abstractions they introduce must live in their own importable namespace.** This is true for `jac-scale`. It's true for `byllm`. And it must be true for any future plugin, whether it ships from Jaseci Labs or from the community.
 
 ## Decision Framework
 
@@ -287,14 +294,14 @@ flowchart TD
     Q7 -- Yes --> BI["🟡 <b>Builtin</b>"]
     Q7 -- No --> Q8
 
-    Q8{Plugin-specific?}
-    Q8 -- Yes --> PL["🟣 <b>Plugin Namespace</b>"]
-    Q8 -- No --> SL["🟢 <b>Standard Library</b>"]
+    Q8{Plugin-specific<br/>or cross-cutting?}
+    Q8 -- "Plugin-specific" --> PL["🟢 <b>Standard Library</b><br/><i>in plugin's namespace</i><br/>e.g. jac_scale.abstractions"]
+    Q8 -- "Cross-cutting" --> SL["🟢 <b>Standard Library</b><br/><i>in jac core</i><br/>e.g. jaclang modules"]
 
     style KW fill:#f8d7da,stroke:#dc3545,color:#000
     style BI fill:#fff3cd,stroke:#ffc107,color:#000
     style SL fill:#d4edda,stroke:#28a745,color:#000
-    style PL fill:#e8d5f5,stroke:#6f42c1,color:#000
+    style PL fill:#d4edda,stroke:#28a745,color:#000
 ```
 
 ### Keyword checklist — all must be true
@@ -312,13 +319,14 @@ flowchart TD
 - [ ] It makes sense across all runtime backends (vanilla, jac-scale, future plugins)
 - [ ] It's simple enough that a small set of well-known names covers it
 
-### Standard library
+### Standard library — the default home
 
-The default home. If neither checklist above is fully satisfied, it belongs here. Design a clean module API, write good docs, and ship it.
+If neither checklist above is fully satisfied, it belongs in the standard library. The remaining question is *where* within the standard library:
 
-### Plugin namespace
+- **Plugin-specific?** Put it in that plugin's namespace (e.g. `jac_scale.abstractions`, `byllm.lib`). This is still standard library — just scoped to the plugin that provides it.
+- **Cross-cutting?** Put it in `jac` core's importable modules, available to all programs that import it.
 
-If the abstraction only makes sense in the context of a specific plugin (scaling, deployment, specific integrations), it goes in the plugin's own importable namespace. Full stop.
+Either way: explicit import required, clean module API, good docs.
 
 ## Case Studies
 
@@ -342,13 +350,13 @@ Correct placement: keyword.
 
 Correct placement: builtin.
 
-### `DatabaseProvider` → Plugin namespace ✅
+### `DatabaseProvider` → Standard library (via `jac-scale`) ✅
 
 - Universal? **No.** Only matters if you're deploying with `jac-scale`.
 - Serves core abstractions? **No.** It's about infrastructure provisioning, not graph operations.
-- Plugin-specific? **Yes.** It lives in `jac_scale.abstractions` and requires explicit import.
+- Import-required? **Yes.** It lives in `jac_scale.abstractions` and requires explicit import.
 
-Correct placement: `jac_scale.abstractions.DatabaseProvider`.
+Correct placement: standard library, in `jac-scale`'s namespace — `jac_scale.abstractions.DatabaseProvider`. It's part of the standard Jaseci ecosystem, but it requires an import and lives in its plugin's own namespace, exactly as it should.
 
 ### Hypothetical: `http.get()` → Standard library
 
