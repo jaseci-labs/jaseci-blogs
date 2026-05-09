@@ -1,7 +1,7 @@
 ---
 date: 2026-05-09
 authors:
-  - mars
+  - jayanaka
 categories:
   - Jac Programming
   - Fixing the Broken
