@@ -23,17 +23,21 @@ This post is a deep guide for contributors to the Jaseci codebase. If you're add
 
 Jac's architecture is built as a stack of three distinct layers, each with a clear role:
 
-```
-┌──────────────────────────────────┐
-│          jac program             │  ← Application-specific
-│   (uses abstractions)            │
-├──────────────────────────────────┤
-│             jac                  │  ← Nothing app-specific
-│   (exposes abstractions)         │
-├──────────────────────────────────┤
-│          jac-scale               │  ← Nothing app-specific
-│   (implements abstractions)      │
-└──────────────────────────────────┘
+```mermaid
+block-beta
+    columns 1
+    block:top["🔷 jac program — Application-specific"]:1
+        A["Uses abstractions"]
+    end
+    block:mid["🔶 jac — Nothing app-specific"]:1
+        B["Exposes abstractions"]
+    end
+    block:bot["🔷 jac-scale — Nothing app-specific"]:1
+        C["Implements abstractions"]
+    end
+
+    top --> mid
+    bot --> mid
 ```
 
 The **top layer** is user code — the applications people build with Jac. It consumes abstractions but doesn't define them. The **middle layer** is the Jac language and runtime itself — it *defines and exposes* the abstractions that make Jac what it is. The **bottom layer** consists of plugins like `jac-scale` that provide production-grade implementations of those abstractions without changing their semantics.
@@ -54,12 +58,18 @@ Here's the most important mental model for this decision: **think of it as a pro
 
 Everything starts as a standard library candidate. You *promote* to builtin only under specific pressure. You *promote* to keyword only when the concept is architecturally load-bearing.
 
-```
-keyword      ← Hardest to add, hardest to remove. Changes the grammar.
-   ↑ promote only when...
-builtin      ← Available everywhere, no import. Tightly coupled to core.
-   ↑ promote only when...
-std lib      ← The default home. Explicit imports. Easy to evolve.
+```mermaid
+graph BT
+    S["🟢 <b>Standard Library</b><br/>The default home<br/>Explicit imports · Easy to evolve"]
+    B["🟡 <b>Builtins</b><br/>Available everywhere, no import<br/>Tightly coupled to core"]
+    K["🔴 <b>Language Keywords</b><br/>Hardest to add, hardest to remove<br/>Changes the grammar"]
+
+    S -- "promote only when..." --> B
+    B -- "promote only when..." --> K
+
+    style S fill:#d4edda,stroke:#28a745,color:#000
+    style B fill:#fff3cd,stroke:#ffc107,color:#000
+    style K fill:#f8d7da,stroke:#dc3545,color:#000
 ```
 
 The gravity should always pull downward. Here's why: a keyword you regret is nearly impossible to remove without breaking the world. A builtin you regret is painful to deprecate. A standard library module you regret is just a deprecation notice and a migration guide. The cost of being wrong increases dramatically as you move up the ladder.
@@ -72,11 +82,22 @@ Keywords are reserved for things that **change how you think**, not just what yo
 
 Look at what's currently in the grammar:
 
-```
-KW_NODE, KW_EDGE, KW_WALKER     → core archetypes
-KW_VISIT, KW_SPAWN              → graph traversal semantics
-KW_ENTRY, KW_EXIT               → lifecycle hooks for walkers
-KW_CAN, KW_HAS                  → ability and attribute declaration
+```mermaid
+mindmap
+  root((Jac Keywords))
+    Core Archetypes
+      node
+      edge
+      walker
+    Graph Traversal
+      visit
+      spawn
+    Lifecycle Hooks
+      entry
+      exit
+    Declaration
+      can
+      has
 ```
 
 These aren't convenience features. They define the Object-Spatial Programming paradigm itself. Without `walker`, `node`, and `edge`, Jac is just another Python. Without `visit` and `spawn`, graph traversal becomes manual iterator management. These keywords *are* the language's identity.
@@ -228,11 +249,48 @@ The reasoning is airtight:
 
 The principle: **plugins can override implementations of existing abstractions, but any new abstractions they introduce must live in their own importable namespace.**
 
-## Decision Framework: A Checklist
+## Decision Framework
 
-When you're about to introduce a new abstraction, walk through this:
+When you're about to introduce a new abstraction, walk through this flowchart:
 
-### Step 1: Does it need to be in the grammar?
+```mermaid
+flowchart TD
+    Start([New abstraction proposed]) --> Q1
+
+    Q1{New computational pattern<br/>that can't be a function?}
+    Q1 -- Yes --> Q2{Compiler must generate<br/>special code for it?}
+    Q1 -- No --> Q5
+
+    Q2 -- Yes --> Q3{Every Jac programmer<br/>will encounter it?}
+    Q2 -- No --> Q5
+
+    Q3 -- Yes --> Q4{Function-call syntax would<br/>be misleading or awkward?}
+    Q3 -- No --> Q5
+
+    Q4 -- Yes --> KW["🔴 <b>Language Keyword</b>"]
+    Q4 -- No --> Q5
+
+    Q5{Operates on core constructs<br/>nodes / edges / walkers / anchors?}
+    Q5 -- Yes --> Q6{Import tax in every file<br/>would be genuinely harmful?}
+    Q5 -- No --> Q8
+
+    Q6 -- Yes --> Q7{Works across all runtime<br/>backends vanilla + plugins?}
+    Q6 -- No --> Q8
+
+    Q7 -- Yes --> BI["🟡 <b>Builtin</b>"]
+    Q7 -- No --> Q8
+
+    Q8{Plugin-specific?}
+    Q8 -- Yes --> PL["🟣 <b>Plugin Namespace</b>"]
+    Q8 -- No --> SL["🟢 <b>Standard Library</b>"]
+
+    style KW fill:#f8d7da,stroke:#dc3545,color:#000
+    style BI fill:#fff3cd,stroke:#ffc107,color:#000
+    style SL fill:#d4edda,stroke:#28a745,color:#000
+    style PL fill:#e8d5f5,stroke:#6f42c1,color:#000
+```
+
+### Keyword checklist — all must be true
 
 - [ ] It introduces a fundamentally new computational pattern
 - [ ] The compiler must generate special code for it
@@ -240,24 +298,20 @@ When you're about to introduce a new abstraction, walk through this:
 - [ ] Function-call syntax would be misleading or awkward
 - [ ] Removing it from the grammar would make programs fundamentally harder to reason about
 
-**All boxes checked?** → Language keyword. **Any unchecked?** → Move to Step 2.
-
-### Step 2: Does it need to be available without import?
+### Builtin checklist — all must be true
 
 - [ ] It operates directly on core language constructs (nodes, edges, walkers, anchors, the graph)
 - [ ] The import tax in every file would be genuinely harmful
 - [ ] It makes sense across all runtime backends (vanilla, jac-scale, future plugins)
 - [ ] It's simple enough that a small set of well-known names covers it
 
-**All boxes checked?** → Builtin. **Any unchecked?** → Move to Step 3.
+### Standard library
 
-### Step 3: Standard library
+The default home. If neither checklist above is fully satisfied, it belongs here. Design a clean module API, write good docs, and ship it.
 
-Welcome home. This is where it belongs. Design a clean module API, write good docs, and ship it.
+### Plugin namespace
 
-### Step 4: Is it plugin-specific?
-
-If the abstraction only makes sense in the context of a specific plugin (scaling, deployment, specific integrations), it goes in the plugin's namespace. Full stop.
+If the abstraction only makes sense in the context of a specific plugin (scaling, deployment, specific integrations), it goes in the plugin's own importable namespace. Full stop.
 
 ## Case Studies
 
