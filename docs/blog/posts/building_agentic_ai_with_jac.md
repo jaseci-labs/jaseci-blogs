@@ -10,29 +10,31 @@ slug: building-agentic-ai-with-jac
 
 # Déjà Vu: Why Every Agent Codebase Rebuilds the Same Seven Wheels
 
-*Agents are first-class citizens in our lives. They aren't first-class citizens of any language we build them in. That gap is the whole story.*
-
-LLMs draft our emails, write our code, and run our businesses. We talk to them like coworkers. We hand them our calendars.
-
-The moment we sit down to *build* with them, they go back to being strangers.
+LLMs draft our emails, write our code, and run our businesses. We talk to them like coworkers and hand them our calendars. The moment we sit down to *build* one, the tooling drops back to HTTP requests and string concatenation.
 
 ---
 
-## The Gap
+## The Problem
 
 <!-- more -->
 
-An agent is a program built around LLM calls. The calls do the thinking. The code around them decides which calls to make, what to do with the results, and what to call next.
+An agent is a program built around LLM calls. The model does the thinking, and the code around it decides which calls to make, what to do with the results, and what to call next.
 
-In Python or TypeScript, the connecting logic ends up in one of two places: the prompt, or glue code around the LLM call. In the prompt, it's a string. Renames don't propagate, you can't test whether the model follows the steps, and the model re-reads the whole prompt every turn, costing tokens. In glue code, you get types. But every team writes its own routing, retries, and tool dispatching from scratch.
+Today, most agents are built in Python or TypeScript. These languages were chosen for their ecosystem maturity, not because they were designed for agents. As a result, three problems show up in nearly every agent codebase.
 
-That's the gap. It shows up in every agent codebase in the wild: OpenClaw, Hermes, OpenCode, most of the code is the language working around it. So a question:
+**The same intent gets written twice.** A tool is a function *and* a JSON schema describing it. A structured output is a Pydantic class *and* a `response_format` argument. If we rename the function but forget the JSON spec, the spec still advertises the old name to the model. If we rename a field but forget the prompt that asks for it, the prompt still references the old one. Nothing in the build catches the mismatch, because the link between the code and the string only exists in the developer's head. Drift is silent until the model misbehaves at runtime.
+
+**Control flow lives in prose.** When we want an agent to follow a specified workflow, that workflow ends up inside a system prompt in natural language, like *"First search, then summarize, then if the summary is too long, revise it."* Because the workflow only lives as a string, the code can't enforce or check the steps. There's no way to verify the agent followed the workflow correctly as specified.
+
+**The plumbing is rebuilt every project.** Every agent codebase needs the same supporting machinery: a ReAct loop for tool use, retry logic around validation errors, a router that dispatches on a classifier output, a threadpool that fans work out and merges results. None of this is the agent's logic, but every team builds it themselves. That wastes engineering time, and bugs in the plumbing are hard to tell apart from bugs in the agent.
+
+These three problems share a root cause. The parts that *are* the agent, its tools, its workflow, its retries, its parallelism, live in two places: as strings inside prompts, and as code that every team has to write from scratch. Neither place is something the language understands as an agent. So a question:
 
 !!! quote ""
 
-    *If "agent" were a feature of the language itself, what would have to be in it?*
+    *If agents were a feature of the language itself, instead of being built from prompts and code that developers need to write from scratch, what would the language need to provide?*
 
-The answer turns out to be small: **seven primitives**. Three about what an LLM does inside a call (the **Mind**), four about how work moves between calls (the **Flow**). Every agent codebase already implements all seven; it just does so in prose or in glue code, where the typechecker can't see them. The rest of this post is what those seven look like when the language has words for them. The language is [**Jac**](https://docs.jaseci.org/) with the [**byLLM**](https://docs.jaseci.org/) plugin.
+The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it: **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/) plugin, and **Object-Spatial Programming** (OSP), Jac's native model for organizing computation around a graph. Together they give us **seven primitives** for building agents: three for what an LLM does inside a single call (the **Mind**), and four for how work moves between calls (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
 
 !!! info "About the code"
 
