@@ -8,9 +8,9 @@ categories:
 slug: building-agentic-ai-with-jac
 ---
 
-# Déjà Vu: Why Every Agent Codebase Rebuilds the Same Seven Wheels
+# Building Agents in a Language That Knows What an Agent Is
 
-LLMs draft our emails, write our code, and run our businesses. We talk to them like coworkers and hand them our calendars. The moment we sit down to *build* one, the tooling drops back to HTTP requests and string concatenation.
+Most of an agent codebase is not the agent. It is the supporting code every developer writes from scratch, because the languages we use were never designed for agents.
 
 ---
 
@@ -34,7 +34,7 @@ These three problems share a root cause. The parts that *are* the agent, its too
 
     *If agents were a feature of the language itself, instead of being built from prompts and code that developers need to write from scratch, what would the language need to provide?*
 
-The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it: **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/) plugin, and **Object-Spatial Programming** (OSP), Jac's native model for organizing computation around a graph. Together they give us **seven primitives** for building agents: three for what an LLM does inside a single call (the **Mind**), and four for how work moves between calls (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
+The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it: **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/) plugin, and **Object-Spatial Programming** (OSP), Jac's native model for organizing computation around a graph. Together they give us **seven primitives** for building agents: three for what happens inside a single iteration (the **Mind**), and four for how work moves between iterations (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
 
 !!! info "About the code"
 
@@ -56,7 +56,7 @@ Either way, the things developers care about are out of reach: type-checked work
 
 ## The Mind
 
-Three things any single LLM call usefully does:
+Three things any single agent iteration usefully does:
 
 1. **Generate**: LLM returns free text from a function signature.
 2. **Extract**: LLM returns typed data validated against a schema.
@@ -64,8 +64,6 @@ Three things any single LLM call usefully does:
 
 
 ### 1. Generate
-
-LLM returns free text. The function signature is the prompt.
 
 <div class="collapse" data-lines="10">
 
@@ -87,9 +85,10 @@ def answer(question: str) -> str:
 
 </div>
 
+The Python snippet above describes one function in two places. The signature `def answer(question: str) -> str` says what the function returns. The system prompt string `"You answer questions about any topic."` says what it actually does. Rename `answer` to `respond` and the prompt still describes the old function. This is exactly the problem we named earlier: *the same intent written twice*.
+
 ```jac
 # Jac: an LLM call is a function
-"""Answer a question about any topic."""
 def answer(question: str) -> str by llm();
 
 with entry {
@@ -97,11 +96,9 @@ with entry {
 }
 ```
 
-The Python version has no information in it that the Jac version doesn't. Model name, system prompt, question, return type, all of it lives in the Jac signature, docstring, and runtime config. To change the agent's behavior in Jac, change the signature. Not a YAML file. Not a prompt template. The semantics of the code *are* the prompt. Jac calls this **Meaning-Typed Programming**.
+In Jac, the intent is written once. The signature `def answer(question: str) -> str by llm();` is what the LLM sees. The function name `answer`, the parameter `question`, and the return type `str` together tell the model what to do. Rename the function or the parameter, and the prompt updates with it. byLLM builds the prompt automatically from these code semantics. Jac calls this **Meaning-Typed Programming**.
 
 ### 2. Extract
-
-LLM returns typed data. The compiler enforces the schema.
 
 <div class="collapse" data-lines="10">
 
@@ -134,6 +131,8 @@ def classify_paper(title: str, abstract: str) -> PaperClassification:
 
 </div>
 
+The Python snippet above needs several moving parts just to return a typed object. The schema lives in a Pydantic class, `PaperClassification`. OpenAI's beta parse endpoint takes that same class again as `response_format=`. The return value is still optional, so every caller writes a defensive check (`# may be None, must check`). Malformed JSON forces a hand-rolled try/except and retry loop on top of all that. The schema, the beta endpoint, the optional check, the retry, every developer rebuilds this wrapper for every structured-output call.
+
 In Jac:
 
 ```jac
@@ -157,11 +156,9 @@ with entry {
 }
 ```
 
-The return type *is* the schema; the compiler knows about it. If the model produces something malformed, the runtime retries with the validation error in scope, automatically. The `try / json.loads / pydantic.ValidationError` layer that lives in every production agent today doesn't exist here.
+In Jac, the return type `PaperClassification` is the schema. The runtime introspects it, sends it to the model, validates the response, and retries automatically with the validation error in scope. The developer never writes the `try / json.loads / pydantic.ValidationError` block by hand, because the runtime handles it.
 
 ### 3. Invoke
-
-LLM calls tools. ReAct in one line.
 
 <div class="collapse" data-lines="10">
 
@@ -195,7 +192,7 @@ def research(query: str) -> str:
 
 </div>
 
-The dispatch table re-declares functions that already exist. The tool schema re-declares parameters that are already typed. The while-loop re-implements the ReAct cycle every team in the world is re-implementing this week.
+The Python snippet above shows two of our problems at once. `search_papers` is declared three times: once as the actual function, once in the `TOOLS` list as a JSON schema, and once in the `DISPATCH` dict as a string key. Renaming the function means manually updating it in all three places. The developer also has to write the entire tool-use loop by hand, repeatedly calling the model, running the tool it requests, sending the result back, and continuing until the model is done. Every developer building a tool-using agent writes this same loop themselves.
 
 In Jac:
 
@@ -215,17 +212,19 @@ with entry {
 }
 ```
 
-Tools are just functions. The runtime introspects their signatures, exposes them to the model, runs the ReAct loop, and only returns when the model says it's done.
+In Jac, tools are ordinary functions. The runtime introspects their signatures, exposes them to the model, runs the tool-use loop, and returns when the model is done. The developer never declares a JSON schema, never maintains a dispatch dict, and never writes the tool-use loop by hand.
 
 ---
 
-That's the Mind. Three primitives, one per LLM call. With them in hand, you can wire calls together with `for` loops and `if` statements and convince yourself you have an agent. But the moment two calls need to talk, the moment one's output feeds the next, or a retry kicks in, or three workers run in parallel, that wiring is the agent, and your `for` loop is doing the agent's job in plain Python. That work has a different shape. It belongs in the next four primitives.
+Together, these three primitives address two of our problems for anything that happens inside a single iteration: declaring the same intent in multiple places, and rewriting the same supporting code in every project. The moment two iterations need to coordinate, the wiring between them becomes the agent. One iteration's output feeds the next, a retry triggers a rerun, or several workers run in parallel.
+
+In Python or TypeScript, this wiring lives inside a generic `for` loop or inside a system prompt with numbered steps. That is the third problem, *control flow lives in prose*, and the next four primitives address it.
 
 ---
 
 ## The Flow
 
-Four kinds of wiring between Mind calls:
+Four kinds of wiring between Mind iterations:
 
 1. **Pipe**: sequential composition. One call's output is the next call's input.
 2. **Route**: pick which handler runs based on what came in.
@@ -234,8 +233,6 @@ Four kinds of wiring between Mind calls:
 
 
 ### 1. Pipe
-
-Pipe is a literal chain of nodes wired by edges, with a walker that visits each in turn and carries state forward.
 
 <figure markdown="span">
   ![Pipe Pattern](../../assets/diagrams/pipe.gif){ loading=lazy }
@@ -272,11 +269,9 @@ with entry {
 }
 ```
 
-Each step is a small, scoped prompt living on its node. None see the others' instructions, only the typed data the walker carries forward. To insert a fact-check stage tomorrow, connect a new node into the chain. The graph *is* the pipeline.
+In Python or TypeScript, a workflow like this normally lives inside one system prompt with numbered steps, and the model is left to decide on its own whether each step was followed. In the Jac code above, each step is its own node (`Draft`, `Examples`, `Summary`), connected by the edges `root ++> draft ++> ex ++> summ ++> done`. The walker `Explainer` visits each node in order, calling its `run` method and carrying the result forward in `self.text`. Each step has its own scoped prompt that only sees the data the walker carries. Inserting a new step means adding a node and an edge instead of editing a prompt.
 
 ### 2. Route
-
-The LLM reads the graph and picks which node the walker visits.
 
 ```jac
 node HardwareExpert {
@@ -319,11 +314,9 @@ with entry {
 }
 ```
 
-The route is a single line: `visit [-->] by llm(...)`. The LLM reads each connected node's `description` field and picks. To add a new expert, add a `node` with a `description`. No prompt edit, no dispatch-table edit. The graph *is* the routing table.
+In Python or TypeScript, branching between specialists normally requires three pieces: a classifier prompt that picks a label, a dispatch dictionary that maps each label to a handler function, and the handler functions themselves with their own prompts. Adding a new specialist means updating these three pieces. In the Jac code above, each specialist is a node with a `description` field (`HardwareExpert`, `SoftwareExpert`, `AIExpert`). The line `visit [-->] by llm(incl_info={"User query": self.query})` lets the model read each connected node's description and pick which one to visit. Adding a new specialist means adding one node with a description, without touching a prompt or a dispatch table.
 
 ### 3. Loop
-
-Self-correction expressed as a cycle in the graph: draft, evaluate, and if the verdict isn't good enough, take a typed retry edge back to revise.
 
 <figure markdown="span">
   ![Loop Pattern](../../assets/diagrams/loop.gif){ loading=lazy }
@@ -389,11 +382,9 @@ with entry {
 }
 ```
 
-`RetryEdge` is a typed edge with a name and its own fields. Scanning the graph, a reader sees `eval_n +>:RetryEdge:+> revise` and knows what kind of loop this is. A `while` in a function body could be anything; a `RetryEdge` is one specific thing. The exit condition rides on a typed `Quality` verdict, not a string-match on the model's reply.
+In Python or TypeScript, this normally takes a `while` loop with an exit condition that matches against a substring in the model's reply (`if 'GOOD' in response: break`) and a magic number for the maximum retry count. The intent of the loop, that this is a critique-and-revise cycle, lives only in a comment. In the Jac code above, the loop is a named edge `RetryEdge` between the `Evaluate` and `Revise` nodes, declared as `eval_n +>:RetryEdge:+> revise`. A reader scanning the graph immediately sees what kind of loop this is. The exit condition rides on a typed `Quality` verdict returned by `Evaluate`, not on a string match, and the maximum retry count is a typed field on the edge rather than a magic number in a function body.
 
 ### 4. Spawn
-
-`flow spawn` fans out work; `wait` fans it back in.
 
 <figure markdown="span">
   ![Spawn Pattern](../../assets/diagrams/spawn.gif){ loading=lazy }
@@ -452,35 +443,31 @@ with entry {
 }
 ```
 
-Each researcher carries its own scoped tool list and its own context. Three focused prompts running concurrently, not one bloated prompt holding nine tools and hoping the model picks correctly.
+In Python or TypeScript, parallel work usually collapses into either a single bloated prompt holding all the tools and asking the model to manage them itself, or a hand-rolled threadpool with manual result merging. In the Jac code above, `SurveyAgent` spawns three independent walkers (`HardwareResearcher`, `SoftwareResearcher`, `AIResearcher`) using `flow root spawn`, then collects their results with `wait`. Each researcher carries its own scoped tool list and its own context, so three focused prompts run concurrently rather than one bloated prompt holding nine tools. The synthesis step `self.synthesize(...)` only runs after all three workers have completed.
 
 ---
 
-That's the Flow. Four kinds of wiring, each a property of the graph instead of a paragraph in a prompt. Plus the three Mind primitives, that's the whole list. Most of every agent codebase you've ever read is one of these seven, rebuilt by hand because the host language couldn't host it.
+Together, these four primitives address the third of our problems: workflows that live inside a prompt as a string and cannot be verified or observed by the surrounding code. In Jac, the workflow is the graph itself, where the steps, branches, retries, and parallelism are all visible as connections between nodes. The seven primitives, three for what happens inside an iteration and four for how iterations connect, cover what every agent codebase rebuilds by hand in Python or TypeScript.
 
 ---
 
 ## The Takeaway
 
-Jac has all seven Mind and Flow primitives directly in the language. A developer expresses an agent as code, with types, instead of as prose in a prompt or glue around an LLM call.
+The seven Mind and Flow primitives map directly onto the three problems we started with.
 
-The agents people are actually shipping aren't there yet. The most prominent open-source projects are all in Python or TypeScript:
+| The problem | How Jac addresses it |
+|---|---|
+| **The same intent written twice.** Tool schemas and structured-output classes have to be declared in code and described again in prompts or JSON specs, with nothing keeping the two halves in sync. | The Mind primitives keep intent in one place. The function signature itself becomes the prompt that the model receives. The return type defines the schema for structured output. Tools are simply ordinary functions whose signatures the runtime introspects. byLLM uses all of this to build the prompt automatically. |
+| **Control flow lives in prose.** Workflows, routing decisions, retry conditions, and parallelism end up inside system prompts as English, where no code can verify whether the model followed them. | The Flow primitives express workflows as graph structure. Pipelines, branches, retries, and parallel fan-outs are all visible as connections between nodes, observable by the runtime and readable by the developer. |
+| **The plumbing is rebuilt every project.** Every team writes its own ReAct loop, its own validation-and-retry, its own router, and its own threadpool, and ships its own bugs in them. | byLLM and OSP handle this plumbing in the runtime. The tool-use loop, the validation-and-retry, the routing, and the parallel fan-out are features of the language rather than code every team writes from scratch. |
+
+The agents people are actually shipping aren't here yet. The most prominent open-source projects are all in Python or TypeScript:
 
 - [**OpenClaw**](https://github.com/openclaw/openclaw): personal assistant across 20+ chat channels (TypeScript)
 - [**Hermes**](https://github.com/NousResearch/hermes-agent) (Nous Research): self-improving agent (Python)
 - [**OpenCode**](https://github.com/anomalyco/opencode): open-source coding agent (TypeScript)
 
-Those languages weren't chosen because they're a natural fit for agents. They were chosen for library support and ecosystem maturity, nothing more. It's a reasonable trade, but it has a cost: every team rebuilds the same plumbing from scratch, and the codebase bloats around the missing primitives.
-
-The same handful of subsystems shows up in every codebase. In Jac, each one collapses to a single primitive or a small composition of them:
-
-| What every agent codebase builds by hand | In Jac |
-|---|---|
-| **Capability loader**: injects rules into the prompt, manages the tool registry | `by llm(tools=[...])` |
-| **Subagent spawner**: task queue, context isolation, result merging | `flow spawn` / `wait` |
-| **Router**: switch on a classifier, prompt that returns a name, dispatch table | `visit [-->] by llm()` |
-| **Loop runner**: while-loop over string verdicts, parse-and-pray exits | a typed edge closing a cycle in the graph |
-| **Self-extension**: agent writes more English prose to its own capability file | add a node, add an edge |
+Those languages weren't chosen because they fit agents. They were chosen for ecosystem maturity. The cost is that every team rebuilds the same supporting code, and the codebase bloats around the missing primitives.
 
 !!! quote ""
 
