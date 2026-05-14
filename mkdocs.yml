@@ -74,6 +74,7 @@ extra_javascript:
   - js/jac.monarch.js
   - js/run-code.js
   - js/author-tooltips.js
+  - js/collapsible-code.js
 
 plugins:
   - search

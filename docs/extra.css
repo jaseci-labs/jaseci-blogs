@@ -806,3 +806,80 @@
     margin-left: auto;
     margin-right: auto;
 }
+
+/* ---------- collapsible code blocks (Medium-style fade + floating pill) ---------- */
+.cb-collapse {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.5em;
+}
+.cb-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.cb-content {
+    order: 1;
+    max-height: var(--cb-max-height, 9em);
+    overflow: hidden;
+    position: relative;
+    transition: max-height 0.2s ease;
+}
+/* The fade-to-page-background gradient over the bottom of the collapsed code */
+.cb-content::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 7em;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        var(--md-default-bg-color, #ffffff) 70%
+    );
+    pointer-events: none;
+}
+
+/* The floating pill button, centered over the gradient. Background matches the
+   page so it appears to sit on it; text uses the page foreground color. */
+.cb-label {
+    order: 2;
+    position: absolute;
+    bottom: 0.9em;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    cursor: pointer;
+    color: var(--md-default-fg-color, #111);
+    background: var(--md-default-bg-color, #ffffff);
+    font: 500 0.82rem/1.4 -apple-system, system-ui, sans-serif;
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--md-default-fg-color--lightest, rgba(0,0,0,0.12));
+    user-select: none;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    white-space: nowrap;
+}
+.cb-label:hover {
+    background: var(--md-default-fg-color--lightest, rgba(0,0,0,0.04));
+    transform: translateX(-50%) translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
+.cb-label::before { content: "▼  Show full code (" attr(data-lines) " lines)"; }
+
+/* Expanded state: full height, no gradient, label flows into the document below */
+.cb-toggle:checked ~ .cb-content { max-height: none; }
+.cb-toggle:checked ~ .cb-content::after { display: none; }
+.cb-toggle:checked + .cb-label {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin: 8px auto 0;
+    align-self: center;
+}
+.cb-toggle:checked + .cb-label:hover {
+    transform: translateY(-1px);
+}
+.cb-toggle:checked + .cb-label::before { content: "▲  Collapse"; }
