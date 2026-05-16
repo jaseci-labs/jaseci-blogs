@@ -90,10 +90,12 @@ jobs:
             # For scheduled builds, use date-based versioning
             TAG="nightly-$(date +'%Y%m%d')"
           else
-            # For push builds, create a versioned tag: v1.<commit_count>.<short_sha>
-            COMMIT_COUNT=$(git rev-list --count HEAD)
+            # For push builds, create a versioned tag: v1.<utc_timestamp>.<short_sha>
+            # Timestamp is monotonic across history rewrites, so the ImagePolicy
+            # always picks up the most recently pushed image.
+            TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
             SHORT_SHA=$(git rev-parse --short=8 HEAD)
-            TAG="v1.${COMMIT_COUNT}.${SHORT_SHA}"
+            TAG="v1.${TIMESTAMP}.${SHORT_SHA}"
           fi
 
           echo "Tag: $TAG"
