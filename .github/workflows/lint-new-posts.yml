@@ -1,0 +1,81 @@
+name: Lint new posts
+
+# Blocking PR check: any new file added to docs/blog/posts/ MUST include
+# `draft: true` in its frontmatter. This guarantees a PR merge cannot
+# accidentally publish a post — the only legitimate way to flip a post live
+# is through the scheduling workflows (auto-publisher, /publish-now,
+# "Schedule a post" → publish-now). Removing `draft: true` is the dedicated
+# job of the github-actions bot, and that path doesn't go through PR review.
+#
+# Modified existing posts are NOT checked here — auto-publisher commits
+# legitimately remove `draft: true`.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/blog/posts/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need history to diff against base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Collect newly added posts
+        id: added
+        run: |
+          set -e
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          ADDED=$(git diff --name-only --diff-filter=A "$BASE" "$HEAD" -- 'docs/blog/posts/*.md' || true)
+          echo "Newly added post files in this PR:"
+          echo "$ADDED"
+          {
+            echo "files<<EOF"
+            echo "$ADDED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Enforce draft: true on new posts
+        if: steps.added.outputs.files != ''
+        run: |
+          set -e
+          # shellcheck disable=SC2086
+          python scripts/schedule_lib.py lint-new-posts ${{ steps.added.outputs.files }} | tee result.json
+
+      - name: Post-fail explainer
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '### Lint failed: new post(s) missing `draft: true`\n\n';
+            body += 'Every new post in `docs/blog/posts/` must include `draft: true` in its frontmatter when first added. ';
+            body += 'This is a safety rail — a merge of this PR with the post in its current state would put it live on blogs.jaseci.org immediately, bypassing editorial review.\n\n';
+            body += 'Fix: add `draft: true` to the frontmatter of the affected file(s):\n\n';
+            body += '```yaml\n---\ndate: 2026-XX-XX\nauthors:\n  - your_author_id\ncategories:\n  - Your Category\nslug: your-slug\ndraft: true   # <- this line\n---\n```\n\n';
+            body += 'Once an editor merges the PR, they will schedule a publish time using the *Schedule a post* workflow (or `/schedule <ISO datetime>` in this PR\'s comments). The auto-publisher will flip `draft: true` off when that time arrives.\n\n';
+            try {
+              const result = fs.readFileSync('result.json', 'utf8');
+              body += '<details><summary>Lint output</summary>\n\n```json\n' + result + '\n```\n\n</details>';
+            } catch (e) {}
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });

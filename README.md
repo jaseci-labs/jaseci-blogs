@@ -21,7 +21,7 @@ We'll review all submissions and happily accept anything that's insightful or ot
    ```bash
    touch docs/blog/posts/my-awesome-post.md
    ```
-3. Add frontmatter to the top of your post:
+3. Add frontmatter to the top of your post. **`draft: true` is required** — a PR check will reject any new post without it. This is the safety rail that keeps an accidental merge from publishing a post. An editor flips it live later via the scheduling workflows.
    ```yaml
    ---
    date: 2026-03-12
@@ -30,13 +30,14 @@ We'll review all submissions and happily accept anything that's insightful or ot
    categories:
      - Your Category
    slug: my-awesome-post
+   draft: true
    ---
    ```
 4. Write your post in markdown (see [Adding Jac Code Blocks](#adding-jac-code-blocks) for interactive code examples). We also love [Mermaid](https://mermaid.js.org/) diagrams -- use ` ```mermaid ` code blocks to add flowcharts, sequence diagrams, and more. For custom graphics, we prefer SVGs since they scale nicely and keep the site looking crisp
 5. If you need images (e.g., screenshots of what you built), place them in `docs/assets/` and keep file sizes reasonable -- aim for under 100KB per image when possible. Compress PNGs/JPGs before committing
 6. Open a pull request
 
-> **Note on publish timing:** an editor decides when your post goes live. If you'd like it held until a specific date, just say so in the PR description -- don't put `draft: true` in your frontmatter yourself, the editorial workflow handles that. See [Editorial Scheduling](#editorial-scheduling) for how it works.
+> **Note on publish timing:** an editor decides when your post goes live. Your post must include `draft: true` (a PR check enforces this); the editor removes it via the scheduling workflows once a publish time is decided. If you have a target date in mind, mention it in the PR description. See [Editorial Scheduling](#editorial-scheduling) for how it works.
 
 ### Editorial Scheduling
 

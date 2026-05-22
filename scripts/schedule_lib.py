@@ -383,6 +383,38 @@ def posts_status() -> dict[str, Any]:
     return {"ok": True, "action": "posts-status", "posts": rows}
 
 
+def lint_new_posts(paths: list[str]) -> dict[str, Any]:
+    """Return ok=False if any given path is a post missing `draft: true`.
+
+    Used by the pull_request CI to guarantee that a PR cannot accidentally
+    publish a post on merge — the auto-publisher / publish-now workflows
+    are the only legitimate way for draft: true to be removed.
+    """
+    failures: list[dict[str, Any]] = []
+    checked: list[str] = []
+    for raw in paths:
+        path = (REPO_ROOT / raw).resolve()
+        if not path.exists():
+            failures.append({"path": raw, "error": "file not found in working tree"})
+            continue
+        if not path.is_relative_to(POSTS_DIR):
+            continue  # only enforce on docs/blog/posts/
+        if path.suffix != ".md":
+            continue
+        post = _read_post(path)
+        if post is None:
+            failures.append({"path": raw, "error": "no YAML frontmatter — every post needs a `---` block"})
+            continue
+        if post.meta.get("draft") is not True:
+            failures.append({
+                "path": raw,
+                "error": "new post must include `draft: true` in frontmatter. "
+                         "Editors will flip it live via the scheduling workflows.",
+            })
+        checked.append(raw)
+    return {"ok": not failures, "action": "lint-new-posts", "checked": checked, "failures": failures}
+
+
 def _extract_h1(body: str) -> str | None:
     for line in body.splitlines():
         stripped = line.strip()
@@ -432,6 +464,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("list")
     sub.add_parser("posts-status")
 
+    p_lint = sub.add_parser("lint-new-posts")
+    p_lint.add_argument("paths", nargs="*")
+
     args = parser.parse_args(argv)
 
     try:
@@ -451,6 +486,12 @@ def main(argv: list[str] | None = None) -> int:
             result = list_entries()
         elif args.cmd == "posts-status":
             result = posts_status()
+        elif args.cmd == "lint-new-posts":
+            result = lint_new_posts(args.paths)
+            if not result["ok"]:
+                json.dump(result, sys.stdout, indent=2)
+                sys.stdout.write("\n")
+                return 1
         else:
             parser.error(f"Unknown command {args.cmd!r}")
             return 2
