@@ -98,3 +98,10 @@ schedule:
   published_by: backfill
   first_publish: true
   notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: topology-index-rebuild
+  status: published
+  published_at: '2026-05-09T15:14:02Z'
+  published_by: backfill
+  first_publish: true
+  notes: 'Restored from PR #17 (merged 2026-05-09, dropped by main force-push). See
+    issue #21.'
