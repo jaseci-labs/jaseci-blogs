@@ -883,3 +883,72 @@
     transform: translateY(-1px);
 }
 .cb-toggle:checked + .cb-label::before { content: "▲  Collapse"; }
+
+/* ---------- blog index: each post excerpt rendered as a distinct card ---------- */
+.md-content .md-post--excerpt {
+    position: relative;
+    border: 1px solid var(--md-default-fg-color--lightest, rgba(0,0,0,0.12));
+    border-radius: 14px;
+    background: var(--md-default-bg-color, #ffffff);
+    padding: 1.6em 1.8em 1.6em;
+    margin-bottom: 2em;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.md-content .md-post--excerpt:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    border-color: var(--md-default-fg-color--lighter, rgba(0,0,0,0.25));
+}
+
+.md-content .md-post--excerpt .md-post__content { position: relative; }
+
+/* The peek block: a few lines after <!-- more --> injected at build time by the
+   inject_excerpt_peek hook, with a gradient overlay that fades them into the
+   card background. The pre-<!-- more --> content above renders normally. */
+.md-content .md-post--excerpt .md-post__peek {
+    position: relative;
+    margin-top: 0.4em;
+    max-height: 5em;
+    overflow: hidden;
+}
+.md-content .md-post--excerpt .md-post__peek::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        var(--md-default-bg-color, #ffffff) 90%
+    );
+}
+
+/* "Show more" pill — same visual language as .cb-label on code blocks. */
+.md-content .md-post--excerpt .md-post__action {
+    display: flex;
+    justify-content: center;
+    margin: 0.4em 0 0;
+}
+.md-content .md-post--excerpt .md-post__action a {
+    display: inline-block;
+    color: var(--md-default-fg-color, #111);
+    background: var(--md-default-bg-color, #ffffff);
+    font: 500 0 -apple-system, system-ui, sans-serif;
+    padding: 8px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--md-default-fg-color--lightest, rgba(0,0,0,0.12));
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.md-content .md-post--excerpt .md-post__action a:hover {
+    background: var(--md-default-fg-color--lightest, rgba(0,0,0,0.04));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
+.md-content .md-post--excerpt .md-post__action a::before {
+    content: "Show more  ▸";
+    font-size: 0.82rem;
+}

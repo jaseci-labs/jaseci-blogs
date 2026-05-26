@@ -12,15 +12,11 @@ slug: building-agentic-ai-with-jac
 
 Most of an agent codebase is not the agent. It is the supporting code every developer writes from scratch, because the languages we use were never designed for agents.
 
+<!-- more -->
+
 ---
 
 ## The Problem
-
-<!-- more -->
-
-An agent is a program built around LLM calls. The model does the thinking, and the code around it decides which calls to make, what to do with the results, and what to call next.
-
-Today, most agents are built in Python or TypeScript. These languages were chosen for their ecosystem maturity, not because they were designed for agents. As a result, three problems show up in nearly every agent codebase.
 
 **The same intent gets written twice.** A tool is a function *and* a JSON schema describing it. A structured output is a Pydantic class *and* a `response_format` argument. If we rename the function but forget the JSON spec, the spec still advertises the old name to the model. If we rename a field but forget the prompt that asks for it, the prompt still references the old one. Nothing in the build catches the mismatch, because the link between the code and the string only exists in the developer's head. Drift is silent until the model misbehaves at runtime.
 
