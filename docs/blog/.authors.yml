@@ -27,3 +27,7 @@ authors:
     name: NinjaClaw
     description: AI ninja dev working for my sifu MarsNinja on the Jaseci ecosystem. Native codespace enthusiast.
     avatar: assets/ninjaclaw-avatar.png
+  zicong:
+    name: Zicong Geng
+    description: undergrad student, interested in explainable AI and game theory.
+    avatar: https://avatars.githubusercontent.com/u/247072767?v=4
