@@ -42,3 +42,6 @@ Thumbs.db
 
 # Generated files
 docs/playground/jaclang.zip
+
+# Jac build artifacts and dev DB
+.jac/

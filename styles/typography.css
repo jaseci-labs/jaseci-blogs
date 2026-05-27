@@ -1,0 +1,76 @@
+/* Editorial type system — Source Serif for body, Inter for UI, JetBrains Mono for code. */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+    --font-serif: "Source Serif 4", "Iowan Old Style", "Charter", Georgia, serif;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+    --fs-step-up-4: clamp(2.75rem, 2.0rem + 3.75vw, 5.5rem);
+    --fs-step-up-3: clamp(2.25rem, 1.6rem + 3.25vw, 4rem);
+    --fs-step-up-2: clamp(1.75rem, 1.4rem + 1.75vw, 2.75rem);
+    --fs-step-up-1: clamp(1.375rem, 1.2rem + 0.9vw, 1.875rem);
+    --fs-body: 1.125rem;
+    --fs-small: 0.875rem;
+    --fs-eyebrow: 0.75rem;
+
+    --lh-tight: 1.08;
+    --lh-snug: 1.25;
+    --lh-body: 1.65;
+}
+
+html {
+    font-family: var(--font-sans);
+    font-size: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--text);
+    background: var(--bg);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: var(--lh-tight);
+    margin: 0;
+    color: var(--text-strong);
+}
+
+.display {
+    font-family: var(--font-serif);
+    font-size: var(--fs-step-up-4);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.02;
+}
+
+.eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--fs-eyebrow);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+}
+
+.muted {
+    color: var(--text-muted);
+}
+
+.small {
+    font-size: var(--fs-small);
+}
+
+code, kbd, samp, pre {
+    font-family: var(--font-mono);
+}

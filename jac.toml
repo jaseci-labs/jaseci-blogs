@@ -1,0 +1,49 @@
+[project]
+name = "jaseci-blogs"
+version = "0.1.0"
+description = "The Jaseci & Jac engineering blog — editorial home for jaseci.org writing."
+
+[serve]
+base_route_app = "app"
+cl_route_prefix = "/"
+
+[plugins.client]
+enabled = true
+
+[plugins.client.paths]
+"@components/*" = "./components/*"
+"@styles/*" = "./styles/*"
+
+[plugins.scale]
+enabled = true
+
+[plugins.scale.kubernetes]
+app_name = "jaseci-blogs"
+namespace = "jaseci-blogs"
+liveness_initial_delay = 300
+liveness_failure_threshold = 10
+readiness_initial_delay = 60
+
+[plugins.scale.secrets]
+PUBLIC_SITE_URL = "https://blogs.jaseci.org"
+
+[dependencies]
+markdown = ">=3.5"
+pyyaml = ">=6.0"
+pygments = ">=2.17"
+
+[dependencies.npm]
+react = "^18.2.0"
+react-dom = "^18.2.0"
+react-router-dom = "^6.22.0"
+react-error-boundary = "^5.0.0"
+react-hook-form = "^7.71.0"
+zod = "^4.3.6"
+"@hookform/resolvers" = "^5.2.2"
+
+[dependencies.npm.dev]
+vite = "^6.4.1"
+"@vitejs/plugin-react" = "^4.2.1"
+typescript = "^5.3.3"
+"@types/react" = "^18.2.0"
+"@types/react-dom" = "^18.2.0"
