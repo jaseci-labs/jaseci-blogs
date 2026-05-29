@@ -15,15 +15,14 @@ cl {
                 "minLoadingMs": 800,
             };
 
-            # Resolve the effective theme: saved → system pref → light.
+            # Resolve the effective theme: saved → light. Light is the default
+            # (more readable); system dark-mode preference is intentionally not
+            # honored, so readers only get dark if they explicitly toggle it.
             resolved: str = "light";
             try {
                 saved = window.localStorage.getItem("jaseci-blog-theme");
                 if saved == "dark" or saved == "light" {
                     resolved = str(saved);
-                } else {
-                    prefers_dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                    resolved = "dark" if prefers_dark else "light";
                 }
             } except Exception {
                 _ignore = None;
