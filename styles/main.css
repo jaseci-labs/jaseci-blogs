@@ -241,6 +241,7 @@ img {
 .site-footer {
     border-top: 1px solid var(--rule);
     background: var(--bg-subtle);
+    color: var(--text);
     padding: 3rem 0 2rem;
     margin-top: 4rem;
 }
@@ -256,9 +257,13 @@ img {
     align-items: flex-start;
 }
 .footer-title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
     font-family: var(--font-serif);
     font-size: 1.125rem;
     font-weight: 600;
+    color: var(--text-strong);
     margin: 0 0 0.25rem;
 }
 .footer-tagline {

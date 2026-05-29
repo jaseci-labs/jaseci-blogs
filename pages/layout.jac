@@ -111,7 +111,10 @@ cl {
                     <div className="footer-brand">
                         <img src="https://www.jaseci.org/images/logo.png" alt="" width={40} height={40} />
                         <div>
-                            <p className="footer-title">Jaseci Blogs</p>
+                            <p className="footer-title">
+                                <span className="brand-mark">Jaseci</span>
+                                <span className="brand-sub">Blogs</span>
+                            </p>
                             <p className="footer-tagline muted">Engineering writing from the Jaseci & Jac open-source ecosystem.</p>
                         </div>
                     </div>
