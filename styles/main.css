@@ -328,6 +328,66 @@ img {
 .post-shell {
     padding-top: 3.5rem;
 }
+
+/* On-this-page TOC — floats in the left gutter beside the centered reading
+   column. Fixed so it stays put while reading; only shown when the viewport is
+   wide enough to have room for it (see media query below). */
+.post-toc {
+    position: fixed;
+    top: 7.5rem;
+    left: calc((100vw - 720px) / 2 - 232px);
+    width: 212px;
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    z-index: 5;
+}
+.post-toc-title {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem;
+}
+.post-toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 1px solid var(--rule);
+}
+.post-toc-item {
+    margin: 0;
+}
+.post-toc-link {
+    display: block;
+    padding: 0.3rem 0 0.3rem 0.875rem;
+    margin-left: -1px;
+    border-left: 2px solid transparent;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.post-toc-l3 .post-toc-link {
+    padding-left: 1.75rem;
+    font-size: 0.78125rem;
+}
+.post-toc-link:hover {
+    color: var(--text);
+}
+.post-toc-link.is-active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 600;
+}
+@media (max-width: 1199px) {
+    .post-toc {
+        display: none;
+    }
+}
 .post-header {
     margin-bottom: 2.5rem;
 }

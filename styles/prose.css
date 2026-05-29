@@ -47,6 +47,13 @@
     display: none;
 }
 
+/* Offset jump-link targets so headings clear the sticky header (and the TOC). */
+.prose h2[id],
+.prose h3[id],
+.prose h4[id] {
+    scroll-margin-top: 6rem;
+}
+
 .prose .headerlink {
     margin-left: 0.4em;
     color: var(--text-muted);

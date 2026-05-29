@@ -248,6 +248,27 @@ def:priv load_authors() -> dict {
 }
 
 
+def:priv normalize_avatar(avatar: str) -> str {
+    # Absolute URLs and root-relative paths pass through. Bare "assets/..."
+    # (or "./assets/...") from .authors.yml gets rooted to /assets/ so it
+    # resolves regardless of the current page path.
+    if not avatar {
+        return "";
+    }
+    if avatar.startswith("http://") or avatar.startswith("https://") or avatar.startswith("/") {
+        return avatar;
+    }
+    cleaned = avatar;
+    while cleaned.startswith("./") or cleaned.startswith("../") {
+        cleaned = cleaned.split("/", 1)[1];
+    }
+    if cleaned.startswith("assets/") {
+        return "/" + cleaned;
+    }
+    return "/assets/" + cleaned;
+}
+
+
 def:priv resolve_authors(author_ids: list, registry: dict) -> list {
     resolved = [];
     for aid in author_ids {
@@ -258,7 +279,7 @@ def:priv resolve_authors(author_ids: list, registry: dict) -> list {
                 "id": key,
                 "name": str(entry.get("name", key)),
                 "description": str(entry.get("description", "")),
-                "avatar": str(entry.get("avatar", "")),
+                "avatar": normalize_avatar(str(entry.get("avatar", ""))),
             });
         } else {
             resolved.append({"id": key, "name": key, "description": "", "avatar": ""});

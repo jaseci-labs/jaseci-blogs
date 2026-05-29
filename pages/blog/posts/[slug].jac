@@ -566,9 +566,69 @@ def make_runner(cm: any, output: any, run_btn: any, lang: str) -> any {
 }
 
 
+def build_toc(container: any) -> list {
+    # Collect h2/h3 headings (the markdown `toc` extension already gave them ids
+    # + a .headerlink anchor) into a flat list the sidebar renders as jump links.
+    items = [];
+    heads = container.querySelectorAll("h2[id], h3[id]");
+    for h in heads {
+        raw = str(h.textContent or "");
+        link_el = h.querySelector(".headerlink");
+        if link_el {
+            # Drop the trailing ¶ permalink glyph from the visible label.
+            raw = raw.replace(str(link_el.textContent or ""), "");
+        }
+        text = raw.strip();
+        if not text {
+            continue;
+        }
+        level = 2 if str(h.tagName) == "H2" else 3;
+        items.append({"id": str(h.getAttribute("id")), "text": text, "level": level});
+    }
+    return items;
+}
+
+
+def setup_toc_scrollspy() -> None {
+    # Highlight the section currently in view. We toggle classes directly on the
+    # DOM (not React state) so scrolling never triggers re-renders, and keep a
+    # single handler on window so SPA re-navigations don't stack listeners. The
+    # handler queries .post-toc live, so it's a harmless no-op on non-post pages.
+    if window.__tocScroll {
+        window.removeEventListener("scroll", window.__tocScroll);
+    }
+    def on_scroll() -> None {
+        toc_el = document.querySelector(".post-toc");
+        if not toc_el {
+            return;
+        }
+        links = toc_el.querySelectorAll("a[data-toc-id]");
+        current = "";
+        for ln in links {
+            target = document.getElementById(str(ln.getAttribute("data-toc-id")));
+            if target and target.getBoundingClientRect().top <= 140 {
+                current = str(ln.getAttribute("data-toc-id"));
+            }
+        }
+        for ln in links {
+            if current and str(ln.getAttribute("data-toc-id")) == current {
+                ln.classList.add("is-active");
+            } else {
+                ln.classList.remove("is-active");
+            }
+        }
+    }
+    window.__tocScroll = on_scroll;
+    window.addEventListener("scroll", on_scroll, {"passive": True});
+    # Run once after the nav has painted so the first section highlights on load.
+    setTimeout(on_scroll, 60);
+}
+
+
 def:pub PostBody(html: str) -> JsxElement {
     ref = useRef(None);
     has html_version: int = 0;
+    has toc: list = [];
 
     can with [html] entry {
         html_version = html_version + 1;
@@ -594,13 +654,36 @@ def:pub PostBody(html: str) -> JsxElement {
         } except Exception {
             _ignore = None;
         }
+        try {
+            toc = build_toc(container);
+            setup_toc_scrollspy();
+        } except Exception {
+            _ignore = None;
+        }
     }
 
-    return <div
-        ref={ref}
-        className="prose"
-        dangerouslySetInnerHTML={{"__html": html}}
-    />;
+    return <>
+        {len(toc) > 1 and (
+            <nav className="post-toc" aria-label="On this page">
+                <p className="post-toc-title">On this page</p>
+                <ul className="post-toc-list">
+                    {[
+                        <li key={item["id"]} className={f"post-toc-item post-toc-l{item['level']}"}>
+                            <a href={f"#{item['id']}"} data-toc-id={item["id"]} className="post-toc-link">
+                                {item["text"]}
+                            </a>
+                        </li>
+                        for item in toc
+                    ]}
+                </ul>
+            </nav>
+        )}
+        <div
+            ref={ref}
+            className="prose"
+            dangerouslySetInnerHTML={{"__html": html}}
+        />
+    </>;
 }
 
 

@@ -9,6 +9,10 @@ cl_route_prefix = "/"
 
 [plugins.client]
 enabled = true
+# Production build: single server serves the bundled client + static public/
+# from one origin. Dev/HMR splits vite (:8000) and API (:8001), and vite does
+# not serve public/, which 404s /assets/* and /jaclang.zip on deploy.
+debug = false
 
 [plugins.client.paths]
 "@components/*" = "./components/*"
