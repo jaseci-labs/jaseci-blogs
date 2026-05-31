@@ -288,6 +288,14 @@ img {
 .footer-nav a:hover {
     color: var(--accent);
 }
+.footer-nav a.footer-social {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.footer-nav a.footer-social svg {
+    flex-shrink: 0;
+}
 .footer-bottom {
     margin-top: 2.5rem;
     padding-top: 1.5rem;

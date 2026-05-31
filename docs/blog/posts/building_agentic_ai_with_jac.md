@@ -8,13 +8,11 @@ categories:
 slug: building-agentic-ai-with-jac
 ---
 
-# Building Agents in a Language That Knows What an Agent Is
+# Agentic AI with Jac: A Programming Language That Knows What an Agent Is
 
 Most of an agent codebase is not the agent. It is the supporting code every developer writes from scratch, because the languages we use were never designed for agents.
 
 <!-- more -->
-
----
 
 ## The Problem
 
@@ -30,7 +28,7 @@ These three problems share a root cause. The parts that *are* the agent, its too
 
     *If agents were a feature of the language itself, instead of being built from prompts and code that developers need to write from scratch, what would the language need to provide?*
 
-The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it: **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/) plugin, and **Object-Spatial Programming** (OSP), Jac's native model for organizing computation around a graph. Together they give us **seven patterns** for building agents: three for what happens inside a single iteration (the **Mind**), and four for how work moves between iterations (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
+The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it: **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/reference/plugins/byllm/) plugin, and **[Object-Spatial Programming](https://docs.jaseci.org/reference/language/osp/)** (OSP), Jac's native model for organizing computation around a graph. Together they give us **seven patterns** for building agents: three for what happens inside a single iteration (the **Mind**), and four for how work moves between iterations (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
 
 !!! info "About the code"
 
@@ -48,7 +46,6 @@ Two places agent logic actually ends up today:
 
 Either way, the things developers care about are out of reach: type-checked workflows, refactor-safe agents, testable control flow, predictable behavior on smaller models. That's the gap the seven patterns are designed to close. -->
 
----
 
 ## The Mind
 
@@ -210,13 +207,10 @@ with entry {
 
 In Jac, tools are ordinary functions. The runtime introspects their signatures, exposes them to the model, runs the tool-use loop, and returns when the model is done. The developer never declares a JSON schema, never maintains a dispatch dict, and never writes the tool-use loop by hand.
 
----
-
 Together, these three patterns address two of our problems for anything that happens inside a single iteration: declaring the same intent in multiple places, and rewriting the same supporting code in every project. The moment two iterations need to coordinate, the wiring between them becomes the agent. One iteration's output feeds the next, a retry triggers a rerun, or several workers run in parallel.
 
 In Python or TypeScript, this wiring lives inside a generic `for` loop or inside a system prompt with numbered steps. That is the third problem, *control flow lives in prose*, and the next four patterns address it.
 
----
 
 ## The Flow
 
@@ -441,11 +435,9 @@ with entry {
 
 In Python or TypeScript, parallel work usually collapses into either a single bloated prompt holding all the tools and asking the model to manage them itself, or a hand-rolled threadpool with manual result merging. In the Jac code above, `SurveyAgent` spawns three independent walkers (`HardwareResearcher`, `SoftwareResearcher`, `AIResearcher`) using `flow root spawn`, then collects their results with `wait`. Each researcher carries its own scoped tool list and its own context, so three focused prompts run concurrently rather than one bloated prompt holding nine tools. The synthesis step `self.synthesize(...)` only runs after all three workers have completed.
 
----
 
 Together, these four patterns address the third of our problems: workflows that live inside a prompt as a string and cannot be verified or observed by the surrounding code. In Jac, the workflow is the graph itself, where the steps, branches, retries, and parallelism are all visible as connections between nodes. The seven patterns, three for what happens inside an iteration and four for how iterations connect, cover what every agent codebase rebuilds by hand in Python or TypeScript.
 
----
 
 ## The Takeaway
 
