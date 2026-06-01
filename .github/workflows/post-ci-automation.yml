@@ -1,0 +1,268 @@
+name: Post-CI blog automation
+
+# Runs AFTER "Lint new posts" succeeds on a PR. Because it is a workflow_run
+# trigger it executes in the base-repo context with secrets available even for
+# fork PRs (unlike a pull_request trigger), which is what lets the cross-repo
+# issue step work. It never checks out or runs PR code, so the privileged token
+# is never exposed to untrusted contributions.
+#
+# For each PR that ADDS exactly one post it:
+#   1. opens/updates a "scheduling tracker" issue in THIS repo (label
+#      blog-schedule) — the durable surface an editor uses to /schedule the
+#      post. Merging the PR does NOT close it; auto-publish.yml closes it when
+#      the post goes live.
+#   2. opens/updates a "docs reference" issue in the Jac docs repo (cross-repo,
+#      needs a GitHub App token) pointing at the slug-based coming-soon URL.
+#      Skipped automatically when the App is not configured.
+#   3. posts/refreshes one sticky comment on the PR linking both issues.
+
+on:
+  workflow_run:
+    workflows: ["Lint new posts"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  automate:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Resolve PR, added post and slug
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const wr = context.payload.workflow_run;
+            const headSha = wr.head_sha;
+            const headOwner = wr.head_repository.owner.login;
+            const headRepo = wr.head_repository.name;
+            const headBranch = wr.head_branch;
+
+            // fork PRs leave workflow_run.pull_requests empty — look it up by head.
+            let pr = (wr.pull_requests || [])[0];
+            if (!pr) {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner, repo: context.repo.repo,
+                state: 'open', head: `${headOwner}:${headBranch}`, per_page: 10,
+              });
+              pr = prs[0];
+            }
+            if (!pr) { core.info('No open PR for this run.'); core.setOutput('skip', 'true'); return; }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              pull_number: pr.number, per_page: 100,
+            });
+            const added = files
+              .filter(f => f.status === 'added'
+                && f.filename.startsWith('docs/blog/posts/')
+                && f.filename.endsWith('.md'));
+            if (added.length !== 1) {
+              core.info(`PR #${pr.number} adds ${added.length} post(s); nothing to track.`);
+              core.setOutput('skip', 'true'); return;
+            }
+
+            const path = added[0].filename;
+            let slug = null;
+            try {
+              const { data: blob } = await github.rest.repos.getContent({
+                owner: headOwner, repo: headRepo, path, ref: headSha,
+              });
+              const text = Buffer.from(blob.content, 'base64').toString('utf8');
+              const fm = text.match(/^---\n([\s\S]*?)\n---/);
+              if (fm) {
+                const sm = fm[1].match(/^slug:\s*(.+)$/m);
+                if (sm) slug = sm[1].trim().replace(/^['"]|['"]$/g, '');
+              }
+            } catch (e) { core.info(`Could not read post content: ${e.message}`); }
+            if (!slug) slug = path.split('/').pop().replace(/\.md$/, '');
+
+            core.setOutput('skip', 'false');
+            core.setOutput('pr', String(pr.number));
+            core.setOutput('slug', slug);
+            core.setOutput('path', path);
+
+      - name: Create or update scheduling tracker issue
+        id: tracker
+        if: steps.resolve.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ steps.resolve.outputs.pr }}
+          SLUG: ${{ steps.resolve.outputs.slug }}
+        with:
+          script: |
+            const pr = process.env.PR, slug = process.env.SLUG;
+            const label = 'blog-schedule';
+            try {
+              await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label });
+            } catch (e) {
+              if (e.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  name: label, color: 'fbca04', description: 'Blog post awaiting scheduling',
+                });
+              } else { throw e; }
+            }
+
+            const marker = `<!-- blog-tracker: pr=${pr} slug=${slug} -->`;
+            const comingSoon = `https://blogs.jaseci.org/coming-soon/?slug=${encodeURIComponent(slug)}`;
+            const body = [
+              marker,
+              '',
+              `## Schedule: \`${slug}\``,
+              '',
+              `Tracking PR: #${pr}`,
+              `Coming-soon page: ${comingSoon}`,
+              '',
+              'This issue is the scheduling surface for the post. It stays open until the post',
+              'publishes — **merging the PR does not close it**.',
+              '',
+              '### Editorial commands (write access required)',
+              '',
+              'Comment one of these here (they take effect once the PR is merged):',
+              '',
+              '```',
+              '/schedule 2026-MM-DDTHH:MM:SSZ   # queue for a publish time (UTC)',
+              '/publish-now                     # publish immediately',
+              '/hold                            # keep drafted, no publish time',
+              '/cancel                          # drop a pending schedule',
+              '```',
+              '',
+              '> Scheduling writes `docs/blog/.schedule.yml` on `main`, so `/schedule` only',
+              '> takes effect once the post file exists on `main` (i.e. after the PR merges).',
+            ].join('\n');
+
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: label, per_page: 100,
+            });
+            const found = open.find(i => (i.body || '').includes(`pr=${pr} `));
+            if (found) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: found.number, body,
+              });
+              core.setOutput('number', String(found.number));
+              core.setOutput('url', found.html_url);
+            } else {
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `Schedule blog post: ${slug}`, body, labels: [label],
+              });
+              core.setOutput('number', String(issue.number));
+              core.setOutput('url', issue.html_url);
+            }
+
+      - name: Mint cross-repo token
+        id: app-token
+        if: steps.resolve.outputs.skip == 'false' && vars.ISSUE_BOT_APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ISSUE_BOT_APP_ID }}
+          private-key: ${{ secrets.ISSUE_BOT_PRIVATE_KEY }}
+          owner: ${{ vars.DOCS_REPO_OWNER || 'jaseci-labs' }}
+          repositories: ${{ vars.DOCS_REPO_NAME || 'jaseci' }}
+
+      - name: Create or update docs-reference issue
+        id: docs
+        if: steps.resolve.outputs.skip == 'false' && vars.ISSUE_BOT_APP_ID != ''
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ steps.resolve.outputs.pr }}
+          SLUG: ${{ steps.resolve.outputs.slug }}
+          DOCS_OWNER: ${{ vars.DOCS_REPO_OWNER || 'jaseci-labs' }}
+          DOCS_NAME: ${{ vars.DOCS_REPO_NAME || 'jaseci' }}
+          SRC_REPO: ${{ github.repository }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const owner = process.env.DOCS_OWNER, repo = process.env.DOCS_NAME;
+            const pr = process.env.PR, slug = process.env.SLUG, src = process.env.SRC_REPO;
+            const label = 'blog-docs-sync';
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (e) {
+              if (e.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner, repo, name: label, color: '0e8a16',
+                  description: 'Docs link for an upcoming Jaseci blog post',
+                });
+              } else { throw e; }
+            }
+
+            const marker = `<!-- blog-docs: src=${src} pr=${pr} slug=${slug} -->`;
+            const comingSoon = `https://blogs.jaseci.org/coming-soon/?slug=${encodeURIComponent(slug)}`;
+            const body = [
+              marker,
+              '',
+              `A new blog post **\`${slug}\`** is in the pipeline at \`${src}\` (PR #${pr}).`,
+              '',
+              'Please add or refresh its reference in the Jac documentation.',
+              '',
+              `- Coming-soon URL (stable, slug-based): ${comingSoon}`,
+              '- The final dated URL will be posted here automatically when the post goes live.',
+            ].join('\n');
+
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: label, per_page: 100,
+            });
+            const found = open.find(i => (i.body || '').includes(`pr=${pr} `) && (i.body || '').includes(src));
+            if (found) {
+              core.setOutput('url', found.html_url);
+            } else {
+              const { data: issue } = await github.rest.issues.create({
+                owner, repo, title: `Docs link for upcoming blog post: ${slug}`, body, labels: [label],
+              });
+              core.setOutput('url', issue.html_url);
+            }
+
+      - name: Post sticky PR comment
+        if: steps.resolve.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ steps.resolve.outputs.pr }}
+          SLUG: ${{ steps.resolve.outputs.slug }}
+          TRACKER_URL: ${{ steps.tracker.outputs.url }}
+          DOCS_URL: ${{ steps.docs.outputs.url }}
+        with:
+          script: |
+            const pr = Number(process.env.PR);
+            const marker = '<!-- blog-ci-bot -->';
+            const lines = [
+              marker,
+              '### ✅ CI passed — this post is ready for editorial review',
+              '',
+              `**Slug:** \`${process.env.SLUG}\``,
+              `**Scheduling issue:** ${process.env.TRACKER_URL || '(pending)'}`,
+            ];
+            if (process.env.DOCS_URL) lines.push(`**Docs-reference issue:** ${process.env.DOCS_URL}`);
+            lines.push(
+              '',
+              'After this PR is merged, an editor schedules the post by commenting `/schedule <ISO8601 UTC>`',
+              '**on the scheduling issue above** (not on this PR). The post stays `draft: true` until the',
+              'auto-publisher flips it live at the scheduled time.',
+              '',
+              '_Merging is not gated on scheduling — but the scheduling issue stays open until the post is_',
+              '_live, so it can\'t be quietly forgotten._',
+            );
+            const body = lines.join('\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, per_page: 100,
+            });
+            const existing = comments.find(c => (c.body || '').includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, body,
+              });
+            }

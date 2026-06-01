@@ -68,16 +68,42 @@ jobs:
           # shellcheck disable=SC2086
           python scripts/schedule_lib.py lint-new-posts $FILES | tee result.json
 
+      - name: Guard against un-drafting existing posts
+        # A PR may legitimately edit an already-live post (no draft: key) — that
+        # deploys on merge. But a PR must NOT remove `draft: true` from a post that
+        # is still unpublished: that would publish it on merge, bypassing the
+        # scheduler. The auto-publisher removes draft: via direct commits to main,
+        # never through a PR, so this guard never fights it.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          MODIFIED=$(git diff --name-only --diff-filter=M "$BASE_SHA" "$HEAD_SHA" -- 'docs/blog/posts/*.md' || true)
+          VIOLATIONS=""
+          for f in $MODIFIED; do
+            git show "$BASE_SHA:$f" > /tmp/base_post.md 2>/dev/null || continue
+            base_draft=$(python scripts/schedule_lib.py check-draft /tmp/base_post.md | python -c "import json,sys;print(json.load(sys.stdin)['draft'])")
+            head_draft=$(python scripts/schedule_lib.py check-draft "$f" | python -c "import json,sys;print(json.load(sys.stdin)['draft'])")
+            if [ "$base_draft" = "True" ] && [ "$head_draft" != "True" ]; then
+              echo "::error file=$f::Removes 'draft: true' from an unpublished post. Keep draft: true and run /schedule after merge — the auto-publisher is the only path to live."
+              VIOLATIONS="$VIOLATIONS $f"
+            fi
+          done
+          if [ -n "$VIOLATIONS" ]; then
+            VIOLATIONS="$VIOLATIONS" python -c "import json,os; fs=os.environ['VIOLATIONS'].split(); json.dump({'ok':False,'action':'guard-undraft','failures':[{'path':f,'error':'removes draft: true from an unpublished post'} for f in fs]}, open('result.json','w'), indent=2)"
+            exit 1
+          fi
+
       - name: Post-fail explainer
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let body = '### Lint failed: new post(s) missing `draft: true`\n\n';
-            body += 'Every new post in `docs/blog/posts/` must include `draft: true` in its frontmatter when first added. ';
-            body += 'This is a safety rail — a merge of this PR with the post in its current state would put it live on blogs.jaseci.org immediately, bypassing editorial review.\n\n';
-            body += 'Fix: add `draft: true` to the frontmatter of the affected file(s):\n\n';
+            let body = '### Lint failed: a post in this PR would publish on merge\n\n';
+            body += 'A post is in a state where merging this PR would put it live on blogs.jaseci.org immediately, bypassing the scheduler. This happens when a **new** post is missing `draft: true`, or when a PR **removes** `draft: true` from a post that has not been published yet.\n\n';
+            body += 'Publishing is the scheduler\'s job: keep `draft: true`, merge, then `/schedule` the post on its scheduling issue.\n\n';
+            body += 'Fix: ensure `draft: true` is present in the frontmatter of the affected file(s):\n\n';
             body += '```yaml\n---\ndate: 2026-XX-XX\nauthors:\n  - your_author_id\ncategories:\n  - Your Category\nslug: your-slug\ndraft: true   # <- this line\n---\n```\n\n';
             body += 'Once an editor merges the PR, they will schedule a publish time using the *Schedule a post* workflow (or `/schedule <ISO datetime>` in this PR\'s comments). The auto-publisher will flip `draft: true` off when that time arrives.\n\n';
             try {

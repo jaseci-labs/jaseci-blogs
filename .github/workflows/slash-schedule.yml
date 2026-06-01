@@ -33,13 +33,18 @@ concurrency:
 
 jobs:
   dispatch:
+    # Accept commands either on a PR (legacy) or on a scheduling tracker issue
+    # (labelled blog-schedule), which is the surface post-ci-automation.yml opens.
     if: |
-      github.event.issue.pull_request != null &&
       startsWith(github.event.comment.body, '/') &&
       (
         github.event.comment.author_association == 'OWNER' ||
         github.event.comment.author_association == 'MEMBER' ||
         github.event.comment.author_association == 'COLLABORATOR'
+      ) &&
+      (
+        github.event.issue.pull_request != null ||
+        contains(github.event.issue.labels.*.name, 'blog-schedule')
       )
     runs-on: ubuntu-latest
     steps:
@@ -94,27 +99,39 @@ jobs:
         if: steps.parse.outputs.skip != 'true'
         run: pip install pyyaml
 
-      - name: Infer slug from PR if not provided
+      - name: Infer slug if not provided
         id: slug
         if: steps.parse.outputs.skip != 'true' && steps.parse.outputs.slug == ''
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.issue.number,
-              per_page: 100,
-            });
-            const posts = files
-              .map(f => f.filename)
-              .filter(f => f.startsWith('docs/blog/posts/') && f.endsWith('.md'));
-            if (posts.length !== 1) {
-              core.setFailed(`Could not infer slug: PR touches ${posts.length} post files. Pass slug=<name> explicitly.`);
-              return;
+            const issue = context.payload.issue;
+            if (issue.pull_request) {
+              // PR comment: infer from the single added/changed post file.
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: issue.number,
+                per_page: 100,
+              });
+              const posts = files
+                .map(f => f.filename)
+                .filter(f => f.startsWith('docs/blog/posts/') && f.endsWith('.md'));
+              if (posts.length !== 1) {
+                core.setFailed(`Could not infer slug: PR touches ${posts.length} post files. Pass slug=<name> explicitly.`);
+                return;
+              }
+              const stem = posts[0].split('/').pop().replace(/\.md$/, '');
+              core.setOutput('slug', stem);
+            } else {
+              // Tracker issue: read the slug from the hidden marker in the body.
+              const m = (issue.body || '').match(/<!--\s*blog-tracker:[^>]*\bslug=(\S+)/);
+              if (!m) {
+                core.setFailed('No `slug=` marker found in this issue body. Pass slug=<name> explicitly.');
+                return;
+              }
+              core.setOutput('slug', m[1]);
             }
-            const stem = posts[0].split('/').pop().replace(/\.md$/, '');
-            core.setOutput('slug', stem);
 
       - name: Run scheduler
         if: steps.parse.outputs.skip != 'true'

@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: schedule-mutation
@@ -54,6 +55,80 @@ jobs:
                      -m "Triggered by hourly scheduler." \
                      -m "Run: $RUN_URL"
           git push origin main
+
+      - name: Close scheduling issues
+        id: closed
+        if: steps.run.outputs.count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const result = JSON.parse(fs.readFileSync('result.json', 'utf8'));
+            const published = [];
+            for (const p of (result.published || [])) {
+              let url = null;
+              try {
+                const text = fs.readFileSync(p.post, 'utf8');
+                // post_url_format is "{date}/{slug}" with date as yyyy/MM/dd (mkdocs.yml).
+                const dm = text.match(/^date:\s*['"]?(\d{4})-(\d{2})-(\d{2})/m);
+                if (dm) url = `https://blogs.jaseci.org/blog/${dm[1]}/${dm[2]}/${dm[3]}/${p.slug}/`;
+              } catch (e) { core.info(`Could not read ${p.post}: ${e.message}`); }
+              published.push({ slug: p.slug, url });
+            }
+            core.setOutput('published', JSON.stringify(published));
+
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'blog-schedule', per_page: 100,
+            });
+            for (const pub of published) {
+              const found = open.find(i => (i.body || '').includes(`slug=${pub.slug} `));
+              if (!found) continue;
+              const msg = pub.url ? `🎉 Published — now live at ${pub.url}` : '🎉 Published.';
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: found.number, body: msg,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: found.number, state: 'closed',
+              });
+            }
+
+      - name: Mint cross-repo token
+        id: app-token
+        if: steps.run.outputs.count != '0' && vars.ISSUE_BOT_APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ISSUE_BOT_APP_ID }}
+          private-key: ${{ secrets.ISSUE_BOT_PRIVATE_KEY }}
+          owner: ${{ vars.DOCS_REPO_OWNER || 'jaseci-labs' }}
+          repositories: ${{ vars.DOCS_REPO_NAME || 'jaseci' }}
+
+      - name: Comment live URL on docs issues
+        if: steps.run.outputs.count != '0' && vars.ISSUE_BOT_APP_ID != ''
+        uses: actions/github-script@v7
+        env:
+          DOCS_OWNER: ${{ vars.DOCS_REPO_OWNER || 'jaseci-labs' }}
+          DOCS_NAME: ${{ vars.DOCS_REPO_NAME || 'jaseci' }}
+          PUBLISHED: ${{ steps.closed.outputs.published }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const owner = process.env.DOCS_OWNER, repo = process.env.DOCS_NAME;
+            const published = JSON.parse(process.env.PUBLISHED || '[]');
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: 'blog-docs-sync', per_page: 100,
+            });
+            for (const pub of published) {
+              if (!pub.url) continue;
+              const found = open.find(i => (i.body || '').includes(`slug=${pub.slug} `));
+              if (!found) continue;
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: found.number,
+                body: `The post is now live: ${pub.url}\n\nThis is the final, dated URL — please point any \`coming-soon\` links here.`,
+              });
+            }
 
       - name: Job summary
         if: always()
