@@ -452,6 +452,28 @@ def lint_new_posts(paths: list[str]) -> dict[str, Any]:
     return {"ok": not failures, "action": "lint-new-posts", "checked": checked, "failures": failures}
 
 
+def check_draft(path: str) -> dict[str, Any]:
+    """Report whether a single file is a post and whether it is `draft: true`.
+
+    Location-agnostic (unlike lint_new_posts) so it can be pointed at a base-ref
+    version extracted to a temp path — used by the CI guard that blocks a PR from
+    removing `draft: true` from an unpublished post.
+    """
+    p = Path(path)
+    if not p.exists():
+        return {"ok": True, "path": path, "exists": False, "is_post": False, "draft": False}
+    post = _read_post(p)
+    if post is None:
+        return {"ok": True, "path": path, "exists": True, "is_post": False, "draft": False}
+    return {
+        "ok": True,
+        "path": path,
+        "exists": True,
+        "is_post": True,
+        "draft": post.meta.get("draft") is True,
+    }
+
+
 def _extract_h1(body: str) -> str | None:
     for line in body.splitlines():
         stripped = line.strip()
@@ -504,6 +526,9 @@ def main(argv: list[str] | None = None) -> int:
     p_lint = sub.add_parser("lint-new-posts")
     p_lint.add_argument("paths", nargs="*")
 
+    p_cd = sub.add_parser("check-draft")
+    p_cd.add_argument("path")
+
     args = parser.parse_args(argv)
 
     try:
@@ -529,6 +554,8 @@ def main(argv: list[str] | None = None) -> int:
                 json.dump(result, sys.stdout, indent=2)
                 sys.stdout.write("\n")
                 return 1
+        elif args.cmd == "check-draft":
+            result = check_draft(args.path)
         else:
             parser.error(f"Unknown command {args.cmd!r}")
             return 2
