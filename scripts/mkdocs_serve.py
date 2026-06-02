@@ -30,8 +30,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         """Add security headers to the response."""
         response: Response = await call_next(request)
-        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        # response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        # response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
         return response
 
 
