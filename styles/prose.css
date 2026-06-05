@@ -141,6 +141,48 @@
     margin-top: 0.75em;
 }
 
+/* Phone screenshot — portrait app captures shown at a phone-like width. */
+.prose .phone {
+    max-width: 300px;
+    margin: 2.5em auto;
+}
+.prose .phone img {
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-card);
+}
+/* Two phone screenshots side by side with one shared caption below; the caption
+   spans full width so it sits under both, and the images stack on narrow screens. */
+.prose .phone-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 2.5em auto;
+}
+.prose .phone-row img {
+    flex: 0 0 auto;
+    height: 30rem;
+    width: auto;
+    max-width: 47%;
+    object-fit: contain;
+    margin: 0;
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-card);
+}
+.prose .phone-row figcaption {
+    flex-basis: 100%;
+}
+/* Stack and drop the fixed height on phones so the screenshots fit the width. */
+@media (max-width: 640px) {
+    .prose .phone-row img {
+        height: auto;
+        max-width: 100%;
+    }
+}
+
 /* Inline code */
 .prose :not(pre) > code {
     font-family: var(--font-mono);
@@ -264,8 +306,8 @@
     display: block;
     margin-top: 0.5rem;
     font-family: var(--font-sans);
-    font-size: 0.8125rem;
-    line-height: 1.35;
+    font-size: 1rem;
+    line-height: 1.4;
     color: var(--text-muted);
     text-wrap: balance;
 }

@@ -23,6 +23,12 @@ draft: true
 <div class="stat-card" markdown="1"><span class="stat-num">$1.5M</span><span class="stat-label">raised so far</span></div>
 </div>
 
+<figure class="phone-row" markdown="1">
+<img src="/assets/tobu-4.jpg" alt="The Tobu app inviting a user to capture their first memory" />
+<img src="/assets/tobu-1.jpg" alt="The Tobu memory wall showing photo memories with AI-generated descriptions, dates, and locations" />
+<figcaption>From a first photo to a wall of memories: every photo becomes a memory with its own story, date, and place.</figcaption>
+</figure>
+
 Tobu is rethinking how people preserve digital memories. Its AI-powered memory app helps users capture not just photos and videos, but the stories, people, places, emotions, and context behind them.
 
 That vision created a backend challenge. Tobu was not building a simple photo-storage app. It needed to manage a connected system of memories, users, relationships, places, privacy rules, sharing actions, comments, notifications, and AI-assisted storytelling.
@@ -34,6 +40,11 @@ Most photo apps are designed around storage. A user uploads an image, the system
 Tobu needed to go further. For Tobu, a photo is only the beginning of a memory. The real value comes from the context around that photo: who was there, where it happened, what the moment was about, how the user felt, and who should be able to access it.
 
 Those details are connected. A memory may involve multiple people. A person may be connected to many memories. A place may link different moments together. A shared memory may need different access rules depending on the relationship between users. AI-generated descriptions also need to connect back to the right memory in a reliable way.
+
+<figure class="phone" markdown="1">
+<img src="/assets/tobu-3.jpg" alt="Tobu's Shared Memories screen, a collage of memories shared between people" />
+<figcaption>Shared memories: a single moment can connect several people, each with their own access.</figcaption>
+</figure>
 
 > For Tobu, a photo is only the beginning of a memory. The real value comes from the context around it: who was there, where it happened, what the moment was about, and who should be able to see it.
 
@@ -58,6 +69,11 @@ That architectural fit helped the team move quickly from idea to implementation.
 ## How Jac's `by llm` Supported AI-Assisted Storytelling
 
 Tobu also needed AI to support storytelling. Capturing the meaning behind a memory often requires more than storing user-entered text. The product needed LLM-powered behavior to help collect, organize, and preserve the details that make a memory meaningful.
+
+<figure class="phone" markdown="1">
+<img src="/assets/tobu-2.jpg" alt="Tobu generating an AI summary of a memory and asking a follow-up question to capture its story" />
+<figcaption>Tobu uses <code>by llm</code> behavior to summarize a memory and ask follow-up questions that draw out its story.</figcaption>
+</figure>
 
 In many AI applications, developers have to manually manage prompt templates, model calls, response parsing, validation, and glue code between the AI layer and the backend. This creates extra engineering work and makes the system harder to maintain as features evolve.
 
@@ -84,6 +100,11 @@ Using Jac's graph-native programming model, Tobu built an initial demo in approx
 The impact extended beyond simplifying the architecture. By retrieving memories through their connections to people, places, events, and other moments, Tobu achieved **92.84% retrieval accuracy** and **2.2× fewer missed memories** than traditional RAG systems on real Tobu user data.
 
 Tobu demonstrates how Jaseci can accelerate development for AI-native applications by combining graph-native architecture, built-in AI capabilities, and high-quality retrieval in a single programming model.
+
+<figure class="phone" markdown="1">
+<img src="/assets/tobu-4.jpg" alt="Tobu onboarding screen inviting the user to get started with their first Tobu Moment" />
+<figcaption>Getting started: your first Tobu Moment begins with a single photo.</figcaption>
+</figure>
 
 ---
 
