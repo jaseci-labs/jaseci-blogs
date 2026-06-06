@@ -1,9 +1,9 @@
 ---
-date: 2026-06-05
+date: '2026-06-06'
 authors:
-  - savini
+- savini
 categories:
-  - Community
+- Community
 slug: tobu-memory-graph-case-study
 ---
 

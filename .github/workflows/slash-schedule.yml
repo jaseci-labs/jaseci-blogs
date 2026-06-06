@@ -26,6 +26,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write   # to trigger deploy.yml via workflow_dispatch
 
 concurrency:
   group: schedule-mutation
@@ -190,6 +191,14 @@ jobs:
                      -m "Run: $RUN_URL"
           git push origin main
           echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger deploy
+        # A push made with the default GITHUB_TOKEN does NOT fire deploy.yml's
+        # `on: push`. workflow_dispatch is exempt, so kick it explicitly.
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
 
       - name: Reply to comment
         if: always() && steps.parse.outputs.skip != 'true'

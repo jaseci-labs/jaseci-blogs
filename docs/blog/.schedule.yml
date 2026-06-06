@@ -105,3 +105,8 @@ schedule:
   first_publish: true
   notes: 'Restored from PR #17 (merged 2026-05-09, dropped by main force-push). See
     issue #21.'
+- slug: tobu-memory-graph-case-study
+  status: published
+  published_at: '2026-06-06T13:48:34Z'
+  published_by: Jayanaka-98
+  first_publish: true

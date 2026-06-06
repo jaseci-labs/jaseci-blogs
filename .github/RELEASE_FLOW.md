@@ -185,11 +185,18 @@ Slug matches use a trailing space (`slug=<slug> `) so `foo` never matches `foo-b
 
 ## Coupling to deployment
 
-The publish flow depends on **one** property of `deploy.yml`: *a commit to `main`
-triggers an image build + push that the CD rolls out* (drafts are filtered server-
-side by `parse_post_file` in [main.jac](../main.jac)). Everything else in
-`deploy.yml` (image tagging, ECR/AWS details, buildx, the nightly rebuild, the
-`release`/`workflow_dispatch` triggers) is free to change.
+The publish flow depends on **one** property of `deploy.yml`: *a deploy runs after
+a commit to `main`* (drafts are filtered server-side by `parse_post_file` in
+[main.jac](../main.jac)). Everything else in `deploy.yml` (image tagging, ECR/AWS
+details, buildx, the nightly rebuild, the `release`/`workflow_dispatch` triggers)
+is free to change.
+
+Note the mutation workflows (`auto-publish`, `schedule`, `slash-schedule`,
+`takedown`) push with the default `GITHUB_TOKEN`, and a `GITHUB_TOKEN` push does
+**not** fire another workflow's `on: push` (GitHub's anti-recursion rule). So each
+one fires the deploy explicitly with `gh workflow run deploy.yml --ref main` after
+pushing (needs `actions: write`); `workflow_dispatch` is exempt from that rule.
+The `push: branches: [main]` trigger remains as the safety net for *human* pushes.
 
 **Don't** remove/narrow the `push: branches: [main]` trigger or add a `paths:`
 filter excluding `docs/blog/posts/` — auto-publish would still mark the post
