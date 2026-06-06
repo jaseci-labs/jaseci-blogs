@@ -15,6 +15,8 @@
 
 .prose p {
     margin: 0;
+    text-align: justify;
+    hyphens: auto;
 }
 
 .prose h2,
@@ -102,12 +104,19 @@
 }
 
 .prose blockquote {
-    margin: 2em 0;
-    padding: 0.5em 0 0.5em 1.5em;
-    border-left: 3px solid var(--accent);
-    font-style: italic;
-    color: var(--text-muted);
+    margin: 2.5em 0;
+    padding: 1.4rem 1.75rem;
+    background: var(--bg-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    font-style: normal;
+    color: var(--text);
     font-size: 1.0625em;
+    line-height: 1.6;
+}
+.prose blockquote p {
+    text-align: justify;
+    hyphens: auto;
 }
 
 .prose hr {
@@ -130,6 +139,48 @@
     color: var(--text-muted);
     text-align: center;
     margin-top: 0.75em;
+}
+
+/* Phone screenshot — portrait app captures shown at a phone-like width. */
+.prose .phone {
+    max-width: 300px;
+    margin: 2.5em auto;
+}
+.prose .phone img {
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-card);
+}
+/* Two phone screenshots side by side with one shared caption below; the caption
+   spans full width so it sits under both, and the images stack on narrow screens. */
+.prose .phone-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 2.5em auto;
+}
+.prose .phone-row img {
+    flex: 0 0 auto;
+    height: 30rem;
+    width: auto;
+    max-width: 47%;
+    object-fit: contain;
+    margin: 0;
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-card);
+}
+.prose .phone-row figcaption {
+    flex-basis: 100%;
+}
+/* Stack and drop the fixed height on phones so the screenshots fit the width. */
+@media (max-width: 640px) {
+    .prose .phone-row img {
+        height: auto;
+        max-width: 100%;
+    }
 }
 
 /* Inline code */
@@ -205,6 +256,149 @@
     font-size: 0.75rem;
     letter-spacing: 0.08em;
     margin: 0 0 0.5em;
+}
+
+/* Stat grid — hero metrics callout. Cards with a big accent number and a short
+   label, divided by hairline rules. Used to feature headline results. The grid
+   sizes to its child count (--cols), so it never leaves an orphan empty cell. */
+.prose .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 3), 1fr);
+    gap: 1px;
+    margin: 2.5em 0;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+}
+.prose .stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elev);
+    padding: 1.75rem 1.25rem;
+    text-align: center;
+    transition: background-color 0.15s ease;
+}
+.prose .stat-card:hover {
+    background: var(--accent-soft);
+}
+/* python-markdown wraps the two spans in a <p>; reset it so the spans control
+   their own spacing and the card stays compact. */
+.prose .stat-card > p {
+    margin: 0;
+    text-align: center;
+    hyphens: none;
+}
+.prose .stat-num {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+.prose .stat-label {
+    display: block;
+    margin-top: 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    text-wrap: balance;
+}
+/* Collapse to 2 columns on tablets, 2 across on phones (still no orphan cell). */
+@media (max-width: 640px) {
+    .prose .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .prose .stat-num {
+        font-size: 1.875rem;
+    }
+}
+
+/* Citation — small, muted reference line set apart from the body text. */
+.prose .citation {
+    margin: 1.25em 0 2em;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+.prose .citation p {
+    margin: 0;
+    text-align: left;
+    hyphens: none;
+}
+
+/* Call-to-action — closing card with a pill button. Same warm fill + accent edge
+   as the other cards, but the link renders as a button so it reads as an action. */
+.prose .cta {
+    margin: 3em 0 1em;
+    padding: 2rem;
+    background: var(--bg-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    text-align: center;
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--text-strong);
+}
+.prose .cta p {
+    margin: 0;
+    text-align: center;
+    hyphens: none;
+}
+/* Only the link explicitly marked .cta-button becomes a button; inline links in
+   the CTA copy keep the normal underlined link style. (Can't use :only-child —
+   it ignores text-node siblings, so an inline link in a sentence matches too.) */
+.prose .cta a.cta-button {
+    display: inline-block;
+    margin-top: 1.1rem;
+    padding: 0.7rem 1.6rem;
+    background: var(--accent);
+    color: var(--bg-elev);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.prose .cta a.cta-button:hover {
+    background: var(--link-hover);
+    color: var(--bg-elev);
+    transform: translateY(-1px);
+}
+
+/* Lead paragraph — the standfirst right under the title. A soft card on a warm
+   neutral fill (not an accent tint, which reads synthetic) with a thin accent
+   edge, same serif as the body, justified to match the article. */
+.prose .lead {
+    margin: 1.5em 0 2em;
+    padding: 1.4rem 1.75rem;
+    background: var(--bg-subtle);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-family: var(--font-serif);
+    font-size: 1.3125rem;
+    line-height: 1.58;
+    font-weight: 600;
+    color: var(--text-strong);
+    text-align: justify;
+    hyphens: auto;
+}
+.prose .lead strong {
+    color: var(--text-strong);
+    font-weight: 600;
 }
 
 /* Footnotes */
