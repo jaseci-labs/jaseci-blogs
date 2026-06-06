@@ -100,11 +100,6 @@ The impact extended beyond simplifying the architecture. By retrieving memories 
 
 Tobu demonstrates how Jaseci can accelerate development for AI-native applications by combining graph-native architecture, built-in AI capabilities, and high-quality retrieval in a single programming model.
 
-<figure class="phone" markdown="1">
-<img src="/assets/tobu-4.jpg" alt="Tobu onboarding screen inviting the user to get started with their first Tobu Moment" />
-<figcaption>Getting started: your first Tobu Moment begins with a single photo.</figcaption>
-</figure>
-
 ---
 
 The retrieval system behind Tobu is detailed in our EMNLP 2025 paper:
