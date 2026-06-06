@@ -5,7 +5,6 @@ authors:
 categories:
   - Community
 slug: tobu-memory-graph-case-study
-draft: true
 ---
 
 # How Tobu Used Jaseci to Build an AI-Powered Memory Graph
@@ -100,11 +99,6 @@ Using Jac's graph-native programming model, Tobu built an initial demo in approx
 The impact extended beyond simplifying the architecture. By retrieving memories through their connections to people, places, events, and other moments, Tobu achieved **92.84% retrieval accuracy** and **2.2× fewer missed memories** than traditional RAG systems on real Tobu user data.
 
 Tobu demonstrates how Jaseci can accelerate development for AI-native applications by combining graph-native architecture, built-in AI capabilities, and high-quality retrieval in a single programming model.
-
-<figure class="phone" markdown="1">
-<img src="/assets/tobu-4.jpg" alt="Tobu onboarding screen inviting the user to get started with their first Tobu Moment" />
-<figcaption>Getting started: your first Tobu Moment begins with a single photo.</figcaption>
-</figure>
 
 ---
 
