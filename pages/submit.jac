@@ -147,12 +147,18 @@ def query_param(name: str) -> str {
 }
 
 
-def redirect_uri() -> str {
+def site_origin() -> str {
     try {
-        return str(window.location.origin) + "/submit";
+        return str(window.location.origin);
     } except Exception {
         return "";
     }
+}
+
+
+def redirect_uri() -> str {
+    o = site_origin();
+    return (o + "/submit") if o else "";
 }
 
 
@@ -368,6 +374,9 @@ def:pub page() -> JsxElement {
         }
         submitting = True;
         try {
+            # Declared here so both branches assign the SAME binding — assigning
+            # only inside the if/else block-scopes `res` and it's undefined below.
+            res: any = None;
             if edit_pr > 0 {
                 res = root spawn UpdatePost(
                     session=token, pr_number=edit_pr, title=title, slug=slug,
@@ -379,7 +388,7 @@ def:pub page() -> JsxElement {
                     description=description, body_md=body, author_bio=bio, images=images,
                 );
             }
-            if res.reports and len(res.reports) > 0 {
+            if res and res.reports {
                 data = res.reports[0];
                 if data["ok"] {
                     result = {**data, "edited": edit_pr > 0};
@@ -431,7 +440,7 @@ def:pub page() -> JsxElement {
     async def open_preview(pr: int) -> None {
         subs_busy = f"prev-{pr}";
         try {
-            res = root spawn CreatePreview(session=token, pr_number=pr);
+            res = root spawn CreatePreview(session=token, pr_number=pr, origin=site_origin());
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
@@ -501,8 +510,7 @@ def:pub page() -> JsxElement {
             <h1 className="display">Submit a blog post</h1>
             <p className="post-deck">
                 Share something insightful with the Jac & Jaseci community. Sign in with
-                GitHub to write a post. We fork the repo and open a pull request for you,
-                and an editor schedules it. No local git or command line needed.
+                GitHub to write a post.
             </p>
             {auth_error and <p style={{"color": "var(--danger, #c0392b)", "marginTop": "1rem"}}>{auth_error}</p>}
             <button

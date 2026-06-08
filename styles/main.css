@@ -204,6 +204,7 @@ img {
     align-items: center;
     gap: 1.5rem;
     font-size: 0.9375rem;
+    white-space: nowrap;
 }
 .primary-nav a {
     color: var(--text);
@@ -218,6 +219,22 @@ img {
 }
 .primary-nav a.nav-jaseci:hover {
     color: var(--link-hover);
+}
+/* Contribute: a highlighted pill button so it reads as the primary call to
+   action among the plain text nav links. */
+.primary-nav a.nav-write {
+    padding: 0.4rem 0.95rem;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.primary-nav a.nav-write:hover {
+    color: var(--bg);
+    background: var(--text-strong);
+    transform: translateY(-1px);
 }
 .header-actions {
     display: flex;
@@ -241,7 +258,7 @@ img {
     color: var(--accent);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 860px) {
     .primary-nav {
         display: none;
     }
@@ -285,6 +302,18 @@ img {
     grid-template-columns: 1.25fr 2fr;
     gap: 3rem;
     align-items: start;
+}
+/* Contribute CTA in the footer: same highlighted accent pill as the nav, so
+   the call to action is reachable from the bottom of every page too. Scoped
+   under .site-footer to beat .cta-pill's later-declared background/color. */
+.site-footer .footer-cta {
+    margin-top: 1.25rem;
+    background: var(--accent);
+    color: var(--bg-subtle);
+}
+.site-footer .footer-cta:hover {
+    background: var(--text-strong);
+    color: var(--bg-subtle);
 }
 .footer-brand {
     display: flex;

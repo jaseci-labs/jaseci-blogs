@@ -44,6 +44,15 @@ def read_session() -> any {
 }
 
 
+def site_origin() -> str {
+    try {
+        return str(window.location.origin);
+    } except Exception {
+        return "";
+    }
+}
+
+
 def:pub page() -> JsxElement {
     has booting: bool = True;
     has signed_in: bool = False;
@@ -195,7 +204,7 @@ def:pub page() -> JsxElement {
     async def create_preview() -> None {
         preview_busy = True;
         try {
-            res = root spawn CreatePreview(session=token, pr_number=selected);
+            res = root spawn CreatePreview(session=token, pr_number=selected, origin=site_origin());
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {

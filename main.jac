@@ -1434,6 +1434,11 @@ def:priv match_preview(docs: list, token: str) -> any {
 walker:pub CreatePreview {
     has session: str = "";
     has pr_number: int = 0;
+    # The browser's current origin, so the shareable link points at THIS
+    # deployment (localhost in dev, blogs.jaseci.org in prod) instead of the
+    # hardcoded PUBLIC_SITE_URL fallback. Falls back to public_site_url() if
+    # the caller doesn't pass one.
+    has origin: str = "";
 
     can make with Root entry {
         sess = verify_session(self.session);
@@ -1462,7 +1467,8 @@ walker:pub CreatePreview {
             token=token, slug=str(rendered["slug"]),
             data=preview_payload(rendered), created_at=float(time.time()),
         );
-        report {"ok": True, "token": token, "slug": str(rendered["slug"]), "url": f"{public_site_url()}/preview/{token}"};
+        base = self.origin.rstrip("/") if self.origin else public_site_url();
+        report {"ok": True, "token": token, "slug": str(rendered["slug"]), "url": f"{base}/preview/{token}"};
     }
 }
 

@@ -66,7 +66,6 @@ cl {
             <header style={{"padding": "3rem 0 1rem"}}>
                 <p className="eyebrow">Archive</p>
                 <h1 className="display">Every post.</h1>
-                <p className="post-deck">{total} post{total == 1 and "" or "s"} in chronological order.</p>
             </header>
 
             <ul className="archive-list">
