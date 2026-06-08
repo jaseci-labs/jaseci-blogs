@@ -305,7 +305,7 @@ def:pub page() -> JsxElement {
 
                         <div style={{"marginTop": "1rem", "padding": "1rem", "border": "1px solid var(--rule)", "borderRadius": "10px"}}>
                             <p className="muted small" style={{"marginTop": "0"}}>
-                                Pick an action — it builds one slash-command. Copy it and paste it as a
+                                Pick an action and it builds one slash-command. Copy it and paste it as a
                                 comment on the PR (your write access authorizes it). To merge, open the PR.
                             </p>
 

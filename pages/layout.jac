@@ -53,7 +53,7 @@ cl {
                         <Link to="/blog">Latest</Link>
                         <Link to="/blog/archive">Archive</Link>
                         <Link to="/blog/categories">Categories</Link>
-                        <Link to="/submit" className="nav-write">Write for us</Link>
+                        <Link to="/submit" className="nav-write">Contribute a post</Link>
                         <a href="https://newsletter.jaseci.org" target="_blank" rel="noopener">Newsletter</a>
                         <a href="https://www.jaseci.org" target="_blank" rel="noopener" className="nav-jaseci">Jaseci.org</a>
                     </nav>

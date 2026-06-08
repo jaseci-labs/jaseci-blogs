@@ -497,11 +497,11 @@ def:pub page() -> JsxElement {
 
     if not signed_in {
         return <section className="container narrow" style={{"padding": "4rem 0", "maxWidth": "640px"}}>
-            <p className="eyebrow">Write for us</p>
+            <p className="eyebrow">Contribute</p>
             <h1 className="display">Submit a blog post</h1>
             <p className="post-deck">
                 Share something insightful with the Jac & Jaseci community. Sign in with
-                GitHub to write a post — we fork the repo and open a pull request for you,
+                GitHub to write a post. We fork the repo and open a pull request for you,
                 and an editor schedules it. No local git or command line needed.
             </p>
             {auth_error and <p style={{"color": "var(--danger, #c0392b)", "marginTop": "1rem"}}>{auth_error}</p>}
@@ -566,7 +566,7 @@ def:pub page() -> JsxElement {
             <div style={{"paddingTop": "1.5rem"}}>
                 {edit_pr > 0 and (
                     <p className="muted small" style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "marginBottom": "1rem"}}>
-                        ✏️ Editing submission #{edit_pr} — saving adds a commit to the existing PR.
+                        ✏️ Editing submission #{edit_pr}. Saving adds a commit to the existing PR.
                         <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Cancel edit</button>
                     </p>
                 )}
@@ -590,7 +590,7 @@ def:pub page() -> JsxElement {
                     onChange={lambda e: ChangeEvent { slug_touched = True; slug = e.target.value; }}
                 />
                 <p className="muted small">
-                    {edit_pr > 0 and "Slug can't change when editing — " or "Your post will live at "}/blog/posts/{slug or "your-slug"}
+                    {edit_pr > 0 and "Slug can't change when editing: " or "Your post will live at "}/blog/posts/{slug or "your-slug"}
                 </p>
 
                 <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Categories</label>
@@ -656,7 +656,7 @@ def:pub page() -> JsxElement {
 
                 {edit_pr == 0 and (
                     <>
-                        <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Your bio (optional — used if you're a new author)</label>
+                        <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Your bio (optional, used if you're a new author)</label>
                         <input
                             type="text"
                             className="search-input"
