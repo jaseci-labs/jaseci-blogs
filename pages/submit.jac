@@ -256,7 +256,7 @@ def:pub page() -> JsxElement {
                 client_id = str(cfg.reports[0]["client_id"]);
             }
             if not client_id {
-                auth_error = "Sign-in is not configured yet (missing OAuth client id).";
+                auth_error = "Not available at this moment, check again later.";
                 return;
             }
             ru = encodeURIComponent(redirect_uri());
