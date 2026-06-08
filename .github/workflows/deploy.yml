@@ -53,6 +53,16 @@ jobs:
 
       - name: Deploy jaseci-blogs with jac-scale
         working-directory: .
+        env:
+          # Submission-portal secrets. jac.toml's [plugins.scale.secrets]
+          # interpolates these ${...} env vars at deploy time into the
+          # jaseci-blogs-secrets k8s Secret. Unset values deploy as empty,
+          # which gracefully disables /submit + /editor. Only an OAuth App is
+          # needed — every GitHub action runs as the signed-in user (fork + PR).
+          # See SUBMIT_FLOW.md.
+          GH_OAUTH_CLIENT_ID: ${{ vars.BLOG_OAUTH_CLIENT_ID }}
+          GH_OAUTH_CLIENT_SECRET: ${{ secrets.BLOG_OAUTH_CLIENT_SECRET }}
+          SUBMIT_SESSION_SECRET: ${{ secrets.BLOG_SESSION_SECRET }}
         run: |
           # `jac install` put jaclang + jac-scale + jac-client into the project
           # venv (.jac/venv). Run THAT venv's jac so the jac-scale plugin loads

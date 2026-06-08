@@ -29,6 +29,11 @@ venv/
 env/
 ENV/
 
+# Local secrets — never commit a real .env (use .env.example as the template)
+.env
+.env.local
+.env.*.local
+
 # IDE
 .vscode/
 .idea/

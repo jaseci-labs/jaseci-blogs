@@ -53,6 +53,7 @@ cl {
                         <Link to="/blog">Latest</Link>
                         <Link to="/blog/archive">Archive</Link>
                         <Link to="/blog/categories">Categories</Link>
+                        <Link to="/submit" className="nav-write">Contribute</Link>
                         <a href="https://newsletter.jaseci.org" target="_blank" rel="noopener">Newsletter</a>
                         <a href="https://www.jaseci.org" target="_blank" rel="noopener" className="nav-jaseci">Jaseci.org</a>
                     </nav>
@@ -114,7 +115,8 @@ cl {
                                 <span className="brand-mark">Jaseci</span>
                                 <span className="brand-sub">Blogs</span>
                             </p>
-                            <p className="footer-tagline muted">Engineering writing from the Jaseci & Jac open-source ecosystem.</p>
+                            <p className="footer-tagline muted">Developer and contributor writing from the Jaseci & Jac open-source ecosystem.</p>
+                            <Link to="/submit" className="cta-pill footer-cta">Contribute to the blog</Link>
                         </div>
                     </div>
                     <nav className="footer-nav" aria-label="Footer">

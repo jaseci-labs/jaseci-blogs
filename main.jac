@@ -15,8 +15,15 @@ with `_` are skipped (templates).
 import os;
 import re;
 import yaml;
+import json;
+import time;
+import uuid;
 import base64;
+import hashlib;
+import requests;
+import jwt;
 import markdown as md;
+import from cryptography.fernet { Fernet }
 import from datetime { date as date_cls }
 import from pathlib { Path }
 
@@ -522,11 +529,22 @@ def:priv peek_unpublished(slug: str) -> dict | None {
 
 walker:pub GetPost {
     has slug: str = "";
+    has preview: str = "";
 
     can get with Root entry {
         if not self.slug {
             report {"ok": False, "status": "error", "error": "missing slug"};
             return;
+        }
+
+        # Shareable draft preview: a valid token returns the stored snapshot even
+        # though the post is still draft:true, so the page renders it in full.
+        if self.preview {
+            doc = match_preview([-->][?:PreviewDoc], self.preview);
+            if doc is not None and doc.slug == self.slug {
+                report doc.data;
+                return;
+            }
         }
 
         registry = load_authors();
@@ -750,3 +768,1227 @@ walker:pub GetRuntimeZip {
         }
     }
 }
+
+
+# ───────────────────────── Blog submission portal ─────────────────────────
+#
+# A /submit page lets a GitHub-authenticated visitor open a blog-post PR
+# (with images) without touching git. GitHub is the only datastore — there is
+# no DB, and there is NO GitHub App: every GitHub action runs AS THE SIGNED-IN
+# USER via their OAuth token. Submitting forks the repo to the user's account,
+# commits to a branch on that fork, and opens a cross-fork PR upstream — exactly
+# how any open-source contribution works. So a plain (personally-creatable)
+# OAuth App with `public_repo` scope is all that's needed; no org-owned app, no
+# installation approval.
+#
+# The user's OAuth token is needed at submit time, so it's carried INSIDE the
+# signed session — but ENCRYPTED (Fernet), so the browser only ever holds
+# ciphertext; the server decrypts per request. Editors (repo write access, read
+# live from GitHub) get a review dashboard; its write-actions (merge, schedule,
+# take-down) run with the editor's OWN access — merge on the PR page, slash-
+# commands pasted as a PR comment — so nothing here needs elevated permissions.
+#
+# Required env (k8s secrets — see .github/SUBMIT_FLOW.md):
+#   GH_OAUTH_CLIENT_ID / GH_OAUTH_CLIENT_SECRET  — the OAuth App (sign-in + acts as user)
+#   SUBMIT_SESSION_SECRET                        — HS256 sign + Fernet key for sessions
+#   GH_REPO (default jaseci-labs/jaseci-blogs) / GH_BASE_BRANCH (default main)
+
+glob ALLOWED_CATEGORIES = [
+    "Jac Programming", "Tutorials", "Fixing the Broken",
+    "AI", "Web Development", "Developers", "Community",
+];  # keep in sync with mkdocs.yml -> blog.categories_allowed
+glob MAX_IMAGE_BYTES = 100 * 1024;
+glob MAX_IMAGES = 8;
+glob ALLOWED_IMAGE_EXT = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
+glob SESSION_TTL = 60 * 60 * 8;
+# Marker text stamped into each submission PR body; also the search term that
+# finds submissions (we can't add a label as the contributor, so the body
+# marker is the index instead).
+glob SUBMISSION_TAG = "blog-submission";
+glob GH_API = "https://api.github.com";
+glob PREVIEW_TTL = 60 * 60 * 24 * 30;  # shareable draft previews live 1 month
+
+
+node PreviewDoc {
+    # A persisted, public draft-preview snapshot. Connected to root (which all
+    # :pub walkers share), so anyone with the random token can read it. Holds the
+    # fully-rendered GetPost-shaped payload so the real post page renders it with
+    # runnable code blocks, mermaid, etc. Expires after PREVIEW_TTL.
+    has token: str = "";
+    has slug: str = "";
+    has data: dict = {};
+    has created_at: float = 0.0;
+}
+
+
+def:priv env_str(name: str, fallback: str = "") -> str {
+    val = os.environ.get(name, fallback);
+    if val is None {
+        return fallback;
+    }
+    return str(val);
+}
+
+
+def:priv gh_repo() -> str {
+    return env_str("GH_REPO", "jaseci-labs/jaseci-blogs");
+}
+
+
+def:priv gh_base_branch() -> str {
+    return env_str("GH_BASE_BRANCH", "main");
+}
+
+
+def:priv public_site_url() -> str {
+    return env_str("PUBLIC_SITE_URL", "https://blogs.jaseci.org").rstrip("/");
+}
+
+
+def:priv fernet() -> any {
+    # Symmetric cipher for the GitHub user token at rest in the session. Key is
+    # derived from SUBMIT_SESSION_SECRET so no extra secret to manage.
+    secret = env_str("SUBMIT_SESSION_SECRET") or "dev-only-insecure-secret";
+    key = base64.urlsafe_b64encode(hashlib.sha256(secret.encode("utf-8")).digest());
+    return Fernet(key);
+}
+
+
+def:priv encrypt_token(tok: str) -> str {
+    if not tok {
+        return "";
+    }
+    try {
+        return fernet().encrypt(tok.encode("utf-8")).decode("ascii");
+    } except Exception {
+        return "";
+    }
+}
+
+
+def:priv sign_session(profile: dict, gh_token: str) -> str {
+    # Short-lived HS256 session carrying the verified identity AND the GitHub
+    # user token — but the token is ENCRYPTED, so the browser (which stores this
+    # session) only ever holds ciphertext. The server decrypts it per request.
+    secret = env_str("SUBMIT_SESSION_SECRET");
+    now = int(time.time());
+    payload = {
+        "login": str(profile.get("login", "")),
+        "uid": int(profile.get("uid", 0)),
+        "name": str(profile.get("name", "")),
+        "avatar": str(profile.get("avatar", "")),
+        "ght": encrypt_token(gh_token),
+        "iat": now,
+        "exp": now + SESSION_TTL,
+    };
+    return str(jwt.encode(payload, secret, algorithm="HS256"));
+}
+
+
+def:priv verify_session(token: str) -> dict | None {
+    secret = env_str("SUBMIT_SESSION_SECRET");
+    if not token or not secret {
+        return None;
+    }
+    try {
+        data = jwt.decode(token, secret, algorithms=["HS256"]);
+    } except Exception {
+        return None;
+    }
+    if isinstance(data, dict) {
+        return data;
+    }
+    return None;
+}
+
+
+def:priv session_gh_token(sess: dict) -> str {
+    # Decrypt the GitHub user token embedded in a verified session.
+    ct = str(sess.get("ght", ""));
+    if not ct {
+        return "";
+    }
+    try {
+        return fernet().decrypt(ct.encode("ascii")).decode("utf-8");
+    } except Exception {
+        return "";
+    }
+}
+
+
+def:priv gh_headers(token: str) -> dict {
+    return {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "jaseci-blogs-submit",
+    };
+}
+
+
+def:priv gh_ok(r: any, what: str) -> dict {
+    # Return the JSON dict on a 2xx; otherwise raise with the status + GitHub's
+    # message so failures surface as "create blob failed [403] ..." instead of a
+    # bare KeyError('sha') three calls later.
+    try {
+        data = r.json();
+    } except Exception {
+        data = {};
+    }
+    if r.status_code >= 200 and r.status_code < 300 {
+        return data if isinstance(data, dict) else {"_data": data};
+    }
+    msg = str(data.get("message", "")) if isinstance(data, dict) else "";
+    raise ValueError(f"{what} failed [{r.status_code}] {msg}");
+}
+
+
+def:priv oauth_exchange_code(code: str, redirect_uri: str) -> dict | None {
+    client_id = env_str("GH_OAUTH_CLIENT_ID");
+    client_secret = env_str("GH_OAUTH_CLIENT_SECRET");
+    if not client_id or not client_secret or not code {
+        return None;
+    }
+    body = {"client_id": client_id, "client_secret": client_secret, "code": code};
+    if redirect_uri {
+        body["redirect_uri"] = redirect_uri;
+    }
+    try {
+        r = requests.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json", "User-Agent": "jaseci-blogs-submit"},
+            json=body, timeout=30,
+        );
+        tok = r.json().get("access_token", "");
+        if not tok {
+            return None;
+        }
+        u = requests.get(
+            f"{GH_API}/user",
+            headers={
+                "Authorization": f"token {tok}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "jaseci-blogs-submit",
+            },
+            timeout=30,
+        ).json();
+    } except Exception {
+        return None;
+    }
+    if not isinstance(u, dict) or "login" not in u {
+        return None;
+    }
+    return {
+        "login": str(u.get("login", "")),
+        "uid": int(u.get("id", 0)),
+        "name": str(u.get("name") or u.get("login", "")),
+        "avatar": str(u.get("avatar_url", "")),
+        "token": str(tok),
+    };
+}
+
+
+def:priv has_write_access(token: str) -> bool {
+    # Ask GitHub what THIS user can do on the repo: GET /repos returns a
+    # `permissions` block for the authenticated caller. push/maintain/admin = editor.
+    if not token {
+        return False;
+    }
+    try {
+        r = requests.get(f"{GH_API}/repos/{gh_repo()}", headers=gh_headers(token), timeout=30);
+        if r.status_code != 200 {
+            return False;
+        }
+        perms = r.json().get("permissions", {});
+        if not isinstance(perms, dict) {
+            return False;
+        }
+        return bool(perms.get("admin") or perms.get("maintain") or perms.get("push"));
+    } except Exception {
+        return False;
+    }
+}
+
+
+def:priv is_valid_slug(slug: str) -> bool {
+    return bool(re.match(r"^[a-z0-9]+(?:-[a-z0-9]+)*$", slug));
+}
+
+
+def:priv slug_taken(slug: str) -> bool {
+    dir_path = Path(POSTS_DIR);
+    if not dir_path.exists() {
+        return False;
+    }
+    for path in dir_path.glob("*.md") {
+        if path.name.startswith("_") {
+            continue;
+        }
+        try {
+            text = path.read_text(encoding="utf-8");
+        } except Exception {
+            continue;
+        }
+        if not text.startswith("---") {
+            continue;
+        }
+        parts = text.split("---", 2);
+        if len(parts) < 3 {
+            continue;
+        }
+        try {
+            meta = yaml.safe_load(parts[1]);
+        } except Exception {
+            continue;
+        }
+        if isinstance(meta, dict) and str(meta.get("slug", path.stem)) == slug {
+            return True;
+        }
+    }
+    return False;
+}
+
+
+def:priv load_scheduled_slugs() -> dict {
+    # Map slug -> publish_at for entries still queued (scheduled or held).
+    path = Path("docs/blog/.schedule.yml");
+    result: dict = {};
+    if not path.exists() {
+        return result;
+    }
+    try {
+        data = yaml.safe_load(path.read_text(encoding="utf-8"));
+    } except Exception {
+        return result;
+    }
+    if not isinstance(data, dict) {
+        return result;
+    }
+    entries = data.get("schedule", []);
+    if not isinstance(entries, list) {
+        return result;
+    }
+    for e in entries {
+        if not isinstance(e, dict) {
+            continue;
+        }
+        if e.get("status") in ["scheduled", "held"] {
+            s = str(e.get("slug", ""));
+            if s {
+                result[s] = str(e.get("publish_at", ""));
+            }
+        }
+    }
+    return result;
+}
+
+
+def:priv resolve_author_id(profile: dict, bio: str) -> tuple {
+    # Returns (author_id, new_entry_or_None). Reuse an existing .authors.yml
+    # entry whose avatar references this GitHub numeric id, or whose key matches
+    # the login. Otherwise create a new entry keyed by the (sanitized) login.
+    registry = load_authors();
+    login = str(profile.get("login", "")).lower();
+    uid = str(profile.get("uid", ""));
+    for (key, entry) in registry.items() {
+        if not isinstance(entry, dict) {
+            continue;
+        }
+        avatar = str(entry.get("avatar", ""));
+        if uid and f"/u/{uid}" in avatar {
+            return (str(key), None);
+        }
+        if str(key).lower() == login {
+            return (str(key), None);
+        }
+    }
+    new_id = re.sub(r"[^a-z0-9-]", "-", login) or "contributor";
+    new_entry = {
+        "id": new_id,
+        "name": str(profile.get("name", login)),
+        "description": bio or "Contributor",
+        "avatar": str(profile.get("avatar", "")),
+    };
+    return (new_id, new_entry);
+}
+
+
+def:priv build_post_markdown(
+    title: str, slug: str, categories: list, description: str,
+    author_id: str, body: str
+) -> str {
+    today = date_cls.today().isoformat();
+    lines: list = ["---", f"date: {today}", "authors:", f"  - {author_id}", "categories:"];
+    for c in categories {
+        lines.append(f"  - {c}");
+    }
+    if description {
+        lines.append(f"description: {json.dumps(description)}");
+    }
+    lines.append(f"slug: {slug}");
+    lines.append("draft: true");
+    lines.append("---");
+    fm = "\n".join(lines);
+    body_text: str = body.strip();
+    if not body_text.startswith("#") {
+        body_text = f"# {title}\n\n{body_text}";
+    }
+    return f"{fm}\n\n{body_text}\n";
+}
+
+
+def:priv authors_yml_with(new_entry: dict) -> str | None {
+    path = Path(AUTHORS_PATH);
+    try {
+        text = path.read_text(encoding="utf-8");
+    } except Exception {
+        return None;
+    }
+    block = (
+        f"  {new_entry['id']}:\n"
+        + f"    name: {json.dumps(new_entry['name'])}\n"
+        + f"    description: {json.dumps(new_entry['description'])}\n"
+        + f"    avatar: {json.dumps(new_entry['avatar'])}\n"
+    );
+    if not text.endswith("\n") {
+        text = f"{text}\n";
+    }
+    return f"{text}{block}";
+}
+
+
+def:priv ensure_fork(token: str, login: str) -> str {
+    # Fork the upstream repo into the user's account (idempotent — returns the
+    # existing fork if present). Forking is ASYNC: GitHub returns the repo record
+    # before the git objects are copied, so poll the branch *ref* (not just the
+    # repo) until it resolves — that's when blobs/trees/commits will succeed.
+    repo = gh_repo();
+    base_branch = gh_base_branch();
+    name = repo.split("/", 1)[1] if "/" in repo else repo;
+    fork_full = f"{login}/{name}";
+    h = gh_headers(token);
+    gh_ok(requests.post(f"{GH_API}/repos/{repo}/forks", headers=h, timeout=30), "fork repo");
+    i = 0;
+    while i < 30 {
+        r = requests.get(f"{GH_API}/repos/{fork_full}/git/ref/heads/{base_branch}", headers=h, timeout=30);
+        if r.status_code == 200 and isinstance(r.json().get("object"), dict) {
+            return fork_full;
+        }
+        time.sleep(2);
+        i = i + 1;
+    }
+    raise ValueError("fork did not become ready in time — try again in a moment");
+}
+
+
+def:priv build_commit(token: str, repo_full: str, base_sha: str, files: list, message: str) -> str {
+    # Create blobs/tree/commit on top of base_sha; return the new commit sha.
+    # Text files go inline in the tree; images become base64 blobs first.
+    h = gh_headers(token);
+    base_commit = gh_ok(requests.get(f"{GH_API}/repos/{repo_full}/git/commits/{base_sha}", headers=h, timeout=30), "read base commit");
+    base_tree = str(base_commit["tree"]["sha"]);
+
+    tree_items = [];
+    for f in files {
+        if f.get("binary") {
+            blob = gh_ok(requests.post(
+                f"{GH_API}/repos/{repo_full}/git/blobs",
+                headers=h, json={"content": f["content"], "encoding": "base64"}, timeout=30,
+            ), "create image blob");
+            tree_items.append({"path": f["path"], "mode": "100644", "type": "blob", "sha": str(blob["sha"])});
+        } else {
+            tree_items.append({"path": f["path"], "mode": "100644", "type": "blob", "content": f["content"]});
+        }
+    }
+    new_tree = gh_ok(requests.post(
+        f"{GH_API}/repos/{repo_full}/git/trees",
+        headers=h, json={"base_tree": base_tree, "tree": tree_items}, timeout=30,
+    ), "create tree");
+    new_commit = gh_ok(requests.post(
+        f"{GH_API}/repos/{repo_full}/git/commits",
+        headers=h, json={"message": message, "tree": str(new_tree["sha"]), "parents": [base_sha]}, timeout=30,
+    ), "create commit");
+    return str(new_commit["sha"]);
+}
+
+
+def:priv commit_to_repo(
+    token: str, repo_full: str, branch: str, base_branch: str,
+    files: list, message: str
+) -> None {
+    # First commit on a NEW branch (forked off base_branch).
+    h = gh_headers(token);
+    ref = gh_ok(requests.get(f"{GH_API}/repos/{repo_full}/git/ref/heads/{base_branch}", headers=h, timeout=30), "read base ref");
+    new_sha = build_commit(token, repo_full, str(ref["object"]["sha"]), files, message);
+    gh_ok(requests.post(
+        f"{GH_API}/repos/{repo_full}/git/refs",
+        headers=h, json={"ref": f"refs/heads/{branch}", "sha": new_sha}, timeout=30,
+    ), "create branch");
+}
+
+
+def:priv commit_update(token: str, repo_full: str, branch: str, files: list, message: str) -> None {
+    # Add a commit ON TOP of an existing branch (updates an open PR). Bases the
+    # commit on the branch's current head and fast-forwards the ref.
+    h = gh_headers(token);
+    ref = gh_ok(requests.get(f"{GH_API}/repos/{repo_full}/git/ref/heads/{branch}", headers=h, timeout=30), "read branch ref");
+    new_sha = build_commit(token, repo_full, str(ref["object"]["sha"]), files, message);
+    gh_ok(requests.patch(
+        f"{GH_API}/repos/{repo_full}/git/refs/heads/{branch}",
+        headers=h, json={"sha": new_sha, "force": False}, timeout=30,
+    ), "update branch");
+}
+
+
+def:priv submit_via_fork(
+    token: str, login: str, branch: str, files: list, message: str,
+    pr_title: str, pr_body: str
+) -> dict {
+    # Open the PR entirely AS THE USER: fork → sync fork's default branch →
+    # commit to a branch on the fork → open a cross-fork PR to upstream. No app,
+    # no privileged token — just the contributor's own public_repo access.
+    base_branch = gh_base_branch();
+    fork_full = ensure_fork(token, login);
+    # Bring the fork's default branch up to date with upstream (no-op for a fresh
+    # fork; matters for a returning contributor whose fork is stale).
+    try {
+        requests.post(
+            f"{GH_API}/repos/{fork_full}/merge-upstream",
+            headers=gh_headers(token), json={"branch": base_branch}, timeout=30,
+        );
+    } except Exception {
+        _ignore = None;
+    }
+    commit_to_repo(token, fork_full, branch, base_branch, files, message);
+    pr = gh_ok(requests.post(
+        f"{GH_API}/repos/{gh_repo()}/pulls",
+        headers=gh_headers(token),
+        json={
+            "title": pr_title, "head": f"{login}:{branch}", "base": base_branch,
+            "body": pr_body,
+        },
+        timeout=30,
+    ), "open pull request");
+    return pr;
+}
+
+
+def:priv rewrite_assets_to_raw(body: str, repo: str, sha: str) -> str {
+    # For editor previews: point asset references at the raw blobs on the PR's
+    # head ref, so images render before the post is merged + deployed.
+    base = f"https://raw.githubusercontent.com/{repo}/{sha}/docs/assets/";
+    body = re.sub(r"(!\[[^\]]*\]\()(?:\.\./)+assets/", r"\1" + base, body);
+    body = re.sub(r"(<img[^>]+src=[\"'])(?:\.\./)+assets/", r"\1" + base, body);
+    body = body.replace("](/assets/", f"]({base}");
+    body = body.replace('src="/assets/', f'src="{base}');
+    body = body.replace("src='/assets/", f"src='{base}");
+    return body;
+}
+
+
+def:priv render_submitted_markdown(text: str, raw_repo: str, raw_sha: str) -> dict {
+    # Draft-tolerant render of a raw post file (parse_post_file drops drafts).
+    # Reuses the same pipeline GetPost uses so previews match the live look.
+    meta: dict = {};
+    raw_body = text;
+    if text.startswith("---") {
+        parts = text.split("---", 2);
+        if len(parts) >= 3 {
+            try {
+                loaded = yaml.safe_load(parts[1]);
+                meta = loaded if isinstance(loaded, dict) else {};
+            } except Exception {
+                meta = {};
+            }
+            raw_body = parts[2].strip();
+        }
+    }
+    registry = load_authors();
+    author_ids = meta.get("authors", []);
+    if not isinstance(author_ids, list) {
+        author_ids = [author_ids];
+    }
+    authors = resolve_authors(author_ids, registry);
+    categories = meta.get("categories", []);
+    if not isinstance(categories, list) {
+        categories = [categories];
+    }
+    categories = [str(c) for c in categories];
+    title = str(meta.get("title", ""));
+    if not title {
+        h1 = re.search(r"(?m)^#\s+(.+)$", raw_body);
+        title = h1.group(1).strip() if h1 else str(meta.get("slug", "")).replace("-", " ").title();
+    }
+    title = strip_markdown_inline(title);
+    if raw_repo and raw_sha {
+        body = rewrite_assets_to_raw(raw_body, raw_repo, raw_sha);
+    } else {
+        body = rewrite_asset_paths(raw_body);
+    }
+    body = convert_mermaid_fences(body);
+    body = inject_markdown_attr(body);
+    html = render_markdown(body);
+    return {
+        "title": title,
+        "slug": str(meta.get("slug", "")),
+        "description": str(meta.get("description", "")),
+        "authors": authors,
+        "categories": categories,
+        "draft": bool(meta.get("draft", False)),
+        "reading_minutes": estimate_reading_minutes(raw_body),
+        "html": html,
+    };
+}
+
+
+def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
+    # Read the single post file added by a submission PR (from the PR's head ref).
+    # Shared by the editor preview and the shareable-preview creator.
+    h = gh_headers(token);
+    repo = gh_repo();
+    pr = requests.get(f"{GH_API}/repos/{repo}/pulls/{pr_number}", headers=h, timeout=30).json();
+    if not isinstance(pr, dict) or "head" not in pr {
+        return None;
+    }
+    head_sha = str(pr["head"]["sha"]);
+    head_repo = str(pr["head"]["repo"]["full_name"]);
+    files = requests.get(
+        f"{GH_API}/repos/{repo}/pulls/{pr_number}/files",
+        headers=h, params={"per_page": 100}, timeout=30,
+    ).json();
+    post_path = "";
+    for f in files {
+        fn = str(f.get("filename", ""));
+        if fn.startswith("docs/blog/posts/") and fn.endswith(".md") {
+            post_path = fn;
+            break;
+        }
+    }
+    if not post_path {
+        return None;
+    }
+    blob = requests.get(
+        f"{GH_API}/repos/{head_repo}/contents/{post_path}",
+        headers=h, params={"ref": head_sha}, timeout=30,
+    ).json();
+    try {
+        content = base64.b64decode(str(blob.get("content", ""))).decode("utf-8");
+    } except Exception {
+        return None;
+    }
+    return {
+        "content": content,
+        "post_path": post_path,
+        "head_repo": head_repo,
+        "head_ref": str(pr["head"].get("ref", "")),
+        "head_owner": str(pr["head"]["repo"]["owner"]["login"]) if pr["head"].get("repo") else "",
+        "head_sha": head_sha,
+        "state": str(pr.get("state", "")),
+        "merged": bool(pr.get("merged_at")),
+        "pr_url": str(pr.get("html_url", "")),
+        "mergeable": pr.get("mergeable"),
+        "mergeable_state": str(pr.get("mergeable_state", "")),
+    };
+}
+
+
+def:priv preview_payload(rendered: dict) -> dict {
+    # Shape render_submitted_markdown output into the GetPost-style payload the
+    # post page expects, so a preview renders identically to a live post.
+    return {
+        "ok": True,
+        "slug": str(rendered["slug"]),
+        "title": str(rendered["title"]),
+        "description": str(rendered["description"]),
+        "authors": rendered["authors"],
+        "categories": rendered["categories"],
+        "date": "",
+        "date_long": "Preview",
+        "reading_minutes": rendered["reading_minutes"],
+        "cover": "",
+        "html": rendered["html"],
+        "prev": None,
+        "next": None,
+        "related": [],
+        "is_preview": True,
+    };
+}
+
+
+def:priv match_preview(docs: list, token: str) -> any {
+    # Pick a non-expired PreviewDoc matching token from a pre-collected list
+    # (the edge traversal happens in the walker ability where it's valid).
+    if not token {
+        return None;
+    }
+    now = float(time.time());
+    for d in docs {
+        if d.token == token and (now - d.created_at) <= PREVIEW_TTL {
+            return d;
+        }
+    }
+    return None;
+}
+
+
+walker:pub CreatePreview {
+    has session: str = "";
+    has pr_number: int = 0;
+    # The browser's current origin, so the shareable link points at THIS
+    # deployment (localhost in dev, blogs.jaseci.org in prod) instead of the
+    # hardcoded PUBLIC_SITE_URL fallback. Falls back to public_site_url() if
+    # the caller doesn't pass one.
+    has origin: str = "";
+
+    can make with Root entry {
+        sess = verify_session(self.session);
+        gh_token = session_gh_token(sess) if sess is not None else "";
+        if sess is None or not gh_token {
+            report {"ok": False, "error": "not signed in"};
+            return;
+        }
+        if not self.pr_number {
+            report {"ok": False, "error": "missing pr_number"};
+            return;
+        }
+        try {
+            pr = fetch_pr_post(gh_token, self.pr_number);
+        } except Exception as e {
+            report {"ok": False, "error": f"could not load PR: {e}"};
+            return;
+        }
+        if pr is None {
+            report {"ok": False, "error": "no post file found in this PR"};
+            return;
+        }
+        rendered = render_submitted_markdown(str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]));
+        token = uuid.uuid4().hex;
+        here ++> PreviewDoc(
+            token=token, slug=str(rendered["slug"]),
+            data=preview_payload(rendered), created_at=float(time.time()),
+        );
+        base = self.origin.rstrip("/") if self.origin else public_site_url();
+        report {"ok": True, "token": token, "slug": str(rendered["slug"]), "url": f"{base}/preview/{token}"};
+    }
+}
+
+
+walker:pub GetPreview {
+    # Resolve a preview token -> slug, so /preview/<token> can redirect to the
+    # real post page (which renders the snapshot with full enhancements).
+    has token: str = "";
+
+    can get with Root entry {
+        doc = match_preview([-->][?:PreviewDoc], self.token);
+        if doc is None {
+            report {"ok": False, "error": "This preview link is invalid or has expired."};
+            return;
+        }
+        report {"ok": True, "slug": doc.slug};
+    }
+}
+
+
+walker:pub GithubOAuthConfig {
+    # Hands the browser the OAuth client id so it can build the authorize URL.
+    can get with Root entry {
+        client_id = env_str("GH_OAUTH_CLIENT_ID");
+        report {"ok": True, "client_id": client_id, "configured": bool(client_id)};
+    }
+}
+
+
+walker:pub GithubOAuthExchange {
+    has code: str = "";
+    has redirect_uri: str = "";
+
+    can get with Root entry {
+        if not self.code {
+            report {"ok": False, "error": "missing code"};
+            return;
+        }
+        profile = oauth_exchange_code(self.code, self.redirect_uri);
+        if profile is None {
+            report {"ok": False, "error": "github authentication failed"};
+            return;
+        }
+        gh_token = str(profile["token"]);
+        report {
+            "ok": True,
+            "token": sign_session(profile, gh_token),
+            "profile": {
+                "login": profile["login"],
+                "name": profile["name"],
+                "avatar": profile["avatar"],
+            },
+            "is_editor": has_write_access(gh_token),
+        };
+    }
+}
+
+
+def:priv collect_images(images: list, slug: str) -> dict {
+    # Validate + turn uploaded images into tree-file entries under the slug's
+    # asset dir. Returns {"ok": True, "files": [...]} or {"ok": False, "error": ...}.
+    if len(images) > MAX_IMAGES {
+        return {"ok": False, "error": f"too many images (max {MAX_IMAGES})"};
+    }
+    out = [];
+    for img in images {
+        name = str(img.get("name", "")).strip();
+        b64 = str(img.get("b64", ""));
+        if not name or not b64 {
+            continue;
+        }
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else "";
+        if ext not in ALLOWED_IMAGE_EXT {
+            return {"ok": False, "error": f"unsupported image type: {name}"};
+        }
+        try {
+            raw = base64.b64decode(b64);
+        } except Exception {
+            return {"ok": False, "error": f"could not decode image: {name}"};
+        }
+        if len(raw) > MAX_IMAGE_BYTES {
+            return {"ok": False, "error": f"image {name} exceeds 100KB"};
+        }
+        safe_name = re.sub(r"[^A-Za-z0-9._-]", "-", name);
+        out.append({"path": f"docs/assets/{slug}/{safe_name}", "content": b64, "binary": True});
+    }
+    return {"ok": True, "files": out};
+}
+
+
+def:priv parse_post_for_edit(content: str) -> dict {
+    # Split a stored post .md into the form fields for editing. Body keeps its
+    # leading H1; slug/categories/description come from frontmatter.
+    meta: dict = {};
+    raw_body = content;
+    if content.startswith("---") {
+        parts = content.split("---", 2);
+        if len(parts) >= 3 {
+            try {
+                loaded = yaml.safe_load(parts[1]);
+                meta = loaded if isinstance(loaded, dict) else {};
+            } except Exception {
+                meta = {};
+            }
+            raw_body = parts[2].strip();
+        }
+    }
+    categories = meta.get("categories", []);
+    if not isinstance(categories, list) {
+        categories = [categories];
+    }
+    title = str(meta.get("title", ""));
+    if not title {
+        h1 = re.search(r"(?m)^#\s+(.+)$", raw_body);
+        title = strip_markdown_inline(h1.group(1).strip()) if h1 else "";
+    }
+    return {
+        "title": title,
+        "slug": str(meta.get("slug", "")),
+        "categories": [str(c) for c in categories],
+        "description": str(meta.get("description", "")),
+        "body_md": raw_body,
+    };
+}
+
+
+walker:pub SubmitPost {
+    has session: str = "";
+    has title: str = "";
+    has slug: str = "";
+    has categories: list = [];
+    has description: str = "";
+    has body_md: str = "";
+    has author_bio: str = "";
+    has images: list = [];
+
+    can submit with Root entry {
+        sess = verify_session(self.session);
+        if sess is None {
+            report {"ok": False, "error": "not signed in"};
+            return;
+        }
+        gh_token = session_gh_token(sess);
+        if not gh_token {
+            report {"ok": False, "error": "session expired — please sign in again"};
+            return;
+        }
+        title = self.title.strip();
+        slug = self.slug.strip().lower();
+        body = self.body_md;
+
+        if not title {
+            report {"ok": False, "error": "title is required"};
+            return;
+        }
+        if not is_valid_slug(slug) {
+            report {"ok": False, "error": "slug must be kebab-case (lowercase letters, digits, hyphens)"};
+            return;
+        }
+        if slug_taken(slug) {
+            report {"ok": False, "error": f"slug '{slug}' is already taken"};
+            return;
+        }
+        if len(body.strip()) < 50 {
+            report {"ok": False, "error": "post body is too short"};
+            return;
+        }
+        cats = [str(c) for c in self.categories if str(c) in ALLOWED_CATEGORIES];
+        if not cats {
+            report {"ok": False, "error": "select at least one valid category"};
+            return;
+        }
+        img_res = collect_images(self.images, slug);
+        if not img_res["ok"] {
+            report {"ok": False, "error": img_res["error"]};
+            return;
+        }
+        image_files = img_res["files"];
+
+        (author_id, new_entry) = resolve_author_id(sess, self.author_bio.strip());
+        post_md = build_post_markdown(title, slug, cats, self.description.strip(), author_id, body);
+        files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
+        files = files + image_files;
+        if new_entry is not None {
+            updated = authors_yml_with(new_entry);
+            if updated is not None {
+                files.append({"path": "docs/blog/.authors.yml", "content": updated, "binary": False});
+            }
+        }
+
+        branch = f"submit/{slug}-{int(time.time())}";
+        marker = f"\n\n<!-- blog-submission slug={slug} by={sess['login']} -->";
+        pr_body = (
+            "Blog submission via the /submit form.\n\n"
+            + f"**Title:** {title}\n"
+            + f"**Author:** @{sess['login']} (`{author_id}`)\n"
+            + f"**Categories:** {', '.join(cats)}\n\n"
+            + "Opened from the author's fork via the /submit form. "
+            + "`draft: true` is set; an editor will schedule publication."
+            + marker
+        );
+
+        try {
+            pr = submit_via_fork(gh_token, str(sess["login"]), branch, files, f"Add blog post: {title}", title, pr_body);
+        } except Exception as e {
+            report {"ok": False, "error": f"could not open PR: {e}"};
+            return;
+        }
+        if not pr.get("number") {
+            report {"ok": False, "error": "PR creation failed", "detail": pr};
+            return;
+        }
+        report {"ok": True, "pr_number": pr["number"], "pr_url": pr.get("html_url", ""), "slug": slug};
+    }
+}
+
+
+walker:pub GetSubmissionForEdit {
+    has session: str = "";
+    has pr_number: int = 0;
+
+    can get with Root entry {
+        sess = verify_session(self.session);
+        gh_token = session_gh_token(sess) if sess is not None else "";
+        if sess is None or not gh_token {
+            report {"ok": False, "error": "not signed in"};
+            return;
+        }
+        try {
+            pr = fetch_pr_post(gh_token, self.pr_number);
+        } except Exception as e {
+            report {"ok": False, "error": f"could not load submission: {e}"};
+            return;
+        }
+        if pr is None {
+            report {"ok": False, "error": "no post file found in this PR"};
+            return;
+        }
+        if str(pr["head_owner"]).lower() != str(sess["login"]).lower() {
+            report {"ok": False, "error": "you can only edit your own submissions"};
+            return;
+        }
+        if pr["state"] != "open" or pr["merged"] {
+            report {"ok": False, "error": "this submission can no longer be edited (already merged or closed)"};
+            return;
+        }
+        fields = parse_post_for_edit(str(pr["content"]));
+        report {"ok": True, "pr_number": self.pr_number, "branch": str(pr["head_ref"]), **fields};
+    }
+}
+
+
+walker:pub UpdatePost {
+    has session: str = "";
+    has pr_number: int = 0;
+    has title: str = "";
+    has slug: str = "";
+    has categories: list = [];
+    has description: str = "";
+    has body_md: str = "";
+    has images: list = [];
+
+    can update with Root entry {
+        sess = verify_session(self.session);
+        gh_token = session_gh_token(sess) if sess is not None else "";
+        if sess is None or not gh_token {
+            report {"ok": False, "error": "not signed in"};
+            return;
+        }
+        try {
+            pr = fetch_pr_post(gh_token, self.pr_number);
+        } except Exception as e {
+            report {"ok": False, "error": f"could not load submission: {e}"};
+            return;
+        }
+        if pr is None {
+            report {"ok": False, "error": "no post file found in this PR"};
+            return;
+        }
+        if str(pr["head_owner"]).lower() != str(sess["login"]).lower() {
+            report {"ok": False, "error": "you can only edit your own submissions"};
+            return;
+        }
+        if pr["state"] != "open" or pr["merged"] {
+            report {"ok": False, "error": "this submission can no longer be edited"};
+            return;
+        }
+
+        title = self.title.strip();
+        slug = self.slug.strip().lower();  # slug is fixed for an edit
+        body = self.body_md;
+        if not title {
+            report {"ok": False, "error": "title is required"};
+            return;
+        }
+        if len(body.strip()) < 50 {
+            report {"ok": False, "error": "post body is too short"};
+            return;
+        }
+        cats = [str(c) for c in self.categories if str(c) in ALLOWED_CATEGORIES];
+        if not cats {
+            report {"ok": False, "error": "select at least one valid category"};
+            return;
+        }
+        img_res = collect_images(self.images, slug);
+        if not img_res["ok"] {
+            report {"ok": False, "error": img_res["error"]};
+            return;
+        }
+
+        # Resolve the author's id (reuses their existing .authors.yml entry);
+        # don't re-touch .authors.yml on edit — the entry already exists.
+        (author_id, _new) = resolve_author_id(sess, "");
+        post_md = build_post_markdown(title, slug, cats, self.description.strip(), author_id, body);
+        files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
+        files = files + img_res["files"];
+
+        try {
+            commit_update(gh_token, str(pr["head_repo"]), str(pr["head_ref"]), files, f"Update blog post: {title}");
+        } except Exception as e {
+            report {"ok": False, "error": f"could not save changes: {e}"};
+            return;
+        }
+        report {"ok": True, "pr_number": self.pr_number, "pr_url": str(pr["pr_url"]), "slug": slug};
+    }
+}
+
+
+walker:pub MySubmissions {
+    has session: str = "";
+
+    can get with Root entry {
+        sess = verify_session(self.session);
+        if sess is None {
+            report {"ok": False, "error": "not signed in"};
+            return;
+        }
+        login = str(sess["login"]);
+        gh_token = session_gh_token(sess);
+        try {
+            q = f'repo:{gh_repo()} type:pr "{SUBMISSION_TAG}" in:body';
+            r = requests.get(
+                f"{GH_API}/search/issues",
+                headers=gh_headers(gh_token),
+                params={"q": q, "per_page": 50, "sort": "created", "order": "desc"},
+                timeout=30,
+            );
+            data = r.json();
+        } except Exception as e {
+            report {"ok": False, "error": f"could not load submissions: {e}"};
+            return;
+        }
+        items = data.get("items", []) if isinstance(data, dict) else [];
+        live_slugs = {p["slug"] for p in list_all_posts()};
+        scheduled = load_scheduled_slugs();
+        out = [];
+        for it in items {
+            body = str(it.get("body", "") or "");
+            bym = re.search(r"by=([A-Za-z0-9-]+)", body);
+            if (bym.group(1) if bym else "") != login {
+                continue;  # only this author's submissions
+            }
+            m = re.search(r"slug=([a-z0-9-]+)", body);
+            slug = m.group(1) if m else "";
+            state = str(it.get("state", "open"));
+            pr_info = it.get("pull_request", {}) or {};
+            merged = bool(pr_info.get("merged_at"));
+            status: str = "in_review";
+            published_url: str = "";
+            schedule_at: str = "";
+            if state == "open" {
+                status = "in_review";
+            } elif merged {
+                if slug and slug in live_slugs {
+                    status = "published";
+                    published_url = f"{public_site_url()}/blog/posts/{slug}";
+                } elif slug and slug in scheduled {
+                    status = "scheduled";
+                    schedule_at = scheduled[slug];
+                } else {
+                    status = "accepted";
+                }
+            } else {
+                status = "declined";
+            }
+            out.append({
+                "title": str(it.get("title", "")),
+                "slug": slug,
+                "pr_number": it.get("number"),
+                "pr_url": str(it.get("html_url", "")),
+                "status": status,
+                "published_url": published_url,
+                "schedule_at": schedule_at,
+                "created_at": str(it.get("created_at", "")),
+            });
+        }
+        report {"ok": True, "submissions": out};
+    }
+}
+
+
+walker:pub ListSubmissions {
+    has session: str = "";
+
+    can get with Root entry {
+        sess = verify_session(self.session);
+        gh_token = session_gh_token(sess) if sess is not None else "";
+        if sess is None or not has_write_access(gh_token) {
+            report {"ok": False, "error": "editor access required"};
+            return;
+        }
+        try {
+            q = f'repo:{gh_repo()} type:pr state:open "{SUBMISSION_TAG}" in:body';
+            r = requests.get(
+                f"{GH_API}/search/issues",
+                headers=gh_headers(gh_token),
+                params={"q": q, "per_page": 50, "sort": "created", "order": "desc"},
+                timeout=30,
+            );
+            data = r.json();
+        } except Exception as e {
+            report {"ok": False, "error": f"could not load queue: {e}"};
+            return;
+        }
+        items = data.get("items", []) if isinstance(data, dict) else [];
+        out = [];
+        for it in items {
+            body = str(it.get("body", "") or "");
+            m = re.search(r"slug=([a-z0-9-]+)", body);
+            bm = re.search(r"by=([A-Za-z0-9-]+)", body);
+            out.append({
+                "title": str(it.get("title", "")),
+                "slug": m.group(1) if m else "",
+                "author": bm.group(1) if bm else "",
+                "pr_number": it.get("number"),
+                "pr_url": str(it.get("html_url", "")),
+                "created_at": str(it.get("created_at", "")),
+            });
+        }
+        report {"ok": True, "submissions": out};
+    }
+}
+
+
+walker:pub PreviewSubmission {
+    has session: str = "";
+    has pr_number: int = 0;
+
+    can get with Root entry {
+        sess = verify_session(self.session);
+        gh_token = session_gh_token(sess) if sess is not None else "";
+        if sess is None or not has_write_access(gh_token) {
+            report {"ok": False, "error": "editor access required"};
+            return;
+        }
+        if not self.pr_number {
+            report {"ok": False, "error": "missing pr_number"};
+            return;
+        }
+        try {
+            h = gh_headers(gh_token);
+            repo = gh_repo();
+            pr = requests.get(f"{GH_API}/repos/{repo}/pulls/{self.pr_number}", headers=h, timeout=30).json();
+            head_sha = str(pr["head"]["sha"]);
+            head_repo = str(pr["head"]["repo"]["full_name"]);
+            files = requests.get(
+                f"{GH_API}/repos/{repo}/pulls/{self.pr_number}/files",
+                headers=h, params={"per_page": 100}, timeout=30,
+            ).json();
+            post_path = "";
+            for f in files {
+                fn = str(f.get("filename", ""));
+                if fn.startswith("docs/blog/posts/") and fn.endswith(".md") {
+                    post_path = fn;
+                    break;
+                }
+            }
+            if not post_path {
+                report {"ok": False, "error": "no post file found in this PR"};
+                return;
+            }
+            blob = requests.get(
+                f"{GH_API}/repos/{head_repo}/contents/{post_path}",
+                headers=h, params={"ref": head_sha}, timeout=30,
+            ).json();
+            content = base64.b64decode(str(blob.get("content", ""))).decode("utf-8");
+        } except Exception as e {
+            report {"ok": False, "error": f"could not load PR content: {e}"};
+            return;
+        }
+        rendered = render_submitted_markdown(content, head_repo, head_sha);
+        slug = str(rendered["slug"]);
+
+        # Find the scheduling tracker issue (opened by post-ci-automation) for
+        # this slug, so the dashboard can link straight to it.
+        issue_url = "";
+        try {
+            iq = f'repo:{gh_repo()} type:issue label:blog-schedule "{slug}"';
+            ir = requests.get(
+                f"{GH_API}/search/issues", headers=h,
+                params={"q": iq, "per_page": 5}, timeout=30,
+            ).json();
+            its = ir.get("items", []) if isinstance(ir, dict) else [];
+            if its and len(its) > 0 {
+                issue_url = str(its[0].get("html_url", ""));
+            }
+        } except Exception {
+            _ignore = None;
+        }
+
+        report {
+            "ok": True,
+            "pr_number": self.pr_number,
+            "pr_url": str(pr.get("html_url", "")),
+            "issue_url": issue_url,
+            "live_url": f"{public_site_url()}/blog/posts/{slug}" if slug else "",
+            "mergeable": pr.get("mergeable"),
+            "mergeable_state": str(pr.get("mergeable_state", "")),
+            **rendered,
+        };
+    }
+}
+

@@ -51,12 +51,17 @@ def build_page_tokens(current: int, total_pages: int) -> list {
         nums.append(total_pages);
     }
     tokens: list = [];
-    for (i, n) in enumerate(nums) {
+    # NOTE: avoid `for (i, n) in enumerate(...)` here — jac-client's browser
+    # codegen mishandles the tuple-unpack (emits an undefined `n`, crashing the
+    # page). A plain loop + counter compiles correctly across versions.
+    idx: int = 0;
+    for n in nums {
         if n == -1 {
-            tokens.append({"kind": "gap", "n": 0, "key": f"gap{i}"});
+            tokens.append({"kind": "gap", "n": 0, "key": f"gap{idx}"});
         } else {
             tokens.append({"kind": "page", "n": n, "key": f"page{n}"});
         }
+        idx = idx + 1;
     }
     return tokens;
 }

@@ -719,8 +719,24 @@ def:pub page() -> JsxElement {
         pending_title = "";
         post = None;
         start: int = int(Date.now());
+        # Optional draft-preview token from the URL (?preview=<token>): lets an
+        # unpublished post render in full via a shared, persisted snapshot.
+        preview_token = "";
         try {
-            result = root spawn GetPost(slug=str(slug));
+            search = str(window.location.search or "");
+            if search.startswith("?") {
+                search = search[1:];
+            }
+            for pair in search.split("&") {
+                if pair.startswith("preview=") {
+                    preview_token = pair.split("=", 1)[1];
+                }
+            }
+        } except Exception {
+            _ignore = None;
+        }
+        try {
+            result = root spawn GetPost(slug=str(slug), preview=preview_token);
             if result.reports and len(result.reports) > 0 {
                 data = result.reports[0];
                 if data["ok"] {
@@ -839,6 +855,13 @@ def:pub page() -> JsxElement {
     share_text = f"{post['title']} — {share_url}";
 
     return <article className="post-shell">
+        {post["is_preview"] and (
+            <div style={{"background": "var(--bg-subtle)", "borderBottom": "1px solid var(--rule)", "padding": "0.6rem 0", "textAlign": "center"}}>
+                <p className="container narrow small" style={{"margin": "0", "color": "var(--text-muted)"}}>
+                    👁 Draft preview — not published. This link is private and expires in ~1 month.
+                </p>
+            </div>
+        )}
         <header className="post-header">
             <div className="container narrow">
                 {primary_category and (
