@@ -42,21 +42,22 @@ cl {
 
             <header className="site-header">
                 <div className="container header-inner">
-                    <Link to="/blog" className="brand">
-                        <img src="https://www.jaseci.org/images/logo.png" alt="Jaseci" width={32} height={32} className="brand-logo" />
-                        <span className="brand-text">
+                    <div className="brand">
+                        <a href="https://www.jaseci.org" target="_blank" rel="noopener" className="brand-logo-link" aria-label="Jaseci.org">
+                            <img src="https://www.jaseci.org/images/logo.png" alt="Jaseci" width={32} height={32} className="brand-logo" />
+                        </a>
+                        <Link to="/blog" className="brand-text">
                             <span className="brand-mark">Jaseci</span>
                             <span className="brand-sub">Blogs</span>
-                        </span>
-                    </Link>
+                        </Link>
+                    </div>
 
                     <nav className="primary-nav" aria-label="Primary">
                         <Link to="/blog">Latest</Link>
                         <Link to="/blog/archive">Archive</Link>
                         <Link to="/blog/categories">Categories</Link>
-                        <Link to="/submit" className="nav-write">Contribute</Link>
                         <a href="https://newsletter.jaseci.org" target="_blank" rel="noopener">Newsletter</a>
-                        <a href="https://www.jaseci.org" target="_blank" rel="noopener" className="nav-jaseci">Jaseci.org</a>
+                        <Link to="/submit" className="nav-write">Contribute</Link>
                     </nav>
 
                     <div className="header-actions">
@@ -126,9 +127,8 @@ cl {
                         <Link to="/blog">Latest</Link>
                         <Link to="/blog/archive">Archive</Link>
                         <Link to="/blog/categories">Categories</Link>
-                        <Link to="/submit" className="nav-write">Contribute</Link>
                         <a href="https://newsletter.jaseci.org" target="_blank" rel="noopener">Newsletter</a>
-                        <a href="https://www.jaseci.org" target="_blank" rel="noopener" className="nav-jaseci">Jaseci.org</a>
+                        <Link to="/submit" className="nav-write">Contribute</Link>
                     </nav>
                 )}
             </header>
@@ -140,12 +140,14 @@ cl {
             <footer className="site-footer">
                 <div className="container footer-grid">
                     <div className="footer-brand">
-                        <img src="https://www.jaseci.org/images/logo.png" alt="" width={40} height={40} />
+                        <a href="https://www.jaseci.org" target="_blank" rel="noopener" className="brand-logo-link" aria-label="Jaseci.org">
+                            <img src="https://www.jaseci.org/images/logo.png" alt="" width={40} height={40} />
+                        </a>
                         <div>
-                            <p className="footer-title">
+                            <Link to="/blog" className="footer-title">
                                 <span className="brand-mark">Jaseci</span>
                                 <span className="brand-sub">Blogs</span>
-                            </p>
+                            </Link>
                             <p className="footer-tagline muted">Developer and contributor writing from the Jaseci & Jac open-source ecosystem.</p>
                             <Link to="/submit" className="cta-pill footer-cta">Contribute to the blog</Link>
                         </div>
