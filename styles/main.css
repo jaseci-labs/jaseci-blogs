@@ -182,6 +182,10 @@ img {
 .brand:hover {
     color: var(--text-strong);
 }
+.brand-logo-link {
+    display: inline-flex;
+    align-items: center;
+}
 .brand-logo {
     border-radius: 6px;
 }
@@ -193,6 +197,13 @@ img {
     font-size: 1.25rem;
     font-weight: 600;
     letter-spacing: -0.01em;
+    /* .brand-text is now the anchor (links to the blog index), so re-assert the
+       brand color the parent used to provide and override the global `a` link
+       color. */
+    color: var(--text-strong);
+}
+.brand-text:hover {
+    color: var(--text-strong);
 }
 .brand-sub {
     color: var(--text-muted);
@@ -369,6 +380,11 @@ img {
     font-weight: 600;
     color: var(--text-strong);
     margin: 0 0 0.25rem;
+}
+/* .footer-title is now a link to the index; keep it visually unchanged by
+   holding the brand color on hover instead of the global link-hover color. */
+.footer-title:hover {
+    color: var(--text-strong);
 }
 .footer-tagline {
     margin: 0;
