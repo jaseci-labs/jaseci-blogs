@@ -124,22 +124,32 @@ Named it. One click. Done.
 
 The repository was live at [github.com/SahanUday/toastmaster-app](https://github.com/SahanUday/toastmaster-app) in under a minute. Real source files, clean commit history, ready to share or extend.
 
+## Then I Hit Deploy
+
+jacBuilder also has a deploy feature.
+
+I set the app address, clicked Deploy, and waited a few minutes. That was it. The app was running in production at [toasttracker.jaseci.app](https://toasttracker.jaseci.app).
+
+No server to configure. No cloud provider to set up. No deployment pipeline to write or maintain. Just a subdomain and a button.
+
+The full journey happened inside one platform: describe the problem, build the app, push to GitHub, deploy to production.
+
 ## What the Clock Actually Said
 
 I want to be upfront about this, because the number sounds exaggerated.
 
-From the moment I started describing the problem to jacBuilder's AI, to the moment the app was live on GitHub: under one hour.
+From the moment I started describing the problem to jacBuilder's AI, to the moment the app was live on GitHub: under one hour. A few minutes after that, it was deployed to production.
 
-Not "under an hour if you skip the thinking." Total elapsed time. Problem description to working multi-tool app to GitHub repository.
+Not "under an hour if you skip the thinking." Total elapsed time. Problem description to working multi-tool app to GitHub repository and live production URL.
 
-For context: I've spent longer than that just setting up the scaffolding for a typical project before writing any real feature. The time saving here isn't just about the AI writing faster. It's about generating an architecture that has less to build in the first place.
-
-The Jaseci stack means no API layer. jacBuilder means no boilerplate. Together, the distance between "I have an idea" and "the app is running" gets dramatically shorter.
+For context: I've spent longer than that just setting up the scaffolding for a typical project before writing any real feature. The time saving here isn't just about the AI writing faster. It's about generating an architecture that has less to build in the first place, and a platform that handles every step of shipping it.
 
 ## Try It
 
 The generator is at [jac-builder.jaseci.org](https://jac-builder.jaseci.org).
 
-I described a problem. Got a working app. Pushed it to GitHub. All before I ran out of time to think about it.
+The app is live at [toasttracker.jaseci.app](https://toasttracker.jaseci.app).
+
+I described a problem. Got a working app. Pushed it to GitHub. Deployed it to production. All in one session, all in one platform.
 
 That's what the stack actually delivers when you see it in action.
