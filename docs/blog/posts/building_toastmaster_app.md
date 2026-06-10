@@ -22,6 +22,10 @@ I almost moved on. Then I remembered what I'd learned from building [ProtoMCP](h
 
 <!-- more -->
 
+![App landing page](../../assets/jacbuilder-app/landing-page.png)
+
+That's the app. Here's the story of how it came together.
+
 ## The Pain Every Developer Knows
 
 Here's the honest cost of a typical fullstack app built from scratch.
@@ -91,8 +95,6 @@ This wasn't a skeleton with stub functions. The logic was correct. The color zon
 That was the moment I understood what jacBuilder actually was.
 
 ## What Came Out
-
-![App landing page](../../assets/jacbuilder-app/landing-page.png)
 
 The app came out with seven tools on a clean navigation bar. A dashboard, a timer with the color zone system, an Ah-Counter for tracking filler words per speaker, a Grammarian tool with vocabulary tracking and grammar notes, a Table Topics tracker, a meeting planner for scheduling and role assignments, and a member progress tracker.
 
