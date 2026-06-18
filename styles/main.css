@@ -81,7 +81,7 @@ img {
 .container.wide {
     max-width: 1400px;
 }
-/* App-like pages (submit / editor) that want most of the viewport width. */
+/* App-like pages (submit / reviewer) that want most of the viewport width. */
 .container.app {
     max-width: min(1600px, 96vw);
 }

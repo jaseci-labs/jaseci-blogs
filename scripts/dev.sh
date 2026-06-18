@@ -12,7 +12,7 @@ if [ -f .env ]; then
   set +a
   echo "Loaded .env ($(grep -cE '^[A-Za-z_]+=' .env) vars)"
 else
-  echo "No .env found — /submit and /editor will report 'not configured'."
+  echo "No .env found — /submit and /reviewer will report 'not configured'."
 fi
 
 # Prefer the project venv's jac (has the scale/client plugins) if present,

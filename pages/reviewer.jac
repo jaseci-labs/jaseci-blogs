@@ -1,18 +1,18 @@
-"""Editor dashboard (/editor).
+"""Reviewer dashboard (/reviewer).
 
 For repo-write users only. Lists open blog submissions, renders each for review
-using the same server pipeline the live post page uses, and exposes the editor
+using the same server pipeline the live post page uses, and exposes the reviewer
 actions — all backed by GitHub (no DB):
 
   • Approve & merge       -> PUT /pulls/{n}/merge
   • Schedule / hold / ... -> dispatches the existing "Schedule a post" workflow
   • Take down a live post -> dispatches the existing "Take down a post" workflow
 
-Editor identity + gating is the same GitHub session minted on /submit; this page
-just additionally requires is_editor (server-verified repo write access).
+Reviewer identity + gating is the same GitHub session minted on /submit; this page
+just additionally requires is_reviewer (server-verified repo write access).
 """
 
-sv import from .main { ListSubmissions, PreviewSubmission, CreatePreview }
+sv import from .main { ListSubmissions, PreviewSubmission, CreatePreview, ListEditablePosts }
 
 to cl:
 
@@ -22,7 +22,7 @@ import from "@jac/runtime" { Link }
 glob SESSION_KEY = "blog_submit_session";
 glob ROW_STYLE = {"display": "flex", "alignItems": "center", "gap": "0.5rem", "justifyContent": "space-between"};
 glob CODE_STYLE = {"fontFamily": "var(--mono, monospace)", "fontSize": "0.9rem", "padding": "0.6rem 0.8rem", "background": "var(--bg-subtle)", "color": "var(--text)", "border": "1px solid var(--rule)", "borderRadius": "6px", "flex": "1", "overflowX": "auto", "whiteSpace": "nowrap"};
-glob EDITOR_ACTIONS = [
+glob REVIEWER_ACTIONS = [
     {"key": "schedule", "label": "Schedule"},
     {"key": "publish-now", "label": "Publish now"},
     {"key": "hold", "label": "Hold"},
@@ -56,12 +56,17 @@ def site_origin() -> str {
 def:pub page() -> JsxElement {
     has booting: bool = True;
     has signed_in: bool = False;
-    has is_editor: bool = False;
-    has token: str = "";
+    has is_reviewer: bool = False;
+    has gh_enc: str = "";  # Fernet-encrypted GitHub token; sent to walkers per call
 
     has queue: list = [];
     has queue_loading: bool = False;
     has queue_error: str = "";
+
+    # Open edits to already-published posts (file-based, incl. direct-GitHub PRs).
+    has edits_q: list = [];
+    has edits_loading: bool = False;
+    has edits_error: str = "";
 
     has selected: int = 0;
     has preview: any = None;
@@ -81,9 +86,9 @@ def:pub page() -> JsxElement {
     can with entry {
         existing = read_session();
         if existing {
-            token = str(existing["token"]);
+            gh_enc = str(existing["gh_enc"]);
             signed_in = True;
-            is_editor = bool(existing["is_editor"]);
+            is_reviewer = bool(existing["is_reviewer"]);
         }
         booting = False;
     }
@@ -92,7 +97,7 @@ def:pub page() -> JsxElement {
         queue_loading = True;
         queue_error = "";
         try {
-            res = root spawn ListSubmissions(session=token);
+            res = root spawn ListSubmissions(gh_enc=gh_enc);
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
@@ -107,9 +112,41 @@ def:pub page() -> JsxElement {
         queue_loading = False;
     }
 
+    async def load_edits() -> None {
+        edits_loading = True;
+        edits_error = "";
+        try {
+            res = root spawn ListEditablePosts(gh_enc=gh_enc);
+            if res.reports and len(res.reports) > 0 {
+                data = res.reports[0];
+                if data["ok"] {
+                    flat: list = [];
+                    for p in data["posts"] {
+                        for pr in p["edit_prs"] {
+                            flat.append({
+                                "number": pr["number"],
+                                "url": pr["url"],
+                                "author": pr["author"],
+                                "title": p["title"],
+                                "slug": p["slug"],
+                            });
+                        }
+                    }
+                    edits_q = flat;
+                } else {
+                    edits_error = str(data["error"]);
+                }
+            }
+        } except Exception {
+            edits_error = "Could not load open edits.";
+        }
+        edits_loading = False;
+    }
+
     async can with [signed_in] entry {
-        if signed_in and is_editor {
+        if signed_in and is_reviewer {
             await load_queue();
+            await load_edits();
         }
     }
 
@@ -121,7 +158,7 @@ def:pub page() -> JsxElement {
         preview_link = "";
         preview_loading = True;
         try {
-            res = root spawn PreviewSubmission(session=token, pr_number=n);
+            res = root spawn PreviewSubmission(gh_enc=gh_enc, pr_number=n);
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
@@ -136,8 +173,8 @@ def:pub page() -> JsxElement {
         preview_loading = False;
     }
 
-    # Editor actions run with the editor's OWN GitHub access: merge happens on
-    # the PR page, and scheduling/take-down are slash-commands the editor pastes
+    # Reviewer actions run with the reviewer's OWN GitHub access: merge happens on
+    # the PR page, and scheduling/take-down are slash-commands the reviewer pastes
     # as a PR comment (their write access authorizes the slash-command workflow).
     # So the app needs no privileged merge/dispatch credential.
     def make_set_action(k: str) -> any {
@@ -204,7 +241,7 @@ def:pub page() -> JsxElement {
     async def create_preview() -> None {
         preview_busy = True;
         try {
-            res = root spawn CreatePreview(session=token, pr_number=selected, origin=site_origin());
+            res = root spawn CreatePreview(gh_enc=gh_enc, pr_number=selected, origin=site_origin());
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
@@ -233,18 +270,18 @@ def:pub page() -> JsxElement {
 
     if not signed_in {
         return <section className="container narrow" style={{"padding": "4rem 0"}}>
-            <p className="eyebrow">Editor dashboard</p>
+            <p className="eyebrow">Reviewer dashboard</p>
             <h1 className="display">Sign in required</h1>
-            <p className="post-deck">Sign in with GitHub to access the editor tools.</p>
+            <p className="post-deck">Sign in with GitHub to access the reviewer tools.</p>
             <p style={{"marginTop": "1.5rem"}}><Link className="cta-pill" to="/submit">Go to sign in →</Link></p>
         </section>;
     }
 
-    if not is_editor {
+    if not is_reviewer {
         return <section className="container narrow" style={{"padding": "4rem 0"}}>
-            <p className="eyebrow">Editor dashboard</p>
+            <p className="eyebrow">Reviewer dashboard</p>
             <h1 className="display">Not authorized</h1>
-            <p className="post-deck">This area is for editors with write access to the repository.</p>
+            <p className="post-deck">This area is for reviewers with write access to the repository.</p>
             <p style={{"marginTop": "1.5rem"}}><Link className="cta-pill" to="/blog">← Back to the blog</Link></p>
         </section>;
     }
@@ -252,10 +289,10 @@ def:pub page() -> JsxElement {
     return <section className="container app" style={{"padding": "2rem 0"}}>
         <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "baseline", "gap": "1rem", "flexWrap": "wrap"}}>
             <div>
-                <p className="eyebrow">Editor dashboard</p>
+                <p className="eyebrow">Reviewer dashboard</p>
                 <h1 className="display" style={{"fontSize": "2rem"}}>Review queue</h1>
             </div>
-            <button type="button" className="runnable-copy" onClick={lambda -> None { load_queue(); }}>Refresh</button>
+            <button type="button" className="runnable-copy" onClick={lambda -> None { load_queue(); load_edits(); }}>Refresh</button>
         </div>
 
         <div style={{"display": "grid", "gridTemplateColumns": "minmax(240px, 320px) 1fr", "gap": "2rem", "marginTop": "1.5rem", "alignItems": "start"}}>
@@ -277,6 +314,27 @@ def:pub page() -> JsxElement {
                             </button>
                         </li>
                         for item in queue
+                    ]}
+                </ul>
+
+                <p className="eyebrow" style={{"marginTop": "1.5rem"}}>Open edits</p>
+                {edits_loading and <p className="muted">Loading…</p>}
+                {edits_error and <p style={{"color": "var(--danger, #c0392b)"}}>{edits_error}</p>}
+                {not edits_loading and len(edits_q) == 0 and <p className="muted small">No open edits to published posts.</p>}
+                <ul style={{"listStyle": "none", "padding": "0", "margin": "0", "display": "flex", "flexDirection": "column", "gap": "0.5rem"}}>
+                    {[
+                        <li key={e["number"]}>
+                            <button
+                                type="button"
+                                className={selected == e["number"] and "tag is-active" or "tag"}
+                                style={{"width": "100%", "textAlign": "left", "display": "block"}}
+                                onClick={lambda -> None { select_pr(int(e["number"])); }}
+                            >
+                                <span style={{"display": "block", "fontWeight": "600"}}>✏️ {e["title"]}</span>
+                                <span className="muted small">@{e["author"]} · PR #{e["number"]}</span>
+                            </button>
+                        </li>
+                        for e in edits_q
                     ]}
                 </ul>
             </aside>
@@ -326,7 +384,7 @@ def:pub page() -> JsxElement {
                                         className={action == a["key"] and "tag is-active" or "tag"}
                                         onClick={make_set_action(str(a["key"]))}
                                     >{a["label"]}</button>
-                                    for a in EDITOR_ACTIONS
+                                    for a in REVIEWER_ACTIONS
                                 ]}
                             </div>
 

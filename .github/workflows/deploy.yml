@@ -57,11 +57,16 @@ jobs:
           # Submission-portal secrets. jac.toml's [plugins.scale.secrets]
           # interpolates these ${...} env vars at deploy time into the
           # jaseci-blogs-secrets k8s Secret. Unset values deploy as empty,
-          # which gracefully disables /submit + /editor. Only an OAuth App is
+          # which gracefully disables /submit + /reviewer. Only an OAuth App is
           # needed — every GitHub action runs as the signed-in user (fork + PR).
           # See SUBMIT_FLOW.md.
           GH_OAUTH_CLIENT_ID: ${{ vars.BLOG_OAUTH_CLIENT_ID }}
           GH_OAUTH_CLIENT_SECRET: ${{ secrets.BLOG_OAUTH_CLIENT_SECRET }}
+          # One random value backs both: jac-scale signs the session JWT with
+          # JWT_SECRET, and SUBMIT_SESSION_SECRET is the Fernet key for the GitHub
+          # token at rest. Reused so there's no extra secret to manage (and so an
+          # unset JWT_SECRET can't silently fall back to jac-scale's default).
+          JWT_SECRET: ${{ secrets.BLOG_SESSION_SECRET }}
           SUBMIT_SESSION_SECRET: ${{ secrets.BLOG_SESSION_SECRET }}
         run: |
           # `jac install` put jaclang + jac-scale + jac-client into the project

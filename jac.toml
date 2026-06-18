@@ -21,6 +21,16 @@ debug = false
 [plugins.scale]
 enabled = true
 
+# jac-scale owns the submission portal's session JWT (it signs/validates the
+# token the browser sends as `Authorization: Bearer` on every walker call). The
+# app no longer hand-rolls JWTs. Set a real secret in prod — the default is
+# forge-able. SUBMIT_SESSION_SECRET stays, but now only as the Fernet key for the
+# GitHub token at rest (see [plugins.scale.secrets]).
+[plugins.scale.jwt]
+secret = "${JWT_SECRET}"
+algorithm = "HS256"
+exp_delta_days = 7
+
 [plugins.scale.kubernetes]
 app_name = "jaseci-blogs"
 namespace = "jaseci-blogs"
@@ -66,13 +76,16 @@ PUBLIC_SITE_URL = "https://blogs.jaseci.org"
 # Submission portal credentials. ${...} is resolved from the deploy-time
 # environment (the GitHub Actions runner — see deploy.yml) into the
 # jaseci-blogs-secrets k8s Secret, never committed. Blank values are tolerated:
-# the /submit + /editor features simply report "not configured" until set.
+# the /submit + /reviewer features simply report "not configured" until set.
 # Only an OAuth App is needed — every GitHub action runs as the signed-in user
 # (fork + PR). See .github/SUBMIT_FLOW.md for the one-time setup.
 GH_REPO = "jaseci-labs/jaseci-blogs"
 GH_BASE_BRANCH = "main"
 GH_OAUTH_CLIENT_ID = "${GH_OAUTH_CLIENT_ID}"
 GH_OAUTH_CLIENT_SECRET = "${GH_OAUTH_CLIENT_SECRET}"
+# jac-scale signs the session JWT with this (see [plugins.scale.jwt]).
+JWT_SECRET = "${JWT_SECRET}"
+# Fernet key for the GitHub token at rest (the browser holds only ciphertext).
 SUBMIT_SESSION_SECRET = "${SUBMIT_SESSION_SECRET}"
 
 [dependencies]
@@ -87,9 +100,9 @@ jac-client = "*"
 markdown = ">=3.5"
 pyyaml = ">=6.0"
 pygments = ">=2.17"
-# Submission portal: GitHub API calls + JWTs (App RS256 + session HS256).
+# Submission portal: GitHub API calls + Fernet encryption of the GitHub token
+# (the session JWT is now jac-scale's, so no pyjwt here).
 requests = ">=2.31"
-pyjwt = ">=2.8"
 cryptography = ">=42.0"
 
 [dependencies.npm]

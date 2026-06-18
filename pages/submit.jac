@@ -124,6 +124,27 @@ def clear_session() -> None {
 }
 
 
+def set_jac_token(tok: str) -> None {
+    # jac-scale's client runtime reads the session JWT from localStorage["jac_token"]
+    # and sends it as `Authorization: Bearer` on every walker call. We mint the
+    # token server-side after GitHub OAuth, so we hand it to the runtime here.
+    try {
+        window.localStorage.setItem("jac_token", tok);
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
+def clear_jac_token() -> None {
+    try {
+        window.localStorage.removeItem("jac_token");
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
 def query_param(name: str) -> str {
     # Manual parse — URLSearchParams is a JS constructor (needs `new`, which
     # Jac can't emit), so we read window.location.search ourselves.
@@ -162,6 +183,25 @@ def redirect_uri() -> str {
 }
 
 
+def copy_text(t: str) -> None {
+    # Copy to clipboard, with a textarea fallback for non-secure contexts.
+    try {
+        if navigator.clipboard {
+            navigator.clipboard.writeText(t);
+        } else {
+            ta = document.createElement("textarea");
+            ta.value = t;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+        }
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
 def status_label(status: str) -> str {
     mapping = {
         "in_review": "🟡 In review",
@@ -178,8 +218,8 @@ def:pub page() -> JsxElement {
     has booting: bool = True;
     has signed_in: bool = False;
     has profile: any = None;
-    has token: str = "";
-    has is_editor: bool = False;
+    has gh_enc: str = "";  # Fernet-encrypted GitHub token; sent to walkers per call
+    has is_reviewer: bool = False;
     has auth_error: str = "";
 
     has tab: str = "write";
@@ -202,9 +242,19 @@ def:pub page() -> JsxElement {
 
     # My submissions.
     has subs: list = [];
+    has my_edits: list = [];   # the author's own open edits to published posts
     has subs_loading: bool = False;
     has subs_error: str = "";
     has subs_busy: str = "";  # slug currently doing a preview/edit action
+
+    # Edit a published post.
+    has editing_published: bool = False;   # write form is editing a live post
+    has edit_existing_prs: list = [];      # open edit PRs for the chosen slug
+    has editable: list = [];               # posts the user may edit
+    has editable_loading: bool = False;
+    has editable_error: str = "";
+    has editable_filter: str = "";
+    has editable_busy: str = "";           # slug currently loading into the form
 
     async can with entry {
         window.scrollTo(0, 0);
@@ -218,14 +268,15 @@ def:pub page() -> JsxElement {
                     data = res.reports[0];
                     if data["ok"] {
                         sess = {
-                            "token": str(data["token"]),
+                            "gh_enc": str(data["gh_enc"]),
                             "profile": data["profile"],
-                            "is_editor": bool(data["is_editor"]),
+                            "is_reviewer": bool(data["is_reviewer"]),
                         };
                         save_session(sess);
-                        token = sess["token"];
+                        set_jac_token(str(data["token"]));
+                        gh_enc = str(sess["gh_enc"]);
                         profile = sess["profile"];
-                        is_editor = sess["is_editor"];
+                        is_reviewer = bool(sess["is_reviewer"]);
                         signed_in = True;
                     } else {
                         auth_error = str(data["error"]);
@@ -246,9 +297,9 @@ def:pub page() -> JsxElement {
         # 2) restore an existing session
         existing = read_session();
         if existing {
-            token = str(existing["token"]);
+            gh_enc = str(existing["gh_enc"]);
             profile = existing["profile"];
-            is_editor = bool(existing["is_editor"]);
+            is_reviewer = bool(existing["is_reviewer"]);
             signed_in = True;
         }
         booting = False;
@@ -276,10 +327,11 @@ def:pub page() -> JsxElement {
 
     def sign_out() -> None {
         clear_session();
+        clear_jac_token();
         signed_in = False;
         profile = None;
-        token = "";
-        is_editor = False;
+        gh_enc = "";
+        is_reviewer = False;
     }
 
     def on_title(v: str) -> None {
@@ -377,21 +429,37 @@ def:pub page() -> JsxElement {
             # Declared here so both branches assign the SAME binding — assigning
             # only inside the if/else block-scopes `res` and it's undefined below.
             res: any = None;
-            if edit_pr > 0 {
+            if editing_published {
+                res = root spawn EditPublishedPost(
+                    gh_enc=gh_enc, slug=slug, title=title, categories=cats,
+                    description=description, body_md=body, images=images, pr_number=edit_pr,
+                );
+            } elif edit_pr > 0 {
                 res = root spawn UpdatePost(
-                    session=token, pr_number=edit_pr, title=title, slug=slug,
+                    gh_enc=gh_enc, pr_number=edit_pr, title=title, slug=slug,
                     categories=cats, description=description, body_md=body, images=images,
                 );
             } else {
                 res = root spawn SubmitPost(
-                    session=token, title=title, slug=slug, categories=cats,
+                    gh_enc=gh_enc, title=title, slug=slug, categories=cats,
                     description=description, body_md=body, author_bio=bio, images=images,
                 );
             }
             if res and res.reports {
                 data = res.reports[0];
                 if data["ok"] {
-                    result = {**data, "edited": edit_pr > 0};
+                    result = {**data, "edited": edit_pr > 0, "published_edit": editing_published};
+                    if editing_published {
+                        # Pair the edit PR with a shareable preview link to send reviewers.
+                        try {
+                            pv = root spawn CreatePreview(gh_enc=gh_enc, pr_number=int(data["pr_number"]), origin=site_origin());
+                            if pv.reports and len(pv.reports) > 0 and pv.reports[0]["ok"] {
+                                result = {**result, "preview_url": str(pv.reports[0]["url"])};
+                            }
+                        } except Exception {
+                            _ignore = None;
+                        }
+                    }
                 } else {
                     submit_error = str(data["error"]);
                 }
@@ -408,12 +476,13 @@ def:pub page() -> JsxElement {
         result = None; edit_pr = 0; title = ""; slug = ""; slug_touched = False;
         description = ""; body = ""; bio = ""; cats = []; images = [];
         preview_html = ""; submit_error = "";
+        editing_published = False; edit_existing_prs = [];
     }
 
     async def start_edit(pr: int) -> None {
         subs_busy = f"edit-{pr}";
         try {
-            res = root spawn GetSubmissionForEdit(session=token, pr_number=pr);
+            res = root spawn GetSubmissionForEdit(gh_enc=gh_enc, pr_number=pr);
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
@@ -440,7 +509,7 @@ def:pub page() -> JsxElement {
     async def open_preview(pr: int) -> None {
         subs_busy = f"prev-{pr}";
         try {
-            res = root spawn CreatePreview(session=token, pr_number=pr, origin=site_origin());
+            res = root spawn CreatePreview(gh_enc=gh_enc, pr_number=pr, origin=site_origin());
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
@@ -477,11 +546,12 @@ def:pub page() -> JsxElement {
         subs_loading = True;
         subs_error = "";
         try {
-            res = root spawn MySubmissions(session=token);
+            res = root spawn MySubmissions(gh_enc=gh_enc);
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
                     subs = data["submissions"];
+                    my_edits = data["edits"];
                 } else {
                     subs_error = str(data["error"]);
                 }
@@ -492,9 +562,67 @@ def:pub page() -> JsxElement {
         subs_loading = False;
     }
 
+    async def load_editable() -> None {
+        editable_loading = True;
+        editable_error = "";
+        try {
+            res = root spawn ListEditablePosts(gh_enc=gh_enc);
+            if res.reports and len(res.reports) > 0 {
+                data = res.reports[0];
+                if data["ok"] {
+                    editable = data["posts"];
+                } else {
+                    editable_error = str(data["error"]);
+                }
+            }
+        } except Exception {
+            editable_error = "Could not load posts.";
+        }
+        editable_loading = False;
+    }
+
+    async def start_edit_published(s: str) -> None {
+        editable_busy = s;
+        try {
+            res = root spawn GetPublishedPostForEdit(gh_enc=gh_enc, slug=s);
+            if res.reports and len(res.reports) > 0 {
+                data = res.reports[0];
+                if data["ok"] {
+                    reset_form();
+                    editing_published = True;
+                    title = str(data["title"]);
+                    slug = str(data["slug"]);
+                    slug_touched = True;
+                    cats = data["categories"];
+                    description = str(data["description"]);
+                    body = str(data["body_md"]);
+                    edit_existing_prs = data["existing_prs"];
+                    edit_pr = 0;
+                    tab = "write";
+                    window.scrollTo(0, 0);
+                } else {
+                    editable_error = str(data["error"]);
+                }
+            }
+        } except Exception {
+            editable_error = "Could not load that post for editing.";
+        }
+        editable_busy = "";
+    }
+
+    def make_edit_published(s: str) -> any {
+        def h() -> None {
+            start_edit_published(s);
+        }
+        return h;
+    }
+
     async can with [tab] entry {
         if tab == "mine" and signed_in {
             await load_subs();
+        }
+        if tab == "edit" and signed_in {
+            await load_editable();
         }
     }
 
@@ -536,7 +664,7 @@ def:pub page() -> JsxElement {
                 </span>
             </div>
             <div style={{"display": "flex", "alignItems": "center", "gap": "0.75rem"}}>
-                {is_editor and <Link to="/editor" className="tag">Editor dashboard →</Link>}
+                {is_reviewer and <Link to="/reviewer" className="tag">Reviewer dashboard →</Link>}
                 <button type="button" className="runnable-copy" onClick={lambda -> None { sign_out(); }}>Sign out</button>
             </div>
         </div>
@@ -552,31 +680,69 @@ def:pub page() -> JsxElement {
                 className={tab == "mine" and "tag is-active" or "tag"}
                 onClick={lambda -> None { tab = "mine"; }}
             >My submissions</button>
+            <button
+                type="button"
+                className={tab == "edit" and "tag is-active" or "tag"}
+                onClick={lambda -> None { tab = "edit"; }}
+            >Edit a post</button>
         </div>
 
         {tab == "write" and result and (
             <div style={{"padding": "2rem 0"}}>
-                <p className="eyebrow">{result["edited"] and "Saved ✓" or "Submitted ✓"}</p>
+                <p className="eyebrow">{result["published_edit"] and "Edit ready ✓" or (result["edited"] and "Saved ✓" or "Submitted ✓")}</p>
                 <h2 className="display" style={{"fontSize": "1.8rem"}}>
-                    {result["edited"] and "Your changes were saved" or "Your post is in review"}
+                    {result["published_edit"] and "Your edit is ready for review" or (result["edited"] and "Your changes were saved" or "Your post is in review")}
                 </h2>
                 <p className="post-deck">
-                    {result["edited"] and "The pull request was updated with your changes." or "A draft pull request was opened. An editor will review and schedule it."}
+                    {result["published_edit"] and "The live post is unchanged until this PR merges. Share the preview link with a reviewer; merging publishes the edit." or (result["edited"] and "The pull request was updated with your changes." or "A draft pull request was opened. A reviewer will review and schedule it.")}
                 </p>
-                <p style={{"marginTop": "1.5rem", "display": "flex", "gap": "0.75rem"}}>
+                <p style={{"marginTop": "1.5rem", "display": "flex", "gap": "0.75rem", "flexWrap": "wrap"}}>
                     <a className="cta-pill" href={result["pr_url"]} target="_blank" rel="noopener">View pull request →</a>
-                    <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Write another</button>
+                    {result.get("preview_url") and (
+                        <a className="cta-pill" href={result["preview_url"]} target="_blank" rel="noopener">Open preview ↗</a>
+                    )}
+                    {result.get("preview_url") and (
+                        <button type="button" className="runnable-copy" onClick={lambda -> None { copy_text(str(result["preview_url"])); }}>Copy preview link</button>
+                    )}
+                    <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Done</button>
                 </p>
             </div>
         )}
 
         {tab == "write" and not result and (
             <div style={{"paddingTop": "1.5rem"}}>
-                {edit_pr > 0 and (
+                {edit_pr > 0 and not editing_published and (
                     <p className="muted small" style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "marginBottom": "1rem"}}>
                         ✏️ Editing submission #{edit_pr}. Saving adds a commit to the existing PR.
                         <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Cancel edit</button>
                     </p>
+                )}
+                {editing_published and (
+                    <div className="muted small" style={{"marginBottom": "1rem", "padding": "0.75rem 1rem", "border": "1px solid var(--rule)", "borderRadius": "8px", "background": "var(--bg-elev)"}}>
+                        <div style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "flexWrap": "wrap"}}>
+                            <span>✏️ Editing published post <code>{slug}</code>. It stays live; saving opens a PR — merging publishes the edit.</span>
+                            <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Cancel</button>
+                        </div>
+                        {len(edit_existing_prs) > 0 and (
+                            <div style={{"marginTop": "0.6rem"}}>
+                                <span>⚠️ Open edit PR(s) for this post: </span>
+                                {[
+                                    <a key={p["number"]} href={p["url"]} target="_blank" rel="noopener" style={{"marginRight": "0.6rem"}}>#{p["number"]} by {p["author"]}</a>
+                                    for p in edit_existing_prs
+                                ]}
+                                <div style={{"marginTop": "0.4rem", "display": "flex", "gap": "0.5rem", "alignItems": "center"}}>
+                                    <label>Save to:</label>
+                                    <select value={str(edit_pr)} onChange={lambda e: ChangeEvent { edit_pr = int(e.target.value); }} style={{"padding": "0.3rem 0.5rem"}}>
+                                        <option value="0">A new PR</option>
+                                        {[
+                                            <option key={p["number"]} value={str(p["number"])}>Continue your PR #{p["number"]}</option>
+                                            for p in edit_existing_prs if profile and str(p["author"]).lower() == str(profile["login"]).lower()
+                                        ]}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
                 <label className="eyebrow">Title</label>
                 <input
@@ -593,12 +759,12 @@ def:pub page() -> JsxElement {
                     className="search-input"
                     placeholder="kebab-case-url"
                     value={slug}
-                    readOnly={edit_pr > 0}
-                    style={edit_pr > 0 and {"opacity": "0.6", "cursor": "not-allowed"} or {}}
+                    readOnly={edit_pr > 0 or editing_published}
+                    style={(edit_pr > 0 or editing_published) and {"opacity": "0.6", "cursor": "not-allowed"} or {}}
                     onChange={lambda e: ChangeEvent { slug_touched = True; slug = e.target.value; }}
                 />
                 <p className="muted small">
-                    {edit_pr > 0 and "Slug can't change when editing: " or "Your post will live at "}/blog/posts/{slug or "your-slug"}
+                    {(edit_pr > 0 or editing_published) and "Slug can't change when editing: " or "Your post will live at "}/blog/posts/{slug or "your-slug"}
                 </p>
 
                 <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Categories</label>
@@ -662,7 +828,7 @@ def:pub page() -> JsxElement {
                     />
                 </div>
 
-                {edit_pr == 0 and (
+                {edit_pr == 0 and not editing_published and (
                     <>
                         <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Your bio (optional, used if you're a new author)</label>
                         <input
@@ -679,7 +845,7 @@ def:pub page() -> JsxElement {
 
                 <div style={{"display": "flex", "gap": "0.75rem", "marginTop": "1.5rem", "flexWrap": "wrap"}}>
                     <button type="button" className="cta-pill" disabled={submitting} onClick={lambda -> None { do_submit(); }}>
-                        {submitting and "Saving…" or (edit_pr > 0 and "Save changes" or "Submit for review")}
+                        {submitting and "Saving…" or (editing_published and (edit_pr > 0 and "Save to PR" or "Open edit PR") or (edit_pr > 0 and "Save changes" or "Submit for review"))}
                     </button>
                 </div>
             </div>
@@ -712,6 +878,73 @@ def:pub page() -> JsxElement {
                             </p>
                         </li>
                         for s in subs
+                    ]}
+                </ul>
+                {len(my_edits) > 0 and (
+                    <div style={{"marginTop": "1.5rem"}}>
+                        <p className="eyebrow">Your open edits to published posts</p>
+                        <ul className="search-results">
+                            {[
+                                <li key={e["number"]} className="search-result">
+                                    <p className="search-result-title">{e["title"]}</p>
+                                    <p className="muted small" style={{"marginTop": "0.25rem", "display": "flex", "gap": "0.75rem", "flexWrap": "wrap", "alignItems": "center"}}>
+                                        <span>editing <code>{e["slug"]}</code></span>
+                                        <a href={e["url"]} target="_blank" rel="noopener">PR #{e["number"]}</a>
+                                        <button type="button" className="runnable-copy" disabled={subs_busy == f"prev-{e['number']}"} onClick={make_preview(int(e["number"]))}>
+                                            {subs_busy == f"prev-{e['number']}" and "Opening…" or "Preview ↗"}
+                                        </button>
+                                        <button type="button" className="runnable-copy" disabled={editable_busy == e["slug"]} onClick={make_edit_published(str(e["slug"]))}>
+                                            {editable_busy == e["slug"] and "Loading…" or "Continue"}
+                                        </button>
+                                    </p>
+                                </li>
+                                for e in my_edits
+                            ]}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {tab == "edit" and (
+            <div style={{"paddingTop": "1.5rem"}}>
+                <p className="muted small" style={{"marginBottom": "0.75rem"}}>
+                    Edit a published post. Saving opens a PR (the post stays live) and gives you a preview link to share with a reviewer.
+                </p>
+                <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Filter posts…"
+                    value={editable_filter}
+                    onChange={lambda e: ChangeEvent { editable_filter = e.target.value; }}
+                />
+                {editable_loading and <p className="muted" style={{"marginTop": "0.75rem"}}>Loading posts…</p>}
+                {editable_error and <p style={{"color": "var(--danger, #c0392b)"}}>{editable_error}</p>}
+                {not editable_loading and not editable_error and len(editable) == 0 and (
+                    <p className="muted" style={{"marginTop": "0.75rem"}}>No posts you can edit. Reviewers can edit any post; authors can edit their own.</p>
+                )}
+                <ul className="search-results">
+                    {[
+                        <li key={p["slug"]} className="search-result">
+                            <p className="search-result-title">{p["title"]}</p>
+                            <p className="muted small" style={{"marginTop": "0.25rem", "display": "flex", "gap": "0.75rem", "flexWrap": "wrap", "alignItems": "center"}}>
+                                <span>{p["date"]}</span>
+                                <a href={f"/blog/posts/{p['slug']}"} target="_blank" rel="noopener">Read live →</a>
+                                {[
+                                    <span key={pr["number"]} style={{"display": "inline-flex", "gap": "0.35rem", "alignItems": "center"}}>
+                                        <a href={pr["url"]} target="_blank" rel="noopener">✏️ PR #{pr["number"]} by {pr["author"]}</a>
+                                        <button type="button" className="runnable-copy" disabled={subs_busy == f"prev-{pr['number']}"} onClick={make_preview(int(pr["number"]))}>
+                                            {subs_busy == f"prev-{pr['number']}" and "…" or "Preview ↗"}
+                                        </button>
+                                    </span>
+                                    for pr in p["edit_prs"]
+                                ]}
+                                <button type="button" className="runnable-copy" disabled={editable_busy == p["slug"]} onClick={make_edit_published(str(p["slug"]))}>
+                                    {editable_busy == p["slug"] and "Loading…" or "Edit"}
+                                </button>
+                            </p>
+                        </li>
+                        for p in editable if (editable_filter == "" or editable_filter.lower() in str(p["title"]).lower() or editable_filter.lower() in str(p["slug"]).lower())
                     ]}
                 </ul>
             </div>
