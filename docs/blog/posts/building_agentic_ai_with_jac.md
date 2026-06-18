@@ -1,10 +1,10 @@
 ---
 date: 2026-05-12
 authors:
-  - jayanaka
+- jayanaka
 categories:
-  - Jac Programming
-  - AI
+- Jac Programming
+- AI
 slug: building-agentic-ai-with-jac
 ---
 
@@ -14,21 +14,21 @@ Most of an agent codebase is not the agent. It is the supporting code every deve
 
 <!-- more -->
 
-## The Problem
+## The Problem 
 
-**You write the prompt by hand.** Every call to a model begins with a prompt: a paragraph of natural language describing what you want it to do. Getting a prompt that reliably makes the model do what you want is difficult and iterative. The model's output is sensitive to the exact wording, and the prompt is a single unstructured block of text, so when the result is wrong nothing points you to the part responsible. Nothing in the code can verify a prompt either, so improving one comes down to adjusting the text and testing again by hand. That effort is separate from the agent's actual logic.
+**The same intent gets written twice.** A tool is a function *and* a JSON schema describing it. A structured output is a Pydantic class *and* a `response_format` argument. If we rename the function but forget the JSON spec, the spec still advertises the old name to the model. If we rename a field but forget the prompt that asks for it, the prompt still references the old one. Nothing in the build catches the mismatch, because the link between the code and the string only exists in the developer's head. Drift is silent until the model misbehaves at runtime.
 
-**You build the plumbing around the call by hand.** A model only ever returns raw text, so you write the code that makes that text usable. For a structured result, you declare a schema, parse the text into it, validate the fields, and retry when the JSON comes back malformed. For tool use, you describe each tool as a JSON schema, then run the loop that calls the tool the model asked for, reads the result, and feeds it back. None of this machinery is the agent's logic, yet every project rebuilds the same parsing, validation, retry, and tool-calling code from scratch.
+**Control flow lives in prose.** When we want an agent to follow a specified workflow, that workflow ends up inside a system prompt in natural language, like *"First search, then summarize, then if the summary is too long, revise it."* Because the workflow only lives as a string, the code can't enforce or check the steps. There's no way to verify the agent followed the workflow correctly as specified.
 
-**The agent's workflow lives in prose.** When an agent should follow a specific sequence, like *"first search, then summarize, then if the summary is too long, revise it,"* that workflow ends up inside a system prompt as natural language, or scattered across a hand-rolled `for` loop, a router that dispatches on a classifier's label, and a threadpool that fans work out and merges it. Either way the control flow that *defines* the agent is invisible to the language: no code can enforce the steps or check that the model followed them.
+**The plumbing is rebuilt every project.** Every agent codebase needs the same supporting machinery: a ReAct loop for tool use, retry logic around validation errors, a router that dispatches on a classifier output, a threadpool that fans work out and merges results. None of this is the agent's logic, but every team builds it themselves. That wastes engineering time, and bugs in the plumbing are hard to tell apart from bugs in the agent.
 
-These problems share a root cause. The parts that *are* the agent, its tools, its workflow, its retries, its parallelism, live in two places the language can't see: as strings inside prompts, and as supporting code every team writes from scratch. Neither is something the language understands as an agent. So a question:
+These three problems share a root cause. The parts that *are* the agent, its tools, its workflow, its retries, its parallelism, live in two places: as strings inside prompts, and as code that every team has to write from scratch. Neither place is something the language understands as an agent. So a question:
 
 !!! quote ""
 
     *If agents were a feature of the language itself, instead of being built from prompts and code that developers need to write from scratch, what would the language need to provide?*
 
-The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it. **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/reference/plugins/byllm/) plugin, builds the prompt from your code and handles the input/output plumbing in the runtime, so you stop writing prompts by hand and stop re-inventing the wheel for parsing, validation, and retries. The payoff is concrete: byLLM shrinks the code needed to integrate an LLM by **3.8–8.2×** versus hand-written prompts, and lets developers finish tasks **3.2× faster** with **45% fewer lines of code**, all while *matching or beating* the accuracy of carefully hand-tuned prompts. **[Object-Spatial Programming](https://docs.jaseci.org/reference/language/osp/)** (OSP), Jac's native model for organizing computation around a graph, makes the workflow explicit: you express it as nodes and edges the language can see and enforce, instead of prose or tangled control flow. Together they give us **seven patterns** for building agents: three for what happens inside a single iteration (the **Mind**), and four for how work moves between iterations (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
+The answer is already in the [**Jac**](https://docs.jaseci.org/) programming language. Two ideas power it: **Meaning-Typed Programming** ([MTP](https://dl.acm.org/doi/10.1145/3763092)), brought in by the [**byLLM**](https://docs.jaseci.org/reference/plugins/byllm/) plugin, and **[Object-Spatial Programming](https://docs.jaseci.org/reference/language/osp/)** (OSP), Jac's native model for organizing computation around a graph. Together they give us **seven patterns** for building agents: three for what happens inside a single iteration (the **Mind**), and four for how work moves between iterations (the **Flow**). Every agent codebase already implements all seven, just by hand. The rest of this post is what those seven look like when the language has words for them.
 
 !!! info "About the code"
 
@@ -46,14 +46,10 @@ Two places agent logic actually ends up today:
 
 Either way, the things developers care about are out of reach: type-checked workflows, refactor-safe agents, testable control flow, predictable behavior on smaller models. That's the gap the seven patterns are designed to close. -->
 
-An agent's work splits in two: 
-1. what happens *inside* a single LLM iteration, one turn of thinking, deciding, or acting, and 
-2. how those iterations *connect* into a larger workflow. 
-We call the first the **Mind** and the second the **Flow**.
 
 ## The Mind
 
- The Mind is where a single call to the model does something useful. Three things it usefully does:
+Three things any single agent iteration usefully does:
 
 1. **Generate**: LLM returns free text from a function signature.
 2. **Extract**: LLM returns typed data validated against a schema.
@@ -82,7 +78,7 @@ def answer(question: str) -> str:
 
 </div>
 
-The Python snippet above describes one function in two places. The signature `def answer(question: str) -> str` says what the function returns. The system prompt string `"You answer questions about any topic."` says what it actually does. Rename `answer` to `respond` and the prompt still describes the old function. This is exactly the problem we named earlier: *you write the prompt by hand*, restating intent the signature already carries.
+The Python snippet above describes one function in two places. The signature `def answer(question: str) -> str` says what the function returns. The system prompt string `"You answer questions about any topic."` says what it actually does. Rename `answer` to `respond` and the prompt still describes the old function. This is exactly the problem we named earlier: *the same intent written twice*.
 
 ```jac
 # Jac: an LLM call is a function
@@ -189,7 +185,7 @@ def research(query: str) -> str:
 
 </div>
 
-The Python snippet above shows both halves of the byLLM problem at once. `search_papers` is declared three times: once as the actual function, once in the `TOOLS` list as a JSON schema, and once in the `DISPATCH` dict as a string key. Renaming the function means manually updating it in all three places. The developer also has to write the entire tool-use loop by hand, repeatedly calling the model, running the tool it requests, sending the result back, and continuing until the model is done. Every developer building a tool-using agent writes this same loop themselves.
+The Python snippet above shows two of our problems at once. `search_papers` is declared three times: once as the actual function, once in the `TOOLS` list as a JSON schema, and once in the `DISPATCH` dict as a string key. Renaming the function means manually updating it in all three places. The developer also has to write the entire tool-use loop by hand, repeatedly calling the model, running the tool it requests, sending the result back, and continuing until the model is done. Every developer building a tool-using agent writes this same loop themselves.
 
 In Jac:
 
@@ -211,9 +207,10 @@ with entry {
 
 In Jac, tools are ordinary functions. The runtime introspects their signatures, exposes them to the model, runs the tool-use loop, and returns when the model is done. The developer never declares a JSON schema, never maintains a dispatch dict, and never writes the tool-use loop by hand.
 
-Together, these three patterns cover the byLLM half of the story for anything that happens inside a single iteration: the prompt you no longer write by hand, and the input/output plumbing you no longer rebuild. The moment two iterations need to coordinate, the wiring between them becomes the agent. One iteration's output feeds the next, a retry triggers a rerun, or several workers run in parallel.
+Together, these three patterns address two of our problems for anything that happens inside a single iteration: declaring the same intent in multiple places, and rewriting the same supporting code in every project. The moment two iterations need to coordinate, the wiring between them becomes the agent. One iteration's output feeds the next, a retry triggers a rerun, or several workers run in parallel.
 
-In Python or TypeScript, this wiring lives inside a generic `for` loop or inside a system prompt with numbered steps. That is the remaining problem, *the workflow lives in prose*, and the next four patterns address it with OSP.
+In Python or TypeScript, this wiring lives inside a generic `for` loop or inside a system prompt with numbered steps. That is the third problem, *control flow lives in prose*, and the next four patterns address it.
+
 
 ## The Flow
 
@@ -438,19 +435,19 @@ with entry {
 
 In Python or TypeScript, parallel work usually collapses into either a single bloated prompt holding all the tools and asking the model to manage them itself, or a hand-rolled threadpool with manual result merging. In the Jac code above, `SurveyAgent` spawns three independent walkers (`HardwareResearcher`, `SoftwareResearcher`, `AIResearcher`) using `flow root spawn`, then collects their results with `wait`. Each researcher carries its own scoped tool list and its own context, so three focused prompts run concurrently rather than one bloated prompt holding nine tools. The synthesis step `self.synthesize(...)` only runs after all three workers have completed.
 
-Together, these four patterns address the remaining problem: workflows that live inside a prompt as a string and cannot be verified or observed by the surrounding code. In Jac, the workflow is the graph itself, where the steps, branches, retries, and parallelism are all visible as connections between nodes. The seven patterns, three for what happens inside an iteration and four for how iterations connect, cover what every agent codebase rebuilds by hand in Python or TypeScript.
+
+Together, these four patterns address the third of our problems: workflows that live inside a prompt as a string and cannot be verified or observed by the surrounding code. In Jac, the workflow is the graph itself, where the steps, branches, retries, and parallelism are all visible as connections between nodes. The seven patterns, three for what happens inside an iteration and four for how iterations connect, cover what every agent codebase rebuilds by hand in Python or TypeScript.
+
 
 ## The Takeaway
 
-The seven Mind and Flow patterns map directly onto the problems we started with, along two axes: byLLM handles the prompt and the plumbing around a single call; OSP handles the workflow between calls.
+The seven Mind and Flow patterns map directly onto the three problems we started with.
 
 | The problem | How Jac addresses it |
 |---|---|
-| **You write the prompt by hand.** Intent your code already expresses, restated in English for the model, with nothing keeping the two in sync. | **byLLM** builds the prompt from the code. The function signature itself becomes the prompt the model receives, the return type defines the schema for structured output, and tools are ordinary functions whose signatures the runtime introspects. Rename the code and the prompt follows. |
-| **And then you hand-build the plumbing.** Every team writes its own validation-and-retry, its own JSON tool schemas, its own ReAct loop, and ships its own bugs in them. | **byLLM** handles this in the runtime. Parsing the reply into a type, validating it, retrying malformed output, and running the tool-use loop are all features of the language rather than code every team writes from scratch. |
-| **The agent's workflow lives in prose.** Sequencing, routing, retry conditions, and parallelism end up inside system prompts as natural language, where no code can verify whether the model followed them. | **OSP** expresses the workflow as graph structure. Pipelines, branches, retries, and parallel fan-outs are all visible as connections between nodes, observable by the runtime and readable by the developer. |
-
-If you've built an agent, you've probably reached for a framework like [**LangChain**](https://github.com/langchain-ai/langchain), [**CrewAI**](https://github.com/crewAIInc/crewAI), or [**AutoGen**](https://github.com/microsoft/autogen) rather than raw API calls. These help, but they relocate the complexity instead of removing it. Each is a library you import, with its own decorators, base classes, and conventions you have to learn and wire together correctly. The effort shifts from designing prompts to integrating a framework: knowing which abstraction to reach for and where each piece goes is now the developer's job. The prompt is still a string you tune by hand, and the workflow is still framework objects assembled at runtime, so the compiler never sees the agent's actual shape. Jac takes the opposite approach. Rather than hand you a library to assemble, it absorbs that machinery into the compiler and runtime: you write the function, and the language builds the prompt, parses and validates the result, retries on failure, and runs the tool loop. The complexity isn't passed back to the developer as an API to manage, it lives below the language itself.
+| **The same intent written twice.** Tool schemas and structured-output classes have to be declared in code and described again in prompts or JSON specs, with nothing keeping the two halves in sync. | The Mind patterns keep intent in one place. The function signature itself becomes the prompt that the model receives. The return type defines the schema for structured output. Tools are simply ordinary functions whose signatures the runtime introspects. byLLM uses all of this to build the prompt automatically. |
+| **Control flow lives in prose.** Workflows, routing decisions, retry conditions, and parallelism end up inside system prompts as English, where no code can verify whether the model followed them. | The Flow patterns express workflows as graph structure. Pipelines, branches, retries, and parallel fan-outs are all visible as connections between nodes, observable by the runtime and readable by the developer. |
+| **The plumbing is rebuilt every project.** Every team writes its own ReAct loop, its own validation-and-retry, its own router, and its own threadpool, and ships its own bugs in them. | byLLM and OSP handle this plumbing in the runtime. The tool-use loop, the validation-and-retry, the routing, and the parallel fan-out are features of the language rather than code every team writes from scratch. |
 
 The agents people are actually shipping aren't here yet. The most prominent open-source projects are all in Python or TypeScript:
 
