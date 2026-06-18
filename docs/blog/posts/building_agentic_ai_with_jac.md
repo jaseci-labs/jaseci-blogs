@@ -14,8 +14,6 @@ Most of an agent codebase is not the agent. It is the supporting code every deve
 
 <!-- more -->
 
----
-
 ## The Problem
 
 **You write the prompt by hand.** Every call to a model begins with a prompt: a paragraph of natural language describing what you want it to do. Getting a prompt that reliably makes the model do what you want is difficult and iterative. The model's output is sensitive to the exact wording, and the prompt is a single unstructured block of text, so when the result is wrong nothing points you to the part responsible. Nothing in the code can verify a prompt either, so improving one comes down to adjusting the text and testing again by hand. That effort is separate from the agent's actual logic.
@@ -48,7 +46,6 @@ Two places agent logic actually ends up today:
 
 Either way, the things developers care about are out of reach: type-checked workflows, refactor-safe agents, testable control flow, predictable behavior on smaller models. That's the gap the seven patterns are designed to close. -->
 
----
 An agent's work splits in two: 
 1. what happens *inside* a single LLM iteration, one turn of thinking, deciding, or acting, and 
 2. how those iterations *connect* into a larger workflow. 
@@ -214,13 +211,9 @@ with entry {
 
 In Jac, tools are ordinary functions. The runtime introspects their signatures, exposes them to the model, runs the tool-use loop, and returns when the model is done. The developer never declares a JSON schema, never maintains a dispatch dict, and never writes the tool-use loop by hand.
 
----
-
 Together, these three patterns cover the byLLM half of the story for anything that happens inside a single iteration: the prompt you no longer write by hand, and the input/output plumbing you no longer rebuild. The moment two iterations need to coordinate, the wiring between them becomes the agent. One iteration's output feeds the next, a retry triggers a rerun, or several workers run in parallel.
 
 In Python or TypeScript, this wiring lives inside a generic `for` loop or inside a system prompt with numbered steps. That is the remaining problem, *the workflow lives in prose*, and the next four patterns address it with OSP.
-
----
 
 ## The Flow
 
@@ -445,11 +438,7 @@ with entry {
 
 In Python or TypeScript, parallel work usually collapses into either a single bloated prompt holding all the tools and asking the model to manage them itself, or a hand-rolled threadpool with manual result merging. In the Jac code above, `SurveyAgent` spawns three independent walkers (`HardwareResearcher`, `SoftwareResearcher`, `AIResearcher`) using `flow root spawn`, then collects their results with `wait`. Each researcher carries its own scoped tool list and its own context, so three focused prompts run concurrently rather than one bloated prompt holding nine tools. The synthesis step `self.synthesize(...)` only runs after all three workers have completed.
 
----
-
 Together, these four patterns address the remaining problem: workflows that live inside a prompt as a string and cannot be verified or observed by the surrounding code. In Jac, the workflow is the graph itself, where the steps, branches, retries, and parallelism are all visible as connections between nodes. The seven patterns, three for what happens inside an iteration and four for how iterations connect, cover what every agent codebase rebuilds by hand in Python or TypeScript.
-
----
 
 ## The Takeaway
 
