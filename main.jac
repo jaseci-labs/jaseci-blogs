@@ -1369,36 +1369,60 @@ def:priv render_submitted_markdown(text: str, raw_repo: str, raw_sha: str) -> di
 
 
 def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
-    # Read the single post file added by a submission PR (from the PR's head ref).
-    # Shared by the reviewer preview and the shareable-preview creator.
-    h = gh_headers(token);
-    repo = gh_repo();
-    pr = requests.get(f"{GH_API}/repos/{repo}/pulls/{pr_number}", headers=h, timeout=30).json();
-    if not isinstance(pr, dict) or "head" not in pr {
-        return None;
-    }
-    head_sha = str(pr["head"]["sha"]);
-    head_repo = str(pr["head"]["repo"]["full_name"]);
-    files = requests.get(
-        f"{GH_API}/repos/{repo}/pulls/{pr_number}/files",
-        headers=h, params={"per_page": 100}, timeout=30,
-    ).json();
-    post_path = "";
-    for f in files {
-        fn = str(f.get("filename", ""));
-        if fn.startswith("docs/blog/posts/") and fn.endswith(".md") {
-            post_path = fn;
-            break;
-        }
-    }
-    if not post_path {
-        return None;
-    }
-    blob = requests.get(
-        f"{GH_API}/repos/{head_repo}/contents/{post_path}",
-        headers=h, params={"ref": head_sha}, timeout=30,
-    ).json();
+    # Read the single post file a PR touches (from the PR's head ref). Defensive
+    # by design: any malformed or error GitHub response — rate-limit object, a
+    # deleted/inaccessible head fork, a transient 5xx — returns None instead of
+    # raising, so callers report a clean "could not load that PR" rather than a
+    # 500 that surfaces to the user as "Network error". Shared by the reviewer
+    # preview, the shareable-preview creator, and the edit walkers.
     try {
+        h = gh_headers(token);
+        repo = gh_repo();
+        pr = requests.get(f"{GH_API}/repos/{repo}/pulls/{pr_number}", headers=h, timeout=30).json();
+        if not isinstance(pr, dict) or not isinstance(pr.get("head"), dict) {
+            return None;
+        }
+        head = pr["head"];
+        head_repo_obj = head.get("repo");
+        if not isinstance(head_repo_obj, dict) {
+            return None;
+        }
+        head_sha = str(head.get("sha", ""));
+        head_repo = str(head_repo_obj.get("full_name", ""));
+        owner_obj = head_repo_obj.get("owner");
+        head_owner = str(owner_obj.get("login", "")) if isinstance(owner_obj, dict) else "";
+        if not head_repo {
+            return None;
+        }
+        files = requests.get(
+            f"{GH_API}/repos/{repo}/pulls/{pr_number}/files",
+            headers=h, params={"per_page": 100}, timeout=30,
+        ).json();
+        if not isinstance(files, list) {
+            # e.g. a rate-limit / error object instead of the file array.
+            return None;
+        }
+        post_path = "";
+        for f in files {
+            if not isinstance(f, dict) {
+                continue;
+            }
+            fn = str(f.get("filename", ""));
+            if fn.startswith("docs/blog/posts/") and fn.endswith(".md") {
+                post_path = fn;
+                break;
+            }
+        }
+        if not post_path {
+            return None;
+        }
+        blob = requests.get(
+            f"{GH_API}/repos/{head_repo}/contents/{post_path}",
+            headers=h, params={"ref": head_sha}, timeout=30,
+        ).json();
+        if not isinstance(blob, dict) {
+            return None;
+        }
         content = base64.b64decode(str(blob.get("content", ""))).decode("utf-8");
     } except Exception {
         return None;
@@ -1407,8 +1431,8 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
         "content": content,
         "post_path": post_path,
         "head_repo": head_repo,
-        "head_ref": str(pr["head"].get("ref", "")),
-        "head_owner": str(pr["head"]["repo"]["owner"]["login"]) if pr["head"].get("repo") else "",
+        "head_ref": str(head.get("ref", "")),
+        "head_owner": head_owner,
         "head_sha": head_sha,
         "state": str(pr.get("state", "")),
         "merged": bool(pr.get("merged_at")),
