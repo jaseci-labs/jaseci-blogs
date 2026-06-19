@@ -136,6 +136,69 @@
   border: 1px solid var(--border);
 }
 
+/* ── Language identity: distinguish Jac from Python code blocks ──
+   Works without any markup changes: `pygments_lang_class: true` stamps each
+   rendered fence with `language-jac` / `language-python` on the .highlight
+   wrapper. Jac gets the Jaseci-orange identity; Python stays neutral. */
+
+/* Static (non-interactive) blocks: accent left border + corner badge */
+.md-typeset .highlight.language-jac,
+.md-typeset .highlight.language-python {
+    position: relative;
+    border-left: 3px solid var(--border);
+    border-radius: 4px;
+}
+.md-typeset .highlight.language-jac {
+    border-left-color: var(--primary);
+}
+
+.md-typeset .highlight.language-jac::before,
+.md-typeset .highlight.language-python::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    font: 600 0.62rem/1 var(--font-family-code);
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.5rem;
+    border-bottom-left-radius: 4px;
+    pointer-events: none;
+}
+.md-typeset .highlight.language-jac::before {
+    content: "JAC";
+    color: var(--primary);
+    background: var(--md-accent-bg-color);
+}
+.md-typeset .highlight.language-python::before {
+    content: "PY";
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Make room for the badge: nudge Material's copy button left of it */
+.md-typeset .highlight.language-jac > .md-clipboard,
+.md-typeset .highlight.language-python > .md-clipboard {
+    right: 2.6rem;
+}
+
+/* Interactive blocks already carry a toolbar + Monaco editor, so they don't
+   need the overlay badge. Identity is marked on the wrapper border (see the
+   .code-block component rule below); here we just suppress the inner static
+   treatment to avoid doubling up. */
+.code-block .highlight.language-jac,
+.code-block .highlight.language-python {
+    border-left: none;
+    border-radius: 0;
+}
+.code-block .highlight.language-jac::before,
+.code-block .highlight.language-python::before {
+    display: none;
+}
+.code-block .highlight.language-jac > .md-clipboard,
+.code-block .highlight.language-python > .md-clipboard {
+    right: 0.5rem;
+}
+
 /* ── Jac Code Block Component ── */
 .code-block {
     margin: 1.2em 0;
@@ -143,9 +206,15 @@
     background: #0d1117;
     color: #c9d1d9;
     border: 1px solid #21262d;
+    border-left: 3px solid var(--border);
     border-radius: 6px;
     overflow: hidden;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Jac identity on interactive blocks (Python interactive blocks stay neutral) */
+.code-block[data-lang="jac"] {
+    border-left-color: var(--primary);
 }
 
 .code-block.jcb-running {
