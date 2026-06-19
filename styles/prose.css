@@ -446,6 +446,31 @@
     font-weight: 600;
     color: var(--text-muted);
 }
+/* Language identity: colour the code-block header so Jac and Python read as
+   distinct at a glance. The post page renders each block as a CodeMirror shell
+   (.runnable-jac) tagged with lang-<lang> in [slug].jac. Jac → Jaseci orange,
+   Python → Python-logo blue; other languages keep the neutral default. */
+.prose .runnable-jac.lang-jac {
+    border-left: 3px solid #ff6b35;
+}
+.prose .runnable-jac.lang-jac .runnable-header {
+    background: color-mix(in srgb, #ff6b35 14%, var(--code-bg));
+    border-bottom-color: color-mix(in srgb, #ff6b35 34%, var(--code-border));
+}
+.prose .runnable-jac.lang-jac .code-lang {
+    color: #ff6b35;
+}
+
+.prose .runnable-jac.lang-python {
+    border-left: 3px solid #3776ab;
+}
+.prose .runnable-jac.lang-python .runnable-header {
+    background: color-mix(in srgb, #3776ab 14%, var(--code-bg));
+    border-bottom-color: color-mix(in srgb, #3776ab 34%, var(--code-border));
+}
+.prose .runnable-jac.lang-python .code-lang {
+    color: #3776ab;
+}
 .code-copy {
     background: transparent;
     border: 1px solid var(--code-border);

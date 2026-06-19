@@ -212,8 +212,77 @@ def:priv extract_peek_markdown(body: str) -> str {
 }
 
 
+# Exact prefix python-markdown + codehilite (Pygments) emits for every
+# highlighted block. We splice the source language back onto each one — see
+# tag_code_languages.
+glob HL_MARKER = "<div class=\"highlight\"><pre><span></span><code>";
+
+
+def:priv parse_info_lang(info: str) -> str {
+    # Normalize a fence info string into a bare language name:
+    #   "jac" -> "jac", "{.jac}" -> "jac", "python title=x" -> "python".
+    parts = info.strip().split();
+    if not parts {
+        return "";
+    }
+    token = parts[0].strip("{}").lstrip(".");
+    if not token or ("=" in token) {
+        return "";
+    }
+    return token;
+}
+
+
+def:priv extract_fence_langs(body: str) -> list {
+    # Languages of each fenced code block, in source order. codehilite emits
+    # one HL_MARKER per fence in the same order, so the lists align 1:1.
+    langs = [];
+    in_fence = False;
+    fence = "";
+    for raw in body.split("\n") {
+        line = raw.strip();
+        if not in_fence {
+            if line.startswith("```") or line.startswith("~~~") {
+                in_fence = True;
+                fence = line[:3];
+                langs.append(parse_info_lang(line[3:]));
+            }
+        } elif line.startswith(fence) {
+            in_fence = False;
+            fence = "";
+        }
+    }
+    return langs;
+}
+
+
+def:priv tag_code_languages(html: str, body: str) -> str {
+    # codehilite drops the fence language from its output, leaving jac and
+    # python blocks indistinguishable. Splice `language-<lang>` back onto the
+    # wrapper div and inner <code> so the frontend can label + style each.
+    langs = extract_fence_langs(body);
+    parts = html.split(HL_MARKER);
+    if len(parts) <= 1 {
+        return html;
+    }
+    out = parts[0];
+    for i in range(1, len(parts)) {
+        lang = "";
+        if (i - 1) < len(langs) {
+            lang = str(langs[i - 1]);
+        }
+        if lang {
+            out = out + f"<div class=\"highlight language-{lang}\"><pre><span></span><code class=\"language-{lang}\">" + parts[i];
+        } else {
+            out = out + HL_MARKER + parts[i];
+        }
+    }
+    return out;
+}
+
+
 def:priv render_markdown(body: str) -> str {
-    return md.markdown(
+    html = md.markdown(
         body,
         extensions=[
             "fenced_code",
@@ -230,6 +299,7 @@ def:priv render_markdown(body: str) -> str {
             "toc": {"permalink": True, "permalink_class": "headerlink"},
         },
     );
+    return tag_code_languages(html, body);
 }
 
 
@@ -1839,6 +1909,76 @@ def:priv find_open_edit_prs(token: str, slug: str) -> list {
 }
 
 
+def:priv open_submission_prs(token: str) -> list {
+    # ALL open PRs that ADD a NEW post (a docs/blog/posts/*.md that isn't already
+    # a live post), found by the file the PR adds rather than a body marker — so
+    # it picks up submissions opened through the portal AND directly on GitHub.
+    # Edits to an existing post add no new file, so they don't match here; they
+    # are surfaced separately by open_edit_prs_by_slug. Mirrors that function's
+    # file-based detection so the review queue and the open-edits list stay
+    # consistent about direct-GitHub PRs.
+    out: list = [];
+    path_to_slug = post_path_to_slug();
+    try {
+        prs = requests.get(
+            f"{GH_API}/repos/{gh_repo()}/pulls",
+            headers=gh_headers(token),
+            params={"state": "open", "per_page": 100, "sort": "created", "direction": "desc"},
+            timeout=30,
+        ).json();
+    } except Exception {
+        return out;
+    }
+    if not isinstance(prs, list) {
+        return out;
+    }
+    for pr in prs {
+        n = int(pr.get("number", 0));
+        try {
+            files = requests.get(
+                f"{GH_API}/repos/{gh_repo()}/pulls/{n}/files",
+                headers=gh_headers(token), params={"per_page": 100}, timeout=30,
+            ).json();
+        } except Exception {
+            continue;
+        }
+        if not isinstance(files, list) {
+            continue;
+        }
+        adds_new_post = False;
+        for f in files {
+            fn = str(f.get("filename", ""));
+            status = str(f.get("status", ""));
+            name = fn.split("/")[-1];
+            if (
+                fn.startswith(f"{POSTS_DIR}/")
+                and fn.endswith(".md")
+                and not name.startswith("_")
+                and fn not in path_to_slug
+                and status == "added"
+            ) {
+                adds_new_post = True;
+                break;
+            }
+        }
+        if not adds_new_post {
+            continue;
+        }
+        user = pr.get("user");
+        author = str(user.get("login", "")) if isinstance(user, dict) else "";
+        out.append({
+            "title": str(pr.get("title", "")),
+            "slug": "",
+            "author": author,
+            "pr_number": n,
+            "pr_url": str(pr.get("html_url", "")),
+            "created_at": str(pr.get("created_at", "")),
+        });
+    }
+    return out;
+}
+
+
 def:priv build_edited_markdown(
     original_content: str, title: str, categories: list, description: str, body: str
 ) -> str {
@@ -2363,35 +2503,7 @@ walker:priv ListSubmissions {
             report {"ok": False, "error": "reviewer access required"};
             return;
         }
-        try {
-            q = f'repo:{gh_repo()} type:pr state:open "{SUBMISSION_TAG}" in:body';
-            r = requests.get(
-                f"{GH_API}/search/issues",
-                headers=gh_headers(gh_token),
-                params={"q": q, "per_page": 50, "sort": "created", "order": "desc"},
-                timeout=30,
-            );
-            data = r.json();
-        } except Exception as e {
-            report {"ok": False, "error": f"could not load queue: {e}"};
-            return;
-        }
-        items = data.get("items", []) if isinstance(data, dict) else [];
-        out = [];
-        for it in items {
-            body = str(it.get("body", "") or "");
-            m = re.search(r"slug=([a-z0-9-]+)", body);
-            bm = re.search(r"by=([A-Za-z0-9-]+)", body);
-            out.append({
-                "title": str(it.get("title", "")),
-                "slug": m.group(1) if m else "",
-                "author": bm.group(1) if bm else "",
-                "pr_number": it.get("number"),
-                "pr_url": str(it.get("html_url", "")),
-                "created_at": str(it.get("created_at", "")),
-            });
-        }
-        report {"ok": True, "submissions": out};
+        report {"ok": True, "submissions": open_submission_prs(gh_token)};
     }
 }
 

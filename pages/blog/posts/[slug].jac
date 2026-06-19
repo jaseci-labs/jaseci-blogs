@@ -97,14 +97,19 @@ def install_load_helper() -> None {
 
 
 async def ensure_codemirror() -> None {
-    if window.CodeMirror {
-        return;
-    }
     install_load_helper();
-    await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css");
-    await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css");
-    await window.__loadScript("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js");
-    await window.__loadScript("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js");
+    if not window.CodeMirror {
+        await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css");
+        await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css");
+        await window.__loadScript("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js");
+    }
+    # Every code block is rendered with the Jac mode, which is defined inline
+    # below (no network, no load race). Jac and Python share enough syntax —
+    # keywords, strings, numbers, `#` comments — that Python reads as highlighted
+    # too; this is the original behavior and is rock-solid. The CDN Python mode
+    # was racy (it could no-op before core was ready, leaving the editor blank),
+    # so we deliberately don't depend on it. Language identity is conveyed by the
+    # coloured header + label instead.
     define_jac_mode();
 }
 
@@ -196,7 +201,13 @@ async def enhance_code_blocks(container: any) -> None {
         }
 
         shell = document.createElement("div");
+        # Tag the shell with the language so CSS can give Jac vs Python a
+        # distinct header accent (CodeMirror strips the original language-*
+        # class, so we re-stamp it here).
         shell.className = "runnable-jac code-static";
+        if lang {
+            shell.className = f"runnable-jac code-static lang-{lang.lower()}";
+        }
 
         header = document.createElement("div");
         header.className = "runnable-header";
@@ -228,7 +239,8 @@ async def enhance_code_blocks(container: any) -> None {
         } except Exception {
             _ignore = None;
         }
-        cm_mode = "jac" if (lang.lower() == "jac" or not lang) and has_jac else ("python" if lang.lower() in ["python", "py", "jac", ""] else lang);
+        # All blocks render through the always-available inline Jac mode.
+        cm_mode = "jac" if has_jac else "null";
         cm = window.CodeMirror(host, {
             "value": source,
             "mode": cm_mode,
@@ -507,7 +519,7 @@ async def mount_runnable_blocks(container: any) -> None {
         } except Exception {
             _ignore = None;
         }
-        cm_mode = "jac" if (lang == "jac" and has_jac) else "python";
+        cm_mode = "jac" if has_jac else "null";
         cm = window.CodeMirror(host, {
             "value": source,
             "mode": cm_mode,
