@@ -460,3 +460,5 @@ Those languages weren't chosen because they fit agents. They were chosen for eco
 !!! quote ""
 
     **With these patterns in the language, building an agent is just building the agent.**
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/jk1OUyNnHpk?si=pVUxxajZkpf0d-zK" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
