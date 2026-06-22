@@ -730,9 +730,19 @@ def setup_link_rail_scrollspy() -> None {
         window.removeEventListener("scroll", window.__linkRailScroll);
     }
     def on_scroll() -> None {
-        rail = document.querySelector(".link-rail");
+        rail = document.querySelector(".link-rail") as any;
         if not rail {
             return;
+        }
+        # Hide the rail once the article body has scrolled out of view, so it
+        # doesn't hang over the related-posts / footer area (mirrors the TOC).
+        prose_el = document.querySelector(".post-shell .prose") as any;
+        if prose_el {
+            if prose_el.getBoundingClientRect().bottom < 160 {
+                rail.classList.add("link-rail-hidden");
+            } else {
+                rail.classList.remove("link-rail-hidden");
+            }
         }
         nodes = rail.querySelectorAll(".link-node") as any;
         line = window.innerHeight * 0.4;

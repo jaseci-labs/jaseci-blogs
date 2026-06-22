@@ -426,6 +426,14 @@ img {
     padding-top: 6px;
     z-index: 5;
 }
+.link-rail {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+.link-rail.link-rail-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
 .link-rail::before {
     content: "";
     position: absolute;
@@ -450,28 +458,29 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-elev);
-    border: 1.5px solid var(--text-muted);
-    box-shadow: 0 0 0 3px var(--bg);
+    /* Light, glossy bead so favicons (designed for light backgrounds) read in
+       both themes; the bg-coloured ring masks the spine running behind it. */
+    background: radial-gradient(circle at 32% 26%, #ffffff, #ece7dd 82%);
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    box-shadow: 0 1px 3px rgba(20, 14, 4, 0.22), 0 0 0 3px var(--bg);
     overflow: hidden;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .link-dot-img {
     width: 13px;
     height: 13px;
     object-fit: contain;
-    filter: grayscale(1);
-    opacity: 0.75;
-    transition: filter 0.15s ease, opacity 0.15s ease;
+    filter: grayscale(0.5);
+    transition: filter 0.15s ease, transform 0.15s ease;
 }
-.link-node.is-active .link-dot {
-    border-color: var(--accent);
-    transform: scale(1.2);
+.link-node.is-active .link-dot,
+.link-node:hover .link-dot {
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px var(--accent);
+    transform: scale(1.22);
 }
 .link-node.is-active .link-dot-img,
-.link-node.is-expanded .link-dot-img {
-    filter: none;
-    opacity: 1;
+.link-node:hover .link-dot-img {
+    filter: grayscale(0);
 }
 /* Collapsed by default → the rail reads as a timeline of dots until you
    scroll near a link. */
@@ -490,16 +499,9 @@ img {
     transform: none;
 }
 /* Hovering a dot expands its card even when it's minimized, and lifts it above
-   neighbouring cards. */
+   neighbouring cards (dot highlight handled with the is-active rules above). */
 .link-node:hover {
     z-index: 6;
-}
-.link-node:hover .link-dot {
-    border-color: var(--accent);
-}
-.link-node:hover .link-dot-img {
-    filter: none;
-    opacity: 1;
 }
 .link-card-link {
     display: block;
