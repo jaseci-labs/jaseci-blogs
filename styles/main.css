@@ -422,14 +422,15 @@ img {
     max-height: calc(100vh - 11rem);
     overflow-y: auto;
     overflow-x: visible;
-    padding-left: 22px;
+    padding-left: 30px;
+    padding-top: 6px;
     z-index: 5;
 }
 .link-rail::before {
     content: "";
     position: absolute;
-    left: 5px;
-    top: 0.4rem;
+    left: 14px;
+    top: 0.7rem;
     bottom: 0.4rem;
     width: 2px;
     background: var(--rule);
@@ -441,7 +442,7 @@ img {
 }
 .link-dot {
     position: absolute;
-    left: -23px;
+    left: -25px;
     top: 0;
     width: 20px;
     height: 20px;
@@ -482,10 +483,23 @@ img {
     transform: translateY(-4px);
     transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.2s ease;
 }
-.link-node.is-expanded .link-card {
+.link-node.is-expanded .link-card,
+.link-node:hover .link-card {
     max-height: 460px;
     opacity: 1;
     transform: none;
+}
+/* Hovering a dot expands its card even when it's minimized, and lifts it above
+   neighbouring cards. */
+.link-node:hover {
+    z-index: 6;
+}
+.link-node:hover .link-dot {
+    border-color: var(--accent);
+}
+.link-node:hover .link-dot-img {
+    filter: none;
+    opacity: 1;
 }
 .link-card-link {
     display: block;
@@ -537,22 +551,35 @@ img {
     font-size: 0.6875rem;
     color: var(--text-muted);
 }
-.link-embed {
+.link-card-media {
+    padding-top: 0.5rem;
+}
+.link-thumb {
     position: relative;
+    display: block;
     width: 100%;
     aspect-ratio: 16 / 9;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
     border: 1px solid var(--rule);
     border-radius: 8px;
     overflow: hidden;
     background: #000;
 }
-.link-embed iframe {
-    position: absolute;
-    inset: 0;
+.link-thumb img {
     width: 100%;
     height: 100%;
-    border: 0;
+    object-fit: cover;
+    display: block;
+}
+.link-thumb-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
 @media (prefers-reduced-motion: reduce) {
     .link-card,

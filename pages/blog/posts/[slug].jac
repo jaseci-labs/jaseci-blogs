@@ -681,13 +681,16 @@ def build_link_rail(container: any) -> list {
     # Walk the rendered post in document order, tagging each card-worthy anchor
     # with an id the scrollspy can locate, and return the rail model.
     out = [];
-    anchors = container.querySelectorAll("a[href]");
+    # Anchors AND embedded iframes (e.g. a YouTube <iframe> dropped into the
+    # post), walked in document order.
+    els = container.querySelectorAll("a[href], iframe[src]") as any;
     i = 0;
-    for a in anchors {
-        if a.classList.contains("headerlink") {
+    for el in els {
+        is_iframe = (str(el.tagName or "").upper() == "IFRAME");
+        if (not is_iframe) and el.classList.contains("headerlink") {
             continue;
         }
-        raw = str(a.getAttribute("href") or "");
+        raw = str((el.getAttribute("src") if is_iframe else el.getAttribute("href")) or "");
         if not raw {
             continue;
         }
@@ -695,17 +698,22 @@ def build_link_rail(container: any) -> list {
         if not info["type"] {
             continue;
         }
-        # Give the anchor an id so the scrollspy can locate it via
+        # Iframes only earn a card if they're a known embed (YouTube) — we don't
+        # want arbitrary embedded frames in the reference rail.
+        if is_iframe and (str(info["type"]) != "youtube") {
+            continue;
+        }
+        # Give the element an id so the scrollspy can locate it via
         # getElementById; reuse an existing id rather than clobber it.
-        existing = str(a.getAttribute("id") or "");
+        existing = str(el.getAttribute("id") or "");
         ref_id = existing if existing else ("lnk-" + str(i));
         if not existing {
-            a.setAttribute("id", ref_id);
+            el.setAttribute("id", ref_id);
         }
         out.append({
             "id": ref_id,
             "type": str(info["type"]),
-            "href": str(a.href or raw),
+            "href": str((el.src if is_iframe else el.href) or raw),
             "host": str(info["host"]),
         });
         i = i + 1;
@@ -779,31 +787,29 @@ def render_link_card(item: any, meta: any) -> JsxElement {
     title = "";
     desc = "";
     vid = "";
+    img = "";
     stars: any = 0;
     if meta {
         title = str(meta.get("title") or "");
         desc = str(meta.get("description") or "");
         vid = str(meta.get("video_id") or "");
+        img = str(meta.get("image") or "");
         stars = meta.get("stars") or 0;
     }
     if t == "youtube" {
-        return <>
-            {vid and (
-                <div className="link-embed">
-                    <iframe
-                        src={"https://www.youtube.com/embed/" + vid}
-                        title={title or "YouTube video"}
-                        loading="lazy"
-                        allowFullScreen={True}
-                        frameBorder="0"
-                    />
-                </div>
+        # The video is already embedded inline in the post — the rail card is a
+        # thumbnail + title that links out, not a second live player.
+        watch = ("https://www.youtube.com/watch?v=" + vid) if vid else href;
+        return <a className="link-card-link link-card-media" href={watch} target="_blank" rel="noopener noreferrer">
+            {img and (
+                <span className="link-thumb">
+                    <img src={img} alt="" loading="lazy" />
+                    <span className="link-thumb-play">▶</span>
+                </span>
             )}
-            <a className="link-card-link" href={href} target="_blank" rel="noopener noreferrer">
-                <span className="link-card-host">YouTube</span>
-                <span className="link-card-title">{title or host}</span>
-            </a>
-        </>;
+            <span className="link-card-host">YouTube</span>
+            <span className="link-card-title">{title or "YouTube video"}</span>
+        </a>;
     }
     label = "GitHub" if t == "github" else host;
     return <a className="link-card-link" href={href} target="_blank" rel="noopener noreferrer">
