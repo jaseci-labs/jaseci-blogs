@@ -1,12 +1,12 @@
 # Guide for Claude on this repo
 
-This repo is the source for [blogs.jaseci.org](https://blogs.jaseci.org) — an MkDocs Material site with a custom editorial scheduling system on top. Two roles you may be asked to help with: **author** (writing or refining a post) and **reviewer** (evaluating an open PR). The rules differ.
+This repo is the source for [blogs.jaseci.org](https://blogs.jaseci.org) — a Jac web app (jac-client + jac-scale, entrypoint [main.jac](main.jac)) that serves the blog, with a custom editorial scheduling system on top. Posts live as markdown under `docs/blog/posts/` and are parsed and rendered by the app at request time. Two roles you may be asked to help with: **author** (writing or refining a post) and **reviewer** (evaluating an open PR). The rules differ.
 
 ## Shared invariants (apply to everyone, always)
 
 - **Never force-push `main`.** Force-push history rewrites silently dropped three merged blog posts in May 2026 — see [issue #21](https://github.com/jaseci-labs/jaseci-blogs/issues/21). If your local branch is behind, `git pull --rebase` or merge — never `git push --force` on `main`.
 - **`docs/blog/.schedule.yml` is bot-owned.** Do not hand-edit it. Mutations go through `scripts/schedule_lib.py` (or the workflows that wrap it), which adds audit fields (`added_by`, `added_at`, etc).
-- **The blog plugin only sees `docs/blog/posts/`.** Files in `docs/blog/unlisted/` and `docs/blog/archived_posts/` are invisible to the site by location alone. Don't move things between these dirs by hand — use the *Take down a post* workflow or `/hide` / `/unlist` / `/archive` slash-commands so the audit trail is preserved.
+- **The app only lists posts in `docs/blog/posts/`.** ([main.jac](main.jac) scans that directory.) Files in `docs/blog/unlisted/` and `docs/blog/archived_posts/` are invisible to the site by location alone. Don't move things between these dirs by hand — use the *Take down a post* workflow or `/hide` / `/unlist` / `/archive` slash-commands so the audit trail is preserved.
 - **Posts identify by `slug:` frontmatter**, not filename. When the user says "the topology post," match against the `slug:` field first, fall back to the filename stem.
 - **File references in chat: use markdown links**, e.g. [scripts/schedule_lib.py](scripts/schedule_lib.py) — never backticks for paths.
 
@@ -22,13 +22,13 @@ date: 2026-MM-DD                # placeholder; auto-publisher will overwrite whe
 authors:
   - their_author_id
 categories:
-  - One of the categories allowed in mkdocs.yml
+  - One of the established categories (see below)
 slug: my-post-slug              # kebab-case, matches the filename ideally
 draft: true                     # REQUIRED — PR check rejects without it
 ---
 ```
 
-- The `categories_allowed` list lives in [mkdocs.yml](mkdocs.yml) under the `blog:` plugin — if the author wants a new category, add it there in the same PR.
+- Categories are **free-form** — the app builds the category index from whatever `categories:` appear in post frontmatter (the `GetCategories` walker in [main.jac](main.jac)), so there is no allowlist to edit. To avoid fragmenting the taxonomy, reuse an established category: **Jac Programming, Tutorials, Fixing the Broken, AI, Web Development, Developers, Community**. A genuinely new category just needs to be spelled consistently.
 - New authors need an entry in [docs/blog/.authors.yml](docs/blog/.authors.yml) with `name`, `description`, and `avatar`. Use `https://avatars.githubusercontent.com/u/<numeric-id>?v=4` for the avatar.
 - **Do not suggest removing `draft: true`.** That's the editor's call, executed by the scheduling workflows.
 - **Do not suggest a precise future `date:` to "schedule" the post.** Dates in frontmatter do not gate publishing here. The scheduler overrides `date:` when it publishes.
@@ -49,7 +49,7 @@ Your job is to evaluate the post and flag anything an editor needs to know befor
 - `draft: true` is present (the *Lint new posts* check enforces this; if it's missing the PR can't merge anyway).
 - The `slug:` is kebab-case and unique (grep existing posts for collisions).
 - Author is registered in `.authors.yml`.
-- Category is in `categories_allowed` in [mkdocs.yml](mkdocs.yml).
+- Category is spelled consistently with an established category (categories are free-form; see the author section above) so it doesn't fragment the index.
 - No oversized images committed under `docs/assets/`.
 
 **Verify editorially**:
@@ -82,16 +82,17 @@ All four slash-commands and the workflows write commits to `main` via `github-ac
 ## Build & serve (when working locally)
 
 ```bash
-pip install -e .                       # install deps + the Jac syntax highlighter
-python scripts/mkdocs_serve.py         # serves with the CORS headers Pyodide needs
-mkdocs build                           # static build into site/
+pip install jaclang                    # the `jac` CLI
+jac install                            # installs jac-scale, jac-client + deps from jac.toml into .jac/venv
+jac start main.jac                     # serve the app locally (client + backend, one origin)
+python scripts/handle_jac_compile_data.py   # (re)generate docs/playground/jaclang.zip for runnable code blocks
 ```
 
-`mkdocs serve` works for everything except runnable Jac code blocks — those need the custom server.
+`docs/playground/jaclang.zip` is gitignored and powers the in-browser Pyodide runner; regenerate it with the script above if runnable code blocks misbehave locally. Deployment is automated via [.github/workflows/deploy.yml](.github/workflows/deploy.yml) (`jac start main.jac --scale`).
 
 ## Things to NOT do
 
-- Don't add `draft: false` explicitly anywhere. The scheduler removes the `draft:` key entirely when it publishes; "no draft key" and `draft: false` mean the same thing to MkDocs but the former is cleaner in `git log`.
+- Don't add `draft: false` explicitly anywhere. The scheduler removes the `draft:` key entirely when it publishes; "no draft key" and `draft: false` mean the same thing to the publisher but the former is cleaner in `git log`.
 - Don't bypass the *Lint new posts* check by force-merging. If it's failing, fix the post.
 - Don't write to `.schedule.yml` from code other than `scripts/schedule_lib.py`. The header comment block is preserved by `save_schedule()`; ad-hoc yaml writes will lose it.
 - Don't suggest skipping CI hooks (`--no-verify`) for any reason.
