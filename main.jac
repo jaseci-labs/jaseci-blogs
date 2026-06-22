@@ -456,6 +456,14 @@ def:priv parse_post_file(path: Path, registry: dict) -> dict | None {
 
     description = str(meta.get("description", ""));
 
+    # Repost support: a post can be a short write-up that links out to an
+    # external article. `repost: true` is the author-facing "checkbox"; the
+    # external link lives in `repost_url`. A post only counts as a repost if it
+    # actually carries a link — the checkbox alone does nothing.
+    repost_url = str(meta.get("repost_url", "")).strip();
+    is_repost = bool(meta.get("repost", False)) and bool(repost_url);
+    repost_source = str(meta.get("repost_source", "")).strip();
+
     return {
         "slug": slug,
         "filename": path.stem,
@@ -471,6 +479,9 @@ def:priv parse_post_file(path: Path, registry: dict) -> dict | None {
         "body_md": full_md_html_ready,
         "reading_minutes": estimate_reading_minutes(raw_body),
         "cover": str(meta.get("cover", "")),
+        "is_repost": is_repost,
+        "repost_url": repost_url,
+        "repost_source": repost_source,
     };
 }
 
@@ -520,6 +531,9 @@ def:priv post_summary(post: dict) -> dict {
         "peek_html": peek_html,
         "reading_minutes": post["reading_minutes"],
         "cover": post["cover"],
+        "is_repost": post["is_repost"],
+        "repost_url": post["repost_url"],
+        "repost_source": post["repost_source"],
     };
 }
 
@@ -676,6 +690,14 @@ walker:pub GetPost {
 
         html = render_markdown(found["body_md"]);
 
+        # For reposts, fetch the external article's card metadata (og:title,
+        # description, image) so the page can render a rich link card up top on
+        # first paint. link_meta is cached and never raises.
+        repost_meta: dict = {};
+        if found["is_repost"] and found["repost_url"] {
+            repost_meta = link_meta(str(found["repost_url"]));
+        }
+
         # Adjacent posts (prev/next by date).
         all_posts = list_all_posts();
         prev_post = None;
@@ -734,6 +756,10 @@ walker:pub GetPost {
             "prev": prev_post,
             "next": next_post,
             "related": related,
+            "is_repost": found["is_repost"],
+            "repost_url": found["repost_url"],
+            "repost_source": found["repost_source"],
+            "repost_meta": repost_meta,
         };
     }
 }

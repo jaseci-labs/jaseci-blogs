@@ -1880,3 +1880,115 @@ img {
     border-radius: 2px;
 }
 
+/* ── Reposts ──────────────────────────────────────────────────────────────
+   A repost is a short write-up that points at an external article. The home
+   stream tags it with a small badge; the post page shows a prominent card. */
+.stream-eyebrow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.repost-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+
+.repost-card {
+    margin: 0 0 2rem;
+}
+.repost-card-link {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    background: var(--bg-elev);
+    box-shadow: var(--shadow-card);
+    text-decoration: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.repost-card-link:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.1);
+}
+.repost-card-thumb {
+    flex: 0 0 132px;
+    align-self: center;
+    aspect-ratio: 16 / 10;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--accent-soft);
+}
+.repost-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.repost-card-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.repost-card-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+}
+.repost-card-favicon {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+}
+.repost-card-title {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-strong);
+}
+.repost-card-desc {
+    margin-top: 0.35rem;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.repost-card-cta {
+    margin-top: 0.6rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+@media (max-width: 599px) {
+    .repost-card-thumb {
+        display: none;
+    }
+}
+

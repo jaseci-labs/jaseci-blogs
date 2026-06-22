@@ -39,6 +39,35 @@ We'll review all submissions and happily accept anything that's insightful or ot
 
 > **Note on publish timing:** an editor decides when your post goes live. Your post must include `draft: true` (a PR check enforces this); the editor removes it via the scheduling workflows once a publish time is decided. If you have a target date in mind, mention it in the PR description. See [Editorial Scheduling](#editorial-scheduling) for how it works.
 
+### Reposting an external article
+
+Sometimes the thing worth sharing already lives somewhere else — a talk write-up, a partner's engineering blog, a paper. Instead of copying it, write a short take on *why it matters* and link out. The post renders a rich card to the original at the top, and it's tagged **↗ Repost** in the home stream so readers know it points outward.
+
+It's a normal post with three extra frontmatter keys:
+
+```yaml
+---
+date: 2026-03-12
+authors:
+  - your_author_id
+categories:
+  - Your Category
+slug: my-repost
+draft: true
+repost: true                              # the "this is a repost" switch
+repost_url: https://example.com/original  # required — the external article
+repost_source: Example Engineering Blog   # optional — friendly label on the card
+---
+
+# My short take
+
+A few paragraphs on why this is worth your readers' time.
+```
+
+- `repost: true` does nothing on its own — a post only becomes a repost when `repost_url` is also set.
+- The card's title, description, and thumbnail are pulled automatically from the linked page's OpenGraph tags (GitHub repos and YouTube links get richer cards). If that fetch fails, the card falls back to `repost_source` and the link's domain, so it always renders something sensible.
+- Everything else (scheduling, `draft: true`, images, code blocks) works exactly as for a normal post.
+
 ### Editorial Scheduling
 
 Posts are not published the instant they merge. An editor schedules each post for a specific UTC publish time. The source of truth is [docs/blog/.schedule.yml](docs/blog/.schedule.yml), and there are three ways for editors to drive it -- none require cloning the repo:

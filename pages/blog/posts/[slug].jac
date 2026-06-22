@@ -853,6 +853,51 @@ def render_link_card(item: any, meta: any) -> JsxElement {
 }
 
 
+def render_repost_card(post: any) -> JsxElement {
+    # The prominent "Originally published elsewhere" card shown at the top of a
+    # repost. Metadata (title/description/image) is fetched server-side in
+    # GetPost via link_meta; we fall back gracefully when it's missing.
+    url = str(post["repost_url"]);
+    meta: any = post["repost_meta"] or {};
+    host = str(meta.get("host") or "");
+    if not host {
+        # link_meta drops the host when the og fetch fails (e.g. 404). Recover
+        # it from the URL via an anchor element (URL() needs `new`, which the
+        # Jac→JS compiler doesn't emit) so the card always shows a source.
+        parser = document.createElement("a") as any;
+        parser.href = url;
+        host = str(parser.hostname or "").lower();
+        if host.startswith("www.") {
+            host = host[4:];
+        }
+    }
+    source = str(post["repost_source"]) or host or "the original site";
+    ext_title = str(meta.get("title") or "");
+    ext_desc = str(meta.get("description") or "");
+    img = str(meta.get("image") or "");
+    return <aside className="repost-card">
+        <a className="repost-card-link" href={url} target="_blank" rel="noopener noreferrer">
+            {img and (
+                <span className="repost-card-thumb">
+                    <img src={img} alt="" loading="lazy" />
+                </span>
+            )}
+            <span className="repost-card-body">
+                <span className="repost-card-eyebrow">
+                    {host and (
+                        <img className="repost-card-favicon" src={favicon_url(host)} alt="" width={16} height={16} loading="lazy" />
+                    )}
+                    <span>{"Reposted from " + source}</span>
+                </span>
+                {ext_title and (<span className="repost-card-title">{ext_title}</span>)}
+                {ext_desc and (<span className="repost-card-desc">{ext_desc}</span>)}
+                <span className="repost-card-cta">{"Read the original on " + (host or source) + " →"}</span>
+            </span>
+        </a>
+    </aside>;
+}
+
+
 def:pub PostBody(html: str) -> JsxElement {
     ref = useRef(None);
     has html_version: int = 0;
@@ -1294,6 +1339,12 @@ def:pub page() -> JsxElement {
                         {share_copied and "Copied ✓" or "Copy title + link"}
                     </button>
                 </div>
+            </div>
+        )}
+
+        {post["is_repost"] and (
+            <div className="container narrow">
+                {render_repost_card(post)}
             </div>
         )}
 

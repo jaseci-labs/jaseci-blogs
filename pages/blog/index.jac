@@ -151,9 +151,14 @@ def:pub page() -> JsxElement {
                     <li key={p["slug"]} className="stream-item">
                         <article className="stream-article">
                             <div className="stream-body">
-                                {p["categories"] and (
-                                    <p className="eyebrow">
-                                        <Link to={f"/blog/categories/{p['categories'][0]}"}>{p["categories"][0]}</Link>
+                                {(p["categories"] or p["is_repost"]) and (
+                                    <p className="eyebrow stream-eyebrow">
+                                        {p["categories"] and (
+                                            <Link to={f"/blog/categories/{p['categories'][0]}"}>{p["categories"][0]}</Link>
+                                        )}
+                                        {p["is_repost"] and (
+                                            <span className="repost-badge">↗ Repost</span>
+                                        )}
                                     </p>
                                 )}
                                 <h2 className="stream-title">
