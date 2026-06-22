@@ -21,6 +21,8 @@ import uuid;
 import base64;
 import hashlib;
 import requests;
+import from urllib.request { Request, urlopen }
+import from urllib.parse { urlparse, parse_qs }
 import markdown as md;
 import from cryptography.fernet { Fernet }
 import from jac_scale.user_manager { JacScaleUserManager }
@@ -2586,3 +2588,164 @@ walker:priv PreviewSubmission {
     }
 }
 
+
+# --- Link reference cards ----------------------------------------------------
+# The post body links out to GitHub repos, YouTube videos and external sites.
+# FetchLinkMeta enriches a batch of URLs the client found in the rendered post
+# so the right-margin reference rail can show a card per link. Metadata is
+# cached in-process keyed by URL (the content set is small and slow-changing).
+
+glob LINK_META_CACHE = {};
+glob LINK_UA = "Mozilla/5.0 (compatible; JaseciBlogsBot/1.0; +https://blogs.jaseci.org)";
+
+
+def:priv _http_get(url: str, accept: str = "") -> str {
+    headers = {"User-Agent": LINK_UA};
+    if accept {
+        headers["Accept"] = accept;
+    }
+    req = Request(url, headers=headers);
+    resp = urlopen(req, timeout=6.0);
+    # Cap the read so a pathological page can't blow up memory.
+    return str(resp.read()[:400000].decode("utf-8", "ignore"));
+}
+
+
+def:priv _meta_pat(html: str, prop: str) -> str {
+    # Pull a <meta> content value for `prop`, tolerating either attribute order.
+    # Inline (?i) keeps re.search to two args (the flags overload won't resolve
+    # against the urllib-tainted Any types this module passes around).
+    esc = str(re.escape(prop));
+    p1 = '(?i)<meta[^>]+(?:property|name)=["\']' + esc + '["\'][^>]*content=["\']([^"\']*)["\']';
+    m = re.search(p1, html);
+    if m {
+        return str(m.group(1) or "").strip();
+    }
+    p2 = '(?i)<meta[^>]+content=["\']([^"\']*)["\'][^>]+(?:property|name)=["\']' + esc + '["\']';
+    m2 = re.search(p2, html);
+    if m2 {
+        return str(m2.group(1) or "").strip();
+    }
+    return "";
+}
+
+
+def:priv _gh_repo_meta(segs: list) -> dict {
+    owner = str(segs[0]);
+    repo = str(segs[1]);
+    data = json.loads(_http_get(
+        "https://api.github.com/repos/" + owner + "/" + repo,
+        "application/vnd.github+json"
+    )) as dict;
+    owner_obj = (data.get("owner") or {}) as dict;
+    return {
+        "type": "github",
+        "title": str(data.get("full_name") or (owner + "/" + repo)),
+        "description": str(data.get("description") or ""),
+        "stars": int(data.get("stargazers_count") or 0),
+        "image": str(owner_obj.get("avatar_url") or ""),
+    };
+}
+
+
+def:priv _yt_id(host: str, segs: list, query: str) -> str {
+    if host == "youtu.be" and segs {
+        return str(segs[0]);
+    }
+    if segs and (segs[0] in ["embed", "shorts", "v"]) and len(segs) >= 2 {
+        return str(segs[1]);
+    }
+    q = parse_qs(query) as dict;
+    if ("v" in q) and q["v"] {
+        return str(q["v"][0]);
+    }
+    return "";
+}
+
+
+def:priv _yt_meta(vid: str) -> dict {
+    title = "";
+    try {
+        data = json.loads(_http_get(
+            "https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v=" + vid
+        )) as dict;
+        title = str(data.get("title") or "");
+    } except Exception {
+        title = "";
+    }
+    return {
+        "type": "youtube",
+        "video_id": vid,
+        "title": title,
+        "description": "",
+        "image": "https://i.ytimg.com/vi/" + vid + "/hqdefault.jpg",
+    };
+}
+
+
+def:priv _og_meta(url: str) -> dict {
+    html = _http_get(url, "text/html");
+    title = _meta_pat(html, "og:title");
+    if not title {
+        tm = re.search("(?i)<title[^>]*>([^<]*)</title>", html);
+        if tm {
+            title = str(tm.group(1) or "").strip();
+        }
+    }
+    desc = _meta_pat(html, "og:description");
+    if not desc {
+        desc = _meta_pat(html, "description");
+    }
+    return {
+        "type": "link",
+        "title": title,
+        "description": desc,
+        "image": _meta_pat(html, "og:image"),
+    };
+}
+
+
+def:priv link_meta(url: str) -> dict {
+    if url in LINK_META_CACHE {
+        return LINK_META_CACHE[url] as dict;
+    }
+    result: dict = {"type": "link", "title": "", "description": "", "image": "", "url": url, "host": ""};
+    try {
+        parsed = urlparse(url);
+        host = str(parsed.netloc or "").lower();
+        if host.startswith("www.") {
+            host = host[4:];
+        }
+        segs = [s for s in str(parsed.path or "").split("/") if s];
+        if (host == "github.com") and (len(segs) >= 2) {
+            result = {**result, **_gh_repo_meta(segs)};
+        } elif host in ["youtube.com", "m.youtube.com", "youtu.be"] {
+            vid = _yt_id(host, segs, str(parsed.query or ""));
+            if vid {
+                result = {**result, **_yt_meta(vid)};
+            }
+        } else {
+            result = {**result, **_og_meta(url)};
+        }
+        result["url"] = url;
+        result["host"] = host;
+    } except Exception as e {
+        result["error"] = str(e);
+    }
+    LINK_META_CACHE[url] = result;
+    return result;
+}
+
+
+walker:pub FetchLinkMeta {
+    # urls: the external hrefs the client extracted from the rendered post.
+    has urls: list = [];
+
+    can get with Root entry {
+        out = [];
+        for u in self.urls {
+            out.append(link_meta(str(u)));
+        }
+        report {"ok": True, "meta": out};
+    }
+}

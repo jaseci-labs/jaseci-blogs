@@ -10,7 +10,7 @@ the current Jac compiler emits literal source paths into JS imports, which
 vite can't resolve. Inlining the enhancements keeps the build green.
 """
 
-sv import from ...main { GetPost, GetRuntimeZip }
+sv import from ...main { GetPost, GetRuntimeZip, FetchLinkMeta }
 
 to cl:
 
@@ -649,10 +649,216 @@ def setup_toc_scrollspy() -> None {
 }
 
 
+# --- Reference rail ----------------------------------------------------------
+# Posts link out to GitHub repos, YouTube videos and external sites. We surface
+# those as a card timeline in the (otherwise empty) right gutter: a vertical
+# spine with a favicon dot per link, and cards that expand as you scroll near
+# the link. jaseci-owned and in-page links are skipped — they aren't references.
+
+glob LINK_RAIL_SKIP = ["jaseci.org", "blogs.jaseci.org", "jac-lang.org", "jaclang.org"];
+
+
+def classify_link(href: str) -> dict {
+    # Returns {type, host}; type is "" for links that should not get a card.
+    blank = {"type": "", "host": ""};
+    # Parse via an anchor element: Jac emits a plain `URL(...)` call, but the
+    # browser's URL is a constructor and throws without `new`. Setting an
+    # anchor's href resolves relative links and exposes the parsed parts.
+    parser = document.createElement("a") as any;
+    parser.href = href;
+    proto = str(parser.protocol or "");
+    if (proto != "http:") and (proto != "https:") {
+        return blank;
+    }
+    host = str(parser.hostname or "").lower();
+    if host.startswith("www.") {
+        host = host[4:];
+    }
+    cur = str(window.location.hostname or "").lower();
+    if (host == cur) or (host in LINK_RAIL_SKIP) or host.endswith(".jaseci.org") {
+        return blank;
+    }
+    segs = [s for s in str(parser.pathname or "").split("/") if s];
+    if (host == "github.com") and (len(segs) >= 2) {
+        return {"type": "github", "host": host};
+    }
+    if host in ["youtube.com", "m.youtube.com", "youtu.be"] {
+        return {"type": "youtube", "host": host};
+    }
+    return {"type": "link", "host": host};
+}
+
+
+def build_link_rail(container: any) -> list {
+    # Walk the rendered post in document order, tagging each card-worthy anchor
+    # with an id the scrollspy can locate, and return the rail model.
+    out = [];
+    # Anchors AND embedded iframes (e.g. a YouTube <iframe> dropped into the
+    # post), walked in document order.
+    els = container.querySelectorAll("a[href], iframe[src]") as any;
+    seen = {};
+    i = 0;
+    for el in els {
+        is_iframe = (str(el.tagName or "").upper() == "IFRAME");
+        if (not is_iframe) and el.classList.contains("headerlink") {
+            continue;
+        }
+        raw = str((el.getAttribute("src") if is_iframe else el.getAttribute("href")) or "");
+        if not raw {
+            continue;
+        }
+        info = classify_link(raw);
+        if not info["type"] {
+            continue;
+        }
+        # Iframes only earn a card if they're a known embed (YouTube) — we don't
+        # want arbitrary embedded frames in the reference rail.
+        if is_iframe and (str(info["type"]) != "youtube") {
+            continue;
+        }
+        # Only the first occurrence of a given link earns a dot on the timeline;
+        # later repeats are skipped (keyed by the resolved URL).
+        resolved = str((el.src if is_iframe else el.href) or raw);
+        if resolved in seen {
+            continue;
+        }
+        seen[resolved] = True;
+        # Give the element an id so the scrollspy can locate it via
+        # getElementById; reuse an existing id rather than clobber it.
+        existing = str(el.getAttribute("id") or "");
+        ref_id = existing if existing else ("lnk-" + str(i));
+        if not existing {
+            el.setAttribute("id", ref_id);
+        }
+        out.append({
+            "id": ref_id,
+            "type": str(info["type"]),
+            "href": resolved,
+            "host": str(info["host"]),
+        });
+        i = i + 1;
+    }
+    return out;
+}
+
+
+def setup_link_rail_scrollspy() -> None {
+    # Mirror of the TOC scrollspy: toggle classes directly (no re-render). The
+    # link whose anchor sits just above the 40% line is "active"; it and its two
+    # neighbours expand into full cards (max 3), the rest collapse to dots.
+    if window.__linkRailScroll {
+        window.removeEventListener("scroll", window.__linkRailScroll);
+    }
+    def on_scroll() -> None {
+        rail = document.querySelector(".link-rail") as any;
+        if not rail {
+            return;
+        }
+        # Hide the rail once the article body has scrolled out of view, so it
+        # doesn't hang over the related-posts / footer area (mirrors the TOC).
+        prose_el = document.querySelector(".post-shell .prose") as any;
+        if prose_el {
+            if prose_el.getBoundingClientRect().bottom < 160 {
+                rail.classList.add("link-rail-hidden");
+            } else {
+                rail.classList.remove("link-rail-hidden");
+            }
+        }
+        nodes = rail.querySelectorAll(".link-node") as any;
+        line = window.innerHeight * 0.4;
+        active = -1;
+        best = -1000000.0;
+        idx = 0;
+        for el in nodes {
+            ref = str(el.getAttribute("data-link-id") or "");
+            target = document.getElementById(ref);
+            if target {
+                top = target.getBoundingClientRect().top;
+                if (top <= line) and (top > best) {
+                    best = top;
+                    active = idx;
+                }
+            }
+            idx = idx + 1;
+        }
+        # Before the first link scrolls into view, anchor the expansion on the
+        # first card so the rail shows content (not just dots) at the top.
+        focus = active if (active >= 0) else 0;
+        idx2 = 0;
+        for el in nodes {
+            if idx2 == active {
+                el.classList.add("is-active");
+            } else {
+                el.classList.remove("is-active");
+            }
+            if abs(idx2 - focus) <= 1 {
+                el.classList.add("is-expanded");
+            } else {
+                el.classList.remove("is-expanded");
+            }
+            idx2 = idx2 + 1;
+        }
+    }
+    window.__linkRailScroll = on_scroll;
+    window.addEventListener("scroll", on_scroll, {"passive": True});
+    setTimeout(on_scroll, 80);
+}
+
+
+def favicon_url(host: str) -> str {
+    return "https://www.google.com/s2/favicons?domain=" + host + "&sz=64";
+}
+
+
+def render_link_card(item: any, meta: any) -> JsxElement {
+    t = str(item["type"]);
+    href = str(item["href"]);
+    host = str(item["host"]);
+    title = "";
+    desc = "";
+    vid = "";
+    img = "";
+    stars: any = 0;
+    if meta {
+        title = str(meta.get("title") or "");
+        desc = str(meta.get("description") or "");
+        vid = str(meta.get("video_id") or "");
+        img = str(meta.get("image") or "");
+        stars = meta.get("stars") or 0;
+    }
+    if t == "youtube" {
+        # The video is already embedded inline in the post — the rail card is a
+        # thumbnail + title that links out, not a second live player.
+        watch = ("https://www.youtube.com/watch?v=" + vid) if vid else href;
+        return <a className="link-card-link link-card-media" href={watch} target="_blank" rel="noopener noreferrer">
+            {img and (
+                <span className="link-thumb">
+                    <img src={img} alt="" loading="lazy" />
+                    <span className="link-thumb-play">▶</span>
+                </span>
+            )}
+            <span className="link-card-host">YouTube</span>
+            <span className="link-card-title">{title or "YouTube video"}</span>
+        </a>;
+    }
+    label = "GitHub" if t == "github" else host;
+    return <a className="link-card-link" href={href} target="_blank" rel="noopener noreferrer">
+        <span className="link-card-host">{label}</span>
+        <span className="link-card-title">{title or host}</span>
+        {desc and <span className="link-card-desc">{desc}</span>}
+        {(t == "github") and (stars > 0) and (
+            <span className="link-card-meta">{"★ " + str(stars)}</span>
+        )}
+    </a>;
+}
+
+
 def:pub PostBody(html: str) -> JsxElement {
     ref = useRef(None);
     has html_version: int = 0;
     has toc: list = [];
+    has links: list = [];
+    has link_meta: dict = {};
 
     can with [html] entry {
         html_version = html_version + 1;
@@ -684,6 +890,36 @@ def:pub PostBody(html: str) -> JsxElement {
         } except Exception {
             _ignore = None;
         }
+        try {
+            found = build_link_rail(container);
+            links = found;
+            setup_link_rail_scrollspy();
+            # Fetch card metadata for the unique hrefs (favicon dots render
+            # immediately; titles/descriptions fill in when this returns).
+            urls = [];
+            seen = {};
+            for lk in found {
+                href = str(lk["href"]);
+                if not (href in seen) {
+                    seen[href] = True;
+                    urls.append(href);
+                }
+            }
+            if urls {
+                resp = root spawn FetchLinkMeta(urls=urls);
+                if resp.reports and (len(resp.reports) > 0) {
+                    rep = resp.reports[0];
+                    metas = rep["meta"] if ("meta" in rep) else [];
+                    mp = {};
+                    for m in metas {
+                        mp[str(m["url"])] = m;
+                    }
+                    link_meta = mp;
+                }
+            }
+        } except Exception {
+            _ignore = None;
+        }
     }
 
     return <>
@@ -707,6 +943,30 @@ def:pub PostBody(html: str) -> JsxElement {
             className="prose"
             dangerouslySetInnerHTML={{"__html": html}}
         />
+        {len(links) > 0 and (
+            <nav className="link-rail" aria-label="References in this post">
+                {[
+                    <div
+                        className={f"link-node link-node-{item['type']}"}
+                        data-link-id={item["id"]}
+                        key={item["id"]}
+                    >
+                        <span className="link-dot">
+                            <img
+                                className="link-dot-img"
+                                src={favicon_url(str(item["host"]))}
+                                alt=""
+                                loading="lazy"
+                            />
+                        </span>
+                        <div className="link-card">
+                            {render_link_card(item, link_meta.get(item["href"]))}
+                        </div>
+                    </div>
+                    for item in links
+                ]}
+            </nav>
+        )}
     </>;
 }
 
