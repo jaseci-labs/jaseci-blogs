@@ -1,6 +1,6 @@
 # Jac Blog
 
-A clean MkDocs blog setup with Jac syntax highlighting and interactive, runnable Jac code blocks.
+A Jac web app (built on jac-client + jac-scale) that serves the Jaseci Labs engineering blog, with Jac syntax highlighting and interactive, runnable Jac code blocks. Posts are authored as markdown under `docs/blog/posts/` and rendered by the Jac app at request time.
 
 ## Contributing
 
@@ -111,85 +111,60 @@ To get your GitHub avatar URL, just replace `YOUR_GITHUB_USER_ID` with your nume
 
 ## Features
 
-- **Jac Syntax Highlighting**: Beautiful syntax highlighting for Jac code using custom Pygments and Monaco lexers
+- **Jac Web App**: Served by `jac start main.jac` (jac-client React frontend + Jac backend walkers)
+- **Jac Syntax Highlighting**: Highlighting for Jac code blocks via python-markdown `codehilite`
 - **Interactive Code Blocks**: Run Jac code directly in the browser using Pyodide (WebAssembly)
-- **Clean Design**: Built with MkDocs Material theme
-- **Easy to Use**: Simple markdown-based content creation
-- **Fast**: Static site generation for optimal performance
+- **Markdown content**: Posts authored as markdown under `docs/blog/posts/`, parsed and rendered at request time
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- pip (Python package installer)
+- Python 3.12
 - Git
+- Node/bun toolchain is fetched by jac-client at build time (you do not install it directly)
 
 ## Installation
 
-1. **Clone this repository** (if you haven't already):
+1. **Clone this repository** (if you haven't already).
+
+2. **Install the Jac toolchain and project dependencies**:
    ```bash
-   cd ~/blog
+   pip install jaclang
+   jac install
    ```
 
-2. **Install all dependencies and the Jac syntax highlighter**:
+   `jac install` reads the `[dependencies]` table in [jac.toml](jac.toml) and installs jac-scale, jac-client, and the Python/npm deps into the project venv at `.jac/venv`.
+
+3. **(Optional) Generate the playground runtime** so runnable code blocks work locally:
    ```bash
-   pip install -e .
+   python scripts/handle_jac_compile_data.py
    ```
 
-   This will install all required dependencies (mkdocs-material, pymdown-extensions, pygments, mkdocs-video, starlette, uvicorn) and register the Jac syntax highlighter.
+   This downloads a pre-compiled `jaclang` from PyPI and writes `docs/playground/jaclang.zip`, which the app serves to the in-browser Pyodide runner ([main.jac](main.jac) `JACLANG_ZIP`). The zip is gitignored and regenerated on demand.
 
 ## Usage
 
-### Development Server
-
-To start the development server with interactive code execution:
+### Running the app locally
 
 ```bash
-python scripts/mkdocs_serve.py
+jac start main.jac
 ```
 
-This will start a server at `http://127.0.0.1:8000` with the necessary CORS headers for Pyodide to work.
-
-> **Note**: The custom server (`mkdocs_serve.py`) is required for runnable code blocks to work properly because it sets up the CORS headers needed for SharedArrayBuffer support.
-
-Alternatively, for basic preview without runnable code blocks:
-
-```bash
-mkdocs serve
-```
-
-### Building the Site
-
-To build the static site:
-
-```bash
-mkdocs build
-```
-
-The built site will be in the `site/` directory.
+This serves the bundled client and the Jac backend from a single origin. For frontend HMR, jac-client splits the vite dev server (`:8000`) and the API (`:8001`) — see the comments in [jac.toml](jac.toml) under `[plugins.client]`.
 
 ### Deploying
 
-Deploy to GitHub Pages:
-
-```bash
-mkdocs gh-deploy
-```
+Deployment is automated: pushing to `main` triggers [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which runs `jac start main.jac --scale` to deploy to the Jaseci EKS cluster via jac-scale (config under `[plugins.scale]` in [jac.toml](jac.toml)).
 
 ## Writing Blog Posts
 
 ### Creating a New Post
 
-1. Create a new markdown file in `docs/posts/`:
+1. Create a new markdown file in `docs/blog/posts/`:
    ```bash
-   touch docs/posts/my-new-post.md
+   touch docs/blog/posts/my-new-post.md
    ```
 
-2. Add the post to the navigation in `mkdocs.yml`:
-   ```yaml
-   nav:
-     - Posts:
-       - My New Post: posts/my-new-post.md
-   ```
+2. Add the frontmatter shown in [How to Submit a Post](#how-to-submit-a-post). There is no navigation file to edit — the app discovers posts by scanning `docs/blog/posts/` and orders them by their frontmatter `date:`.
 
 ### Adding Jac Code Blocks
 
@@ -244,115 +219,72 @@ with entry {
 ## Project Structure
 
 ```
-~/blog/
-├── docs/                          # Documentation source files
-│   ├── index.md                   # Homepage
-│   ├── about.md                   # About page
-│   ├── posts/                     # Blog posts
-│   │   └── welcome.md            # Example post
-│   ├── js/                        # JavaScript files
-│   │   ├── jac.monarch.js        # Monaco Editor Jac syntax
-│   │   ├── run-code.js           # Interactive code execution
-│   │   └── pyodide-worker.js     # Pyodide web worker
-│   ├── playground/                # Playground resources
-│   │   ├── language-configuration.json
-│   │   └── jaclang.zip           # (Generated by build hook)
-│   ├── extra.css                  # Custom CSS styling
-│   └── assets/                    # Images and other assets
-├── scripts/                       # Build and serve scripts
-│   ├── handle_jac_compile_data.py # Build hook for Jac compiler
-│   └── mkdocs_serve.py           # Custom dev server
-├── overrides/                     # Theme overrides (optional)
-├── jac_syntax_highlighter.py     # Pygments lexer for Jac
-├── mkdocs.yml                     # MkDocs configuration
-└── README.md                      # This file
+jaseci-blogs/
+├── main.jac                       # Backend walkers: parse posts/authors, render markdown, serve runtime zip
+├── jac.toml                       # Project config: serve, jac-client, jac-scale, dependencies
+├── pages/                         # jac-client routes (React via Jac)
+│   ├── index.jac                  # Landing
+│   ├── layout.jac                 # Shared layout / chrome
+│   └── blog/                      # Blog index + posts/[slug] routes
+├── components/                    # Client components
+│   ├── PostBody.cl.jac            # Renders post HTML, boots Pyodide
+│   └── RunnableJacBlock.cl.jac    # Interactive "Run" code blocks
+├── styles/                        # App CSS (main.css, prose.css, typography.css)
+├── public/                        # Static assets served at /
+├── docs/
+│   ├── assets/                    # Images, referenced as /assets/<file>
+│   └── blog/
+│       ├── posts/                 # Published + draft blog posts (markdown)
+│       ├── archived_posts/        # Retired posts (invisible to the app)
+│       ├── unlisted/              # Retracted posts (invisible to the app)
+│       ├── .authors.yml           # Author metadata
+│       └── .schedule.yml          # Bot-owned editorial schedule
+├── scripts/
+│   ├── schedule_lib.py            # Editorial scheduler (source of truth for .schedule.yml)
+│   └── handle_jac_compile_data.py # Generates docs/playground/jaclang.zip for the in-browser runtime
+└── .github/workflows/             # Deploy + editorial scheduling automation
 ```
 
 ## How It Works
 
-### Syntax Highlighting
+### Rendering
 
-The blog uses two lexers for syntax highlighting:
-
-1. **Pygments Lexer** (`jac_syntax_highlighter.py`): Used for server-side static code highlighting during build
-2. **Monaco Monarch Lexer** (`docs/js/jac.monarch.js`): Used for client-side syntax highlighting in the interactive code editor
+[main.jac](main.jac) reads each post from `docs/blog/posts/`, parses its frontmatter, and renders the markdown body to HTML with python-markdown (`fenced_code` + `codehilite` + `md_in_html`). Authors and the editorial schedule come from `.authors.yml` and `.schedule.yml`. The jac-client frontend in [pages/](pages/) and [components/](components/) renders that HTML.
 
 ### Interactive Code Execution
 
-The runnable code blocks use:
+Runnable code blocks (authored by wrapping a fenced block in `<div class="code-block">`) use:
 
-1. **Pyodide**: A Python runtime compiled to WebAssembly that runs in the browser
-2. **Monaco Editor**: The same code editor that powers VS Code
-3. **Web Workers**: For isolated code execution without blocking the UI
-4. **SharedArrayBuffer**: For synchronous input handling (requires special CORS headers)
+1. **Pyodide**: a Python runtime compiled to WebAssembly that runs in the browser
+2. **jaclang.zip**: the pre-compiled Jac runtime, generated by [scripts/handle_jac_compile_data.py](scripts/handle_jac_compile_data.py) and served by the `GetRuntimeZip` walker in [main.jac](main.jac); the client extracts it onto Pyodide's `sys.path`
 
-When you click "Run":
-1. The code is loaded into Monaco Editor
-2. A web worker initializes Pyodide and loads the Jac compiler
-3. The code is executed in the browser
-4. Output is streamed back to the page in real-time
+When you click "Run", the client boots Pyodide (once), loads the Jac runtime from the zip, executes the code, and streams output back to the page. See [notes.md](notes.md) for the authoring options (`run-serve`, `serve-only`, `run-dot`, `data-lang="python"`).
 
 ## Customization
 
-### Changing Theme Colors
+### Theme & styles
 
-Edit the `palette` section in `mkdocs.yml`:
-
-```yaml
-theme:
-  palette:
-    scheme: slate        # Use 'default' for light mode
-    primary: black       # Primary color
-    accent: orange       # Accent color
-```
-
-### Adding Social Links
-
-Edit the `extra.social` section in `mkdocs.yml`:
-
-```yaml
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/yourusername
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/yourusername
-```
-
-### Custom CSS
-
-Add your custom styles to `docs/extra.css`.
+Edit the CSS in [styles/](styles/) (`main.css`, `prose.css`, `typography.css`) and the page chrome in [pages/layout.jac](pages/layout.jac).
 
 ## Troubleshooting
 
 ### Runnable code blocks not working
 
-- Make sure you're using the custom server: `python scripts/mkdocs_serve.py`
-- The custom server sets CORS headers required for SharedArrayBuffer
-- Check browser console for errors
+- Ensure `docs/playground/jaclang.zip` exists — generate it with `python scripts/handle_jac_compile_data.py`
+- Check the browser console for Pyodide errors
 
-### Syntax highlighting not working
+### Posts not appearing
 
-- Ensure `jac_syntax_highlighter.py` is installed properly
-- Try rebuilding: `mkdocs build --clean`
-
-### Build hook errors
-
-- Make sure you have the Jac compiler installed
-- The hook tries to create `docs/playground/jaclang.zip` from your Jac installation
-- If you don't have Jac installed, comment out the hook in `mkdocs.yml`
+- The app only sees `docs/blog/posts/`. Posts in `archived_posts/` and `unlisted/` are intentionally invisible
+- Drafts (`draft: true`) are excluded from the published list — see [Editorial Scheduling](#editorial-scheduling)
 
 ## Dependencies
 
-Core dependencies:
-- `mkdocs-material`: Material theme for MkDocs
-- `pymdown-extensions`: Markdown extensions for code highlighting
-- `pygments`: Syntax highlighting library
-- `starlette`: ASGI framework for custom server
-- `uvicorn`: ASGI server
-
-Optional dependencies:
-- `mkdocs-video`: Video embedding support
+Declared in [jac.toml](jac.toml) `[dependencies]` (installed by `jac install`):
+- `jaclang`: the Jac toolchain and `jac` CLI
+- `jac-client`: React frontend served from Jac
+- `jac-scale[deploy]`: Kubernetes/Docker deploy via `jac start --scale`
+- `markdown`, `pyyaml`, `pygments`: post parsing and rendering
 
 ## License
 
@@ -361,7 +293,6 @@ Optional dependencies:
 
 ## Acknowledgments
 
-- Built with [MkDocs](https://www.mkdocs.org/) and [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
+- Built as a [Jac](https://www.jac-lang.org/) web app with jac-client and jac-scale
 - Interactive code execution powered by [Pyodide](https://pyodide.org/)
-- Code editor powered by [Monaco Editor](https://microsoft.github.io/monaco-editor/)
-- Based on the excellent documentation setup from the [Jaseci project](https://github.com/Jaseci-Labs/jaseci)
+- Part of the [Jaseci project](https://github.com/Jaseci-Labs/jaseci)

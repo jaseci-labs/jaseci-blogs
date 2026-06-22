@@ -49,9 +49,9 @@ cl {
 }
 
 
-# Content roots. During the migration we read from the legacy docs/blog/
-# location so the mkdocs site keeps working as a reference. Step 10 of the
-# migration moves these to content/posts/ + content/authors.yml.
+# Content roots. Posts and author metadata live under docs/blog/ — the same
+# paths the editorial scheduler (scripts/schedule_lib.py) and the GitHub
+# workflows read and mutate, so keep them in sync if this ever moves.
 glob POSTS_DIR = "docs/blog/posts";
 glob AUTHORS_PATH = "docs/blog/.authors.yml";
 glob EXCERPT_MARKER = "<!-- more -->";
@@ -170,8 +170,7 @@ def:priv split_excerpt(body: str) -> tuple[str, str] {
 
 
 def:priv extract_peek_markdown(body: str) -> str {
-    # Mirror of scripts/inject_excerpt_peek.py:_extract_peek_markdown — the
-    # next PEEK_LINES non-blank, non-heading lines after the <!-- more -->
+    # The next PEEK_LINES non-blank, non-heading lines after the <!-- more -->
     # marker, used as a faded teaser on the index card.
     if EXCERPT_MARKER not in body {
         return "";
@@ -869,7 +868,7 @@ walker:pub GetRuntimeZip {
 glob ALLOWED_CATEGORIES = [
     "Jac Programming", "Tutorials", "Fixing the Broken",
     "AI", "Web Development", "Developers", "Community",
-];  # keep in sync with mkdocs.yml -> blog.categories_allowed
+];  # canonical category allowlist — the submission/edit flow drops any category not in this list
 glob MAX_IMAGE_BYTES = 100 * 1024;
 glob MAX_IMAGES = 8;
 glob ALLOWED_IMAGE_EXT = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
