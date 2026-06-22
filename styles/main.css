@@ -419,9 +419,10 @@ img {
     top: 7.5rem;
     left: calc((100vw + 720px) / 2 + 20px);
     width: 236px;
-    max-height: calc(100vh - 11rem);
-    overflow-y: auto;
-    overflow-x: visible;
+    /* Not a scroll container: overflow:auto would force horizontal clipping
+       that cuts dots and card shadows. Visible keeps everything intact; the
+       expanded-card cap + auto-hide keep the height bounded in practice. */
+    overflow: visible;
     padding-left: 30px;
     padding-top: 6px;
     z-index: 5;
