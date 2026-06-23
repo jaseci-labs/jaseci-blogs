@@ -1,10 +1,13 @@
 ---
-date: 2026-06-22
+date: 2026-06-23
 authors:
   - jayanaka
 categories:
   - Community
 slug: what-75-students-shipped-in-one-semester-with-jac
+repost: true
+repost_url: "https://cse.engin.umich.edu/stories/students-build-agentic-ai-tools-for-work-travel-wellness"
+repost_source: "Students build agentic AI tools for work, travel, wellness"
 draft: true
 ---
 
