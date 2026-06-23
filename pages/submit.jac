@@ -235,6 +235,9 @@ def:pub page() -> JsxElement {
     has images: list = [];
     has preview_html: str = "";
     has edit_pr: int = 0;  # 0 = new submission; >0 = editing that PR
+    has is_repost: bool = False;
+    has repost_url: str = "";
+    has repost_source: str = "";
 
     has submitting: bool = False;
     has submit_error: str = "";
@@ -420,6 +423,10 @@ def:pub page() -> JsxElement {
             submit_error = "Pick at least one category.";
             return;
         }
+        if is_repost and not repost_url.strip() {
+            submit_error = "Add the original article URL, or uncheck \"repost\".";
+            return;
+        }
         if len(body.strip()) < 50 {
             submit_error = "Post body is too short.";
             return;
@@ -433,16 +440,19 @@ def:pub page() -> JsxElement {
                 res = root spawn EditPublishedPost(
                     gh_enc=gh_enc, slug=slug, title=title, categories=cats,
                     description=description, body_md=body, images=images, pr_number=edit_pr,
+                    is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                 );
             } elif edit_pr > 0 {
                 res = root spawn UpdatePost(
                     gh_enc=gh_enc, pr_number=edit_pr, title=title, slug=slug,
                     categories=cats, description=description, body_md=body, images=images,
+                    is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                 );
             } else {
                 res = root spawn SubmitPost(
                     gh_enc=gh_enc, title=title, slug=slug, categories=cats,
                     description=description, body_md=body, author_bio=bio, images=images,
+                    is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                 );
             }
             if res and res.reports {
@@ -476,6 +486,7 @@ def:pub page() -> JsxElement {
         result = None; edit_pr = 0; title = ""; slug = ""; slug_touched = False;
         description = ""; body = ""; bio = ""; cats = []; images = [];
         preview_html = ""; submit_error = "";
+        is_repost = False; repost_url = ""; repost_source = "";
         editing_published = False; edit_existing_prs = [];
     }
 
@@ -494,6 +505,9 @@ def:pub page() -> JsxElement {
                     cats = data["categories"];
                     description = str(data["description"]);
                     body = str(data["body_md"]);
+                    is_repost = bool(data["is_repost"]);
+                    repost_url = str(data["repost_url"]);
+                    repost_source = str(data["repost_source"]);
                     tab = "write";
                     window.scrollTo(0, 0);
                 } else {
@@ -596,6 +610,9 @@ def:pub page() -> JsxElement {
                     cats = data["categories"];
                     description = str(data["description"]);
                     body = str(data["body_md"]);
+                    is_repost = bool(data["is_repost"]);
+                    repost_url = str(data["repost_url"]);
+                    repost_source = str(data["repost_source"]);
                     edit_existing_prs = data["existing_prs"];
                     edit_pr = 0;
                     tab = "write";
@@ -788,6 +805,36 @@ def:pub page() -> JsxElement {
                     value={description}
                     onChange={lambda e: ChangeEvent { description = e.target.value; }}
                 />
+
+                <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Repost</label>
+                <label style={{"display": "flex", "alignItems": "center", "gap": "0.5rem", "cursor": "pointer"}}>
+                    <input
+                        type="checkbox"
+                        checked={is_repost}
+                        onChange={lambda e: ChangeEvent { is_repost = bool(e.target.checked); }}
+                    />
+                    <span className="muted small">This post is a repost of an external article</span>
+                </label>
+                {is_repost and (
+                    <div style={{"marginTop": "0.6rem"}}>
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder="Original article URL (https://…)"
+                            value={repost_url}
+                            onChange={lambda e: ChangeEvent { repost_url = e.target.value; }}
+                        />
+                        <input
+                            type="text"
+                            className="search-input"
+                            style={{"marginTop": "0.5rem"}}
+                            placeholder="Source name (optional, e.g. The Example Blog)"
+                            value={repost_source}
+                            onChange={lambda e: ChangeEvent { repost_source = e.target.value; }}
+                        />
+                        <p className="muted small">A card linking to the original renders at the top of your post, and it's tagged “↗ Repost” on the home page.</p>
+                    </div>
+                )}
 
                 <label className="eyebrow" style={{"marginTop": "1rem", "display": "block"}}>Images (optional, ≤100KB each)</label>
                 <input

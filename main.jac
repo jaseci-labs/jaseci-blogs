@@ -1254,9 +1254,16 @@ def:priv resolve_author_id(profile: dict, bio: str) -> tuple {
 }
 
 
+def:priv is_http_url(u: str) -> bool {
+    s = u.strip().lower();
+    return s.startswith("http://") or s.startswith("https://");
+}
+
+
 def:priv build_post_markdown(
     title: str, slug: str, categories: list, description: str,
-    author_id: str, body: str
+    author_id: str, body: str,
+    is_repost: bool = False, repost_url: str = "", repost_source: str = ""
 ) -> str {
     today = date_cls.today().isoformat();
     lines: list = ["---", f"date: {today}", "authors:", f"  - {author_id}", "categories:"];
@@ -1267,6 +1274,15 @@ def:priv build_post_markdown(
         lines.append(f"description: {json.dumps(description)}");
     }
     lines.append(f"slug: {slug}");
+    # A repost links out to an external article via these keys (parsed back into
+    # is_repost/repost_url/repost_source). Only emitted when a URL is present.
+    if is_repost and repost_url.strip() {
+        lines.append("repost: true");
+        lines.append(f"repost_url: {json.dumps(repost_url.strip())}");
+        if repost_source.strip() {
+            lines.append(f"repost_source: {json.dumps(repost_source.strip())}");
+        }
+    }
     lines.append("draft: true");
     lines.append("---");
     fm = "\n".join(lines);
@@ -1769,6 +1785,7 @@ def:priv parse_post_for_edit(content: str) -> dict {
         h1 = re.search(r"(?m)^#\s+(.+)$", raw_body);
         title = strip_markdown_inline(h1.group(1).strip()) if h1 else "";
     }
+    repost_url = str(meta.get("repost_url", "")).strip();
     return {
         "title": title,
         "slug": str(meta.get("slug", "")),
@@ -1776,6 +1793,9 @@ def:priv parse_post_for_edit(content: str) -> dict {
         "authors": [str(a) for a in author_ids],
         "description": str(meta.get("description", "")),
         "body_md": raw_body,
+        "is_repost": bool(meta.get("repost", False)) and bool(repost_url),
+        "repost_url": repost_url,
+        "repost_source": str(meta.get("repost_source", "")),
     };
 }
 
@@ -2024,7 +2044,8 @@ def:priv open_submission_prs(token: str) -> list {
 
 
 def:priv build_edited_markdown(
-    original_content: str, title: str, categories: list, description: str, body: str
+    original_content: str, title: str, categories: list, description: str, body: str,
+    is_repost: bool = False, repost_url: str = "", repost_source: str = ""
 ) -> str {
     # Rebuild a post's .md PRESERVING its frontmatter — date, authors, slug, and
     # crucially the draft state (a live post has no draft key, so the edit stays
@@ -2049,6 +2070,21 @@ def:priv build_edited_markdown(
     } else {
         meta.pop("description", None);
     }
+    # Toggle repost keys to match the form: set them when checked + a URL is
+    # given, otherwise strip any that were there (the post is no longer a repost).
+    if is_repost and repost_url.strip() {
+        meta["repost"] = True;
+        meta["repost_url"] = repost_url.strip();
+        if repost_source.strip() {
+            meta["repost_source"] = repost_source.strip();
+        } else {
+            meta.pop("repost_source", None);
+        }
+    } else {
+        meta.pop("repost", None);
+        meta.pop("repost_url", None);
+        meta.pop("repost_source", None);
+    }
     fm = str(yaml.safe_dump(meta, sort_keys=False, allow_unicode=True)).strip();
     body_text: str = body.strip();
     if not body_text.startswith("#") {
@@ -2067,6 +2103,9 @@ walker:priv SubmitPost {
     has body_md: str = "";
     has author_bio: str = "";
     has images: list = [];
+    has is_repost: bool = False;
+    has repost_url: str = "";
+    has repost_source: str = "";
 
     can submit with Root entry {
         gh_token = decrypt_gh(self.gh_enc);
@@ -2104,6 +2143,15 @@ walker:priv SubmitPost {
             report {"ok": False, "error": "select at least one valid category"};
             return;
         }
+        repost_url = self.repost_url.strip();
+        if self.is_repost and not repost_url {
+            report {"ok": False, "error": "a repost needs the original article URL"};
+            return;
+        }
+        if self.is_repost and not is_http_url(repost_url) {
+            report {"ok": False, "error": "the repost URL must be an http(s) link"};
+            return;
+        }
         img_res = collect_images(self.images, slug);
         if not img_res["ok"] {
             report {"ok": False, "error": img_res["error"]};
@@ -2112,7 +2160,10 @@ walker:priv SubmitPost {
         image_files = img_res["files"];
 
         (author_id, new_entry) = resolve_author_id(profile, self.author_bio.strip());
-        post_md = build_post_markdown(title, slug, cats, self.description.strip(), author_id, body);
+        post_md = build_post_markdown(
+            title, slug, cats, self.description.strip(), author_id, body,
+            self.is_repost, repost_url, self.repost_source.strip(),
+        );
         files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
         files = files + image_files;
         if new_entry is not None {
@@ -2192,6 +2243,9 @@ walker:priv UpdatePost {
     has description: str = "";
     has body_md: str = "";
     has images: list = [];
+    has is_repost: bool = False;
+    has repost_url: str = "";
+    has repost_source: str = "";
 
     can update with Root entry {
         gh_token = decrypt_gh(self.gh_enc);
@@ -2239,6 +2293,11 @@ walker:priv UpdatePost {
             report {"ok": False, "error": "select at least one valid category"};
             return;
         }
+        repost_url = self.repost_url.strip();
+        if self.is_repost and not is_http_url(repost_url) {
+            report {"ok": False, "error": "a repost needs a valid http(s) article URL"};
+            return;
+        }
         img_res = collect_images(self.images, slug);
         if not img_res["ok"] {
             report {"ok": False, "error": img_res["error"]};
@@ -2248,7 +2307,10 @@ walker:priv UpdatePost {
         # Resolve the author's id (reuses their existing .authors.yml entry);
         # don't re-touch .authors.yml on edit — the entry already exists.
         (author_id, _new) = resolve_author_id(profile, "");
-        post_md = build_post_markdown(title, slug, cats, self.description.strip(), author_id, body);
+        post_md = build_post_markdown(
+            title, slug, cats, self.description.strip(), author_id, body,
+            self.is_repost, repost_url, self.repost_source.strip(),
+        );
         files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
         files = files + img_res["files"];
 
@@ -2348,6 +2410,9 @@ walker:priv EditPublishedPost {
     has body_md: str = "";
     has images: list = [];
     has pr_number: int = 0;  # >0 = continue the caller's own open edit PR
+    has is_repost: bool = False;
+    has repost_url: str = "";
+    has repost_source: str = "";
 
     can edit with Root entry {
         gh_token = decrypt_gh(self.gh_enc);
@@ -2390,12 +2455,20 @@ walker:priv EditPublishedPost {
             report {"ok": False, "error": "post body is too short"};
             return;
         }
+        repost_url = self.repost_url.strip();
+        if self.is_repost and not is_http_url(repost_url) {
+            report {"ok": False, "error": "a repost needs a valid http(s) article URL"};
+            return;
+        }
         img_res = collect_images(self.images, slug);
         if not img_res["ok"] {
             report {"ok": False, "error": img_res["error"]};
             return;
         }
-        post_md = build_edited_markdown(original, title, cats, self.description.strip(), self.body_md);
+        post_md = build_edited_markdown(
+            original, title, cats, self.description.strip(), self.body_md,
+            self.is_repost, repost_url, self.repost_source.strip(),
+        );
         # Write back to the post's ACTUAL file (filename != slug), so the PR edits
         # the existing post instead of creating a new file.
         files = [{"path": str(main_post["post_path"]), "content": post_md, "binary": False}];
