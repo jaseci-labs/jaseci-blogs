@@ -1,15 +1,38 @@
 cl import "../styles/main.css";
 cl import "../styles/typography.css";
 cl import "../styles/prose.css";
-cl import from "@jac/runtime" { Outlet, Link }
+cl import from "@jac/runtime" { Outlet, Link, useLocation }
 
 
 cl {
     def:pub layout() -> JsxElement {
         has theme: str = "light";
         has menu_open: bool = False;
+        has is_reviewer: bool = False;
+
+        loc = useLocation();
+
+        # Surface reviewer-only nav (Analytics) when the GitHub session minted on
+        # /submit marks the signed-in user as a reviewer. Keyed on the route path
+        # so it re-reads after sign-in (the layout shell mounts once and would
+        # otherwise never pick up a session created mid-visit). UX only — every
+        # reviewer-gated walker re-verifies write access server-side.
+        can with [loc["pathname"]] entry {
+            try {
+                raw = window.sessionStorage.getItem("blog_submit_session");
+                if raw {
+                    sess = JSON.parse(raw);
+                    is_reviewer = bool(sess["is_reviewer"]);
+                } else {
+                    is_reviewer = False;
+                }
+            } except Exception {
+                _ignore = None;
+            }
+        }
 
         can with entry {
+
             # Site-wide runtime config. Pages read from here so we have one
             # source of truth for tunables like the skeleton-show floor.
             window.__BLOG_CONFIG = {
@@ -57,6 +80,8 @@ cl {
                         <Link to="/blog/archive">Archive</Link>
                         <Link to="/blog/categories">Categories</Link>
                         <a href="https://newsletter.jaseci.org" target="_blank" rel="noopener">Newsletter</a>
+                        {is_reviewer and <Link to="/reviewer" className="nav-staff">Reviewer</Link>}
+                        {is_reviewer and <Link to="/analytics" className="nav-staff">Analytics</Link>}
                         <Link to="/submit" className="nav-write">Contribute</Link>
                     </nav>
 
@@ -128,6 +153,8 @@ cl {
                         <Link to="/blog/archive">Archive</Link>
                         <Link to="/blog/categories">Categories</Link>
                         <a href="https://newsletter.jaseci.org" target="_blank" rel="noopener">Newsletter</a>
+                        {is_reviewer and <Link to="/reviewer" className="nav-staff">Reviewer</Link>}
+                        {is_reviewer and <Link to="/analytics" className="nav-staff">Analytics</Link>}
                         <Link to="/submit" className="nav-write">Contribute</Link>
                     </nav>
                 )}

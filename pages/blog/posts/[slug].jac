@@ -10,7 +10,7 @@ the current Jac compiler emits literal source paths into JS imports, which
 vite can't resolve. Inlining the enhancements keeps the build green.
 """
 
-sv import from ...main { GetPost, GetRuntimeZip, FetchLinkMeta }
+sv import from ...main { GetPost, GetRuntimeZip, FetchLinkMeta, RecordView, RecordEngagement, RecordLinkClick }
 
 to cl:
 
@@ -853,7 +853,229 @@ def render_link_card(item: any, meta: any) -> JsxElement {
 }
 
 
-def:pub PostBody(html: str) -> JsxElement {
+# ── Reading analytics (client) ───────────────────────────────────────────────
+# Anonymous, no-PII tracking that feeds the reviewer-only /analytics dashboard:
+#   • a random visitor id in localStorage (unique vs repeat opens)
+#   • active reading time (paused while the tab is hidden)
+#   • deepest scroll % reached through the article body
+# View is recorded on mount; the engagement sample is flushed once per visit on
+# SPA navigation to another post (next mount) or on pagehide (tab close).
+
+def analytics_visitor_id() -> str {
+    # Stable random id; not tied to any account and never leaves the browser in
+    # raw form (the server only ever stores a one-way hash of it). "" if storage
+    # is blocked (private mode) — the open still counts toward the total.
+    try {
+        existing = window.localStorage.getItem("jaseci-blog-vid");
+        if existing {
+            return str(existing);
+        }
+        fresh = "";
+        try {
+            fresh = str(window.crypto.randomUUID());
+        } except Exception {
+            fresh = "v-" + str(int(Date.now()));
+        }
+        window.localStorage.setItem("jaseci-blog-vid", fresh);
+        return fresh;
+    } except Exception {
+        return "";
+    }
+}
+
+
+async def record_view(slug: str) -> None {
+    try {
+        root spawn RecordView(slug=str(slug), visitor=analytics_visitor_id());
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
+async def record_link_click(slug: str, href: str) -> None {
+    try {
+        root spawn RecordLinkClick(slug=str(slug), href=str(href));
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
+async def flush_engagement() -> None {
+    # Send the current visit's reading sample exactly once.
+    try {
+        st = window.__blogTrack;
+        if not st or st["sent"] or not st["slug"] {
+            return;
+        }
+        now = int(Date.now());
+        if st["resume"] > 0 {
+            st["active"] = st["active"] + (now - st["resume"]);
+            st["resume"] = 0;
+        }
+        # Skip non-reads. This filters genuine sub-second bounces AND, crucially,
+        # the phantom unmount React Strict Mode fires immediately after mount in
+        # dev (mount → unmount → remount), which would otherwise log a 0-time,
+        # top-of-page sample on every open and pin every scroll metric to the
+        # lowest bucket. We don't set `sent` here, so the real flush on actual
+        # navigation away still records once engagement is meaningful.
+        if (st["active"] < 1000) and (st["maxScroll"] < 25) {
+            return;
+        }
+        st["sent"] = True;
+        root spawn RecordEngagement(
+            slug=str(st["slug"]),
+            dwell_ms=float(st["active"]),
+            scroll_pct=int(st["maxScroll"]),
+        );
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
+def compute_scroll_pct(container: any) -> int {
+    # How far through the article body the viewport bottom has reached, 0..100.
+    try {
+        rect = container.getBoundingClientRect();
+        height = container.offsetHeight;
+        if height <= 0 {
+            return 0;
+        }
+        abs_top = rect.top + window.scrollY;
+        reached = (window.scrollY + window.innerHeight) - abs_top;
+        pct = (reached / height) * 100.0;
+        if pct < 0 {
+            return 0;
+        }
+        if pct > 100 {
+            return 100;
+        }
+        return int(pct);
+    } except Exception {
+        return 0;
+    }
+}
+
+
+def setup_engagement_tracking(container: any, slug: str) -> None {
+    # This effect runs twice per post mount: an [html] watcher bumps html_version
+    # to force the enhancement pass to re-run after paint. On that second run the
+    # tracker for THIS post already exists and hasn't been flushed — keep it as-is
+    # rather than re-initializing, which would emit a spurious top-of-page,
+    # zero-time sample (the bug that pinned every median scroll to the lowest
+    # bucket). Only re-init when this is genuinely a different post.
+    try {
+        prev = window.__blogTrack;
+        if prev and (prev["slug"] == slug) and (not prev["sent"]) {
+            return;
+        }
+    } except Exception {
+        _ignore = None;
+    }
+    # Flush the previous (different) post's pending sample first, in case it
+    # wasn't already sent by the unmount/pagehide handlers.
+    flush_engagement();
+
+    visible = True;
+    try {
+        visible = (document.visibilityState != "hidden");
+    } except Exception {
+        _ignore = None;
+    }
+    window.__blogTrack = {
+        "slug": slug,
+        "active": 0,                              # accumulated active ms
+        "resume": int(Date.now()) if visible else 0,  # ts the current visible segment began (0 = paused)
+        "maxScroll": 0,                           # deepest scroll % reached
+        "sent": False,
+    };
+
+    # Scroll depth (replace any prior listener, same idiom as the TOC scrollspy).
+    try {
+        if window.__blogScrollTrack {
+            window.removeEventListener("scroll", window.__blogScrollTrack);
+        }
+    } except Exception {
+        _ignore = None;
+    }
+    def on_scroll() -> None {
+        st = window.__blogTrack;
+        if not st {
+            return;
+        }
+        p = compute_scroll_pct(container);
+        if p > st["maxScroll"] {
+            st["maxScroll"] = p;
+        }
+    }
+    window.__blogScrollTrack = on_scroll;
+    window.addEventListener("scroll", on_scroll, {"passive": True});
+    setTimeout(on_scroll, 60);
+
+    # Pause/resume active time on tab visibility changes (don't count background time).
+    try {
+        if window.__blogVisTrack {
+            document.removeEventListener("visibilitychange", window.__blogVisTrack);
+        }
+    } except Exception {
+        _ignore = None;
+    }
+    def on_vis() -> None {
+        st = window.__blogTrack;
+        if not st {
+            return;
+        }
+        now = int(Date.now());
+        if document.visibilityState == "hidden" {
+            if st["resume"] > 0 {
+                st["active"] = st["active"] + (now - st["resume"]);
+                st["resume"] = 0;
+            }
+        } elif st["resume"] == 0 {
+            st["resume"] = now;
+        }
+    }
+    window.__blogVisTrack = on_vis;
+    document.addEventListener("visibilitychange", on_vis);
+
+    # Final flush on tab close / hard navigation (best-effort).
+    try {
+        if window.__blogHideTrack {
+            window.removeEventListener("pagehide", window.__blogHideTrack);
+        }
+    } except Exception {
+        _ignore = None;
+    }
+    def on_hide() -> None {
+        flush_engagement();
+    }
+    window.__blogHideTrack = on_hide;
+    window.addEventListener("pagehide", on_hide);
+
+    # Delegated click tracking for links inside the article body. Bound to the
+    # fresh per-post container (which is discarded on unmount, so no leak), and
+    # only here — past the same-post dedup early-return above — so it attaches
+    # once per post. Skips pure in-page anchors (#toc jumps).
+    def on_link_click(e: any) -> None {
+        try {
+            anchor = e.target.closest("a");
+            if anchor {
+                href = anchor.getAttribute("href");
+                if href and not str(href).startswith("#") {
+                    record_link_click(slug, str(href));
+                }
+            }
+        } except Exception {
+            _ignore = None;
+        }
+    }
+    container.addEventListener("click", on_link_click);
+}
+
+
+def:pub PostBody(html: str, slug: str) -> JsxElement {
     ref = useRef(None);
     has html_version: int = 0;
     has toc: list = [];
@@ -862,6 +1084,13 @@ def:pub PostBody(html: str) -> JsxElement {
 
     can with [html] entry {
         html_version = html_version + 1;
+    }
+
+    # Flush the reading sample when the reader navigates away from the post
+    # (SPA route change, incl. to a non-post page like /analytics). This is the
+    # reliable signal; pagehide only covers hard tab-close/reload.
+    can with exit {
+        flush_engagement();
     }
 
     async can with [html_version] entry {
@@ -917,6 +1146,12 @@ def:pub PostBody(html: str) -> JsxElement {
                     link_meta = mp;
                 }
             }
+        } except Exception {
+            _ignore = None;
+        }
+        # Reading analytics: track active time + scroll depth for this article.
+        try {
+            setup_engagement_tracking(container, str(slug));
         } except Exception {
             _ignore = None;
         }
@@ -1013,6 +1248,12 @@ def:pub page() -> JsxElement {
                 data = result.reports[0];
                 if data["ok"] {
                     post = data;
+                    # Count this open (anonymous; fire-and-forget).
+                    try {
+                        record_view(str(data["slug"]));
+                    } except Exception {
+                        _ignore = None;
+                    }
                     document.title = f"{data['title']} · Jaseci Blogs";
                     meta_desc = str(data["description"]) or f"{data['reading_minutes']} min read on Jaseci Blogs.";
                     meta_url = "";
@@ -1304,7 +1545,7 @@ def:pub page() -> JsxElement {
         )}
 
         <div className="container narrow">
-            <PostBody html={post["html"]} />
+            <PostBody html={post["html"]} slug={str(post["slug"])} />
         </div>
 
         {cats and (
