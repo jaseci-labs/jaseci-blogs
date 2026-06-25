@@ -247,23 +247,6 @@ img {
     background: var(--text-strong);
     transform: translateY(-1px);
 }
-/* Reviewer-only tools (Reviewer, Analytics): outlined pills so they read as a
-   distinct secondary action group, set apart from the solid Contribute pill. */
-.primary-nav a.nav-staff {
-    padding: 0.4rem 0.95rem;
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-.primary-nav a.nav-staff:hover {
-    background: var(--accent);
-    color: var(--bg);
-    transform: translateY(-1px);
-}
 .header-actions {
     display: flex;
     align-items: center;
@@ -327,16 +310,6 @@ img {
         padding: 0.5rem 1.1rem;
         background: var(--accent);
         color: var(--bg);
-        border-radius: 999px;
-        font-weight: 600;
-    }
-    .mobile-nav a.nav-staff {
-        align-self: flex-start;
-        margin-top: 0.25rem;
-        padding: 0.5rem 1.1rem;
-        background: transparent;
-        color: var(--accent);
-        border: 1px solid var(--accent);
         border-radius: 999px;
         font-weight: 600;
     }
@@ -852,19 +825,6 @@ img {
 .tag:hover {
     border-color: var(--accent);
     color: var(--accent);
-}
-/* Selected/active state for tag chips — category pickers, the write/mine/edit
-   tabs, reviewer toggles. Without this the `is-active` class had no visual, so
-   toggling a category looked like nothing happened even though state updated. */
-.tag.is-active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--bg);
-}
-.tag.is-active:hover {
-    background: var(--text-strong);
-    border-color: var(--text-strong);
-    color: var(--bg);
 }
 
 /* Share trigger in the byline — understated, matches the muted meta type */
