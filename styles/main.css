@@ -286,6 +286,20 @@ img {
     color: var(--accent);
 }
 
+/* Draft-preview band: pinned just beneath the sticky site header so it stays
+   visible while reading instead of scrolling away with the post body. top
+   matches .header-inner's 64px min-height; z-index sits under the header (30)
+   but above post content. */
+.preview-banner {
+    position: sticky;
+    top: 64px;
+    z-index: 25;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.6rem 0;
+    text-align: center;
+}
+
 /* Mobile menu: the hamburger toggle and dropdown panel are desktop-hidden and
    only appear once the primary nav collapses at the breakpoint below. */
 .nav-toggle {

@@ -1369,7 +1369,7 @@ def:pub page() -> JsxElement {
 
     return <article className="post-shell">
         {post["is_preview"] and (
-            <div style={{"background": "var(--bg-subtle)", "borderBottom": "1px solid var(--rule)", "padding": "0.6rem 0", "textAlign": "center"}}>
+            <div className="preview-banner">
                 <p className="container narrow small" style={{"margin": "0", "color": "var(--text-muted)"}}>
                     👁 Draft preview — not published. This link is private and expires in ~1 month.
                 </p>
