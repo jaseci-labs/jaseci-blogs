@@ -5,7 +5,6 @@ authors:
 categories:
   - Community
   - Developers
-description: "Students in EECS 449: Conversational AI designed and built AI-powered applications that use language, vision, retrieval, and agentic workflows to help solve real-world problems."
 slug: 449-project-repost
 repost: true
 repost_url: "https://cse.engin.umich.edu/stories/students-build-agentic-ai-tools-for-work-travel-wellness"
