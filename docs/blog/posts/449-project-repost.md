@@ -22,7 +22,7 @@ draft: true
 
 ## One language for the whole stack
 
-Building a full AI application usually means **stitching together separate systems**: one framework for the interface, another for the backend, a database underneath, and more tooling to call models and orchestrate workflows, with every seam its own thing to learn, wire up, and keep from breaking. That **glue work** is where a lot of a semester disappears, and it is exactly what Jac removes. Jac and the Jaseci runtime let a team handle the interface, the application logic, the data, and the AI itself **in one language**, with **model calls native to the language** rather than a bolted-on service and **model-agnostic** underneath, so teams could reach for whatever model fit without re-architecting anything. **Less time on plumbing, more on the actual problem**, which is most of why a single semester was enough.
+Building a full AI application usually means stitching together separate systems: one framework for the interface, another for the backend, a database underneath, and more tooling to call models and orchestrate workflows, with every seam its own thing to learn, wire up, and keep from breaking. **That glue work is where a lot of a semester disappears, and it is exactly what Jac removes.** **Jac and the Jaseci runtime let a team handle the interface, the application logic, the data, and the AI itself in one language, with model calls native to the language rather than a bolted-on service and model-agnostic underneath, so teams could reach for whatever model fit without re-architecting anything.** Less time on plumbing, more on the actual problem, which is most of why a single semester was enough.
 
 ## A few from the showcase
 
