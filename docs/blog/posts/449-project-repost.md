@@ -18,17 +18,11 @@ draft: true
 
 <!-- more -->
 
-!!! quote ""
-
-    **These weren't chatbot demos.** They were live, full-stack products: conversational interfaces, visual reasoning, document analysis, multimodal input, and multi-step agentic workflows, built for everything from academic advising and health to travel, finance, and career prep.
+**These weren't chatbot demos.** They were live, full-stack products: conversational interfaces, visual reasoning, document analysis, multimodal input, and multi-step agentic workflows, built for everything from academic advising and health to travel, finance, and career prep.
 
 ## One language for the whole stack
 
-Building a full AI application usually means stitching together separate systems: one framework for the interface, another for the backend, a database layer underneath, and more tooling to call models and orchestrate workflows. Each seam is its own thing to learn, wire up, and keep from breaking, and for a four-person team on a deadline, a lot of the semester can disappear into that glue work instead of the product.
-
-The single-language design is a big reason a semester was enough. Jac and the Jaseci runtime let a team handle the interface, the application logic, the data, and the AI itself in one language. AI calls are part of the language rather than a bolted-on service, and Jac stays model-agnostic underneath, so teams could reach for whatever model fit without re-architecting anything. Less time on plumbing, more on the actual problem.
-
-> For a four-person team on a deadline, the win wasn't a clever framework. It was *not* having to wire four of them together.
+Building a full AI application usually means stitching together separate systems: one framework for the interface, another for the backend, a database underneath, and more tooling to call models and orchestrate workflows, with every seam its own thing to learn, wire up, and keep from breaking. That glue work is where a lot of a semester disappears, and it is exactly what Jac removes. Jac and the Jaseci runtime let a team handle the interface, the application logic, the data, and the AI itself in one language, with model calls native to the language rather than a bolted-on service and model-agnostic underneath, so teams could reach for whatever model fit without re-architecting anything. Less time on plumbing, more on the actual problem, which is most of why a single semester was enough.
 
 ## A few from the showcase
 
