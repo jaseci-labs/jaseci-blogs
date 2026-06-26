@@ -18,7 +18,9 @@ draft: true
 
 <!-- more -->
 
-These weren't chatbot demos. They were live products with conversational interfaces, visual reasoning, document analysis, multimodal input, and multi-step agentic workflows, spanning academic advising, health, travel, finance, athletics, software development, and career prep.
+!!! quote ""
+
+    **These weren't chatbot demos.** They were live, full-stack products: conversational interfaces, visual reasoning, document analysis, multimodal input, and multi-step agentic workflows, built for everything from academic advising and health to travel, finance, and career prep.
 
 ## One language for the whole stack
 
