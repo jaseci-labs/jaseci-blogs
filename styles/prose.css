@@ -379,6 +379,27 @@
     transform: translateY(-1px);
 }
 
+/* Rich variant — a self-contained card (full hairline border + soft shadow
+   instead of the left accent bar) with a little more breathing room and a
+   button that lifts off the surface. */
+.prose .cta.cta-rich {
+    margin: 3.5em 0 1em;
+    padding: 2.75rem 2.5rem;
+    border-left: none;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+}
+.prose .cta.cta-rich a.cta-button {
+    margin-top: 1.4rem;
+    padding: 0.8rem 1.9rem;
+    box-shadow: 0 8px 20px -8px var(--accent);
+}
+.prose .cta.cta-rich a.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px -8px var(--accent);
+}
+
 /* Lead paragraph — the standfirst right under the title. A soft card on a warm
    neutral fill (not an accent tint, which reads synthetic) with a thin accent
    edge, same serif as the body, justified to match the article. */
