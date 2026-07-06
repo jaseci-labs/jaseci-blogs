@@ -911,9 +911,9 @@ walker:pub GetRuntimeZip {
 #   GH_REPO (default jaseci-labs/jaseci-blogs) / GH_BASE_BRANCH (default main)
 
 glob ALLOWED_CATEGORIES = [
-    "Jac Programming", "Tutorials", "Fixing the Broken",
-    "AI", "Web Development", "Developers", "Community",
-];  # keep in sync with mkdocs.yml -> blog.categories_allowed
+    "Engineering", "Tutorials", "Built with Jac",
+    "Community", "Announcements",
+];  # intent-based buckets; a post may carry several (they act as tags)
 glob MAX_IMAGE_BYTES = 100 * 1024;
 glob MAX_IMAGES = 8;
 glob ALLOWED_IMAGE_EXT = ["png", "jpg", "jpeg", "gif", "webp", "svg"];

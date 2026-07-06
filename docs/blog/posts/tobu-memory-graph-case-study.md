@@ -3,6 +3,7 @@ date: '2026-06-06'
 authors:
 - savini
 categories:
+- Built with Jac
 - Community
 slug: tobu-memory-graph-case-study
 ---

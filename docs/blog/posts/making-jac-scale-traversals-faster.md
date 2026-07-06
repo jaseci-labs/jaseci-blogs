@@ -3,7 +3,7 @@ date: 2026-03-24
 authors:
   - asim
 categories:
-  - Jac Programming
+  - Engineering
 slug: making-jac-scale-traversals-faster
 ---
 

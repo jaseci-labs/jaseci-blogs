@@ -3,8 +3,7 @@ date: 2026-05-09
 authors:
   - jayanaka
 categories:
-  - Jac Programming
-  - Fixing the Broken
+  - Engineering
 image: /assets/jaseci_labs_logo.jpg
 slug: topology-index-rebuild
 draft: true

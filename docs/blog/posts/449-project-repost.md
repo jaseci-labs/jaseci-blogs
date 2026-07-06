@@ -4,7 +4,6 @@ authors:
 - jaseci-team
 categories:
 - Community
-- Developers
 slug: 449-project-repost
 repost: true
 repost_url: https://cse.engin.umich.edu/stories/students-build-agentic-ai-tools-for-work-travel-wellness

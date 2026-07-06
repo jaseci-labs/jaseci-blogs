@@ -3,8 +3,8 @@ date: 2026-05-12
 authors:
 - jayanaka
 categories:
-- Jac Programming
-- AI
+- Built with Jac
+- Tutorials
 slug: building-agentic-ai-with-jac
 ---
 

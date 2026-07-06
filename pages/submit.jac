@@ -18,9 +18,9 @@ import from "@jac/runtime" { Link }
 
 
 glob SUBMIT_CATEGORIES = [
-    "Jac Programming", "Tutorials", "Fixing the Broken",
-    "AI", "Web Development", "Developers", "Community",
-];
+    "Engineering", "Tutorials", "Built with Jac",
+    "Community", "Announcements",
+];  # keep in sync with main.jac -> ALLOWED_CATEGORIES
 glob SESSION_KEY = "blog_submit_session";
 
 
