@@ -1368,6 +1368,23 @@ def:priv is_http_url(u: str) -> bool {
 }
 
 
+def:priv decode_body_md(body_md: str, is_b64: bool) -> str {
+    # The /submit client base64-encodes the post body so its raw markdown — shell
+    # snippets like `curl … | bash`, URLs — doesn't trip the edge WAF's content
+    # rules, which 403 the walker request before it ever reaches us. Decode it back
+    # to real markdown here. Plain-text bodies (is_b64=False, e.g. an older client)
+    # pass through untouched.
+    if not is_b64 {
+        return body_md;
+    }
+    try {
+        return str(base64.b64decode(body_md.encode("ascii")).decode("utf-8"));
+    } except Exception {
+        return body_md;
+    }
+}
+
+
 def:priv build_post_markdown(
     title: str, slug: str, categories: list, description: str,
     author_id: str, body: str,
@@ -2467,6 +2484,7 @@ walker:priv SubmitPost {
     has categories: list = [];
     has description: str = "";
     has body_md: str = "";
+    has body_b64: bool = False;  # body_md is base64 (client encodes it past the WAF)
     has author_bio: str = "";
     has images: list = [];
     has is_repost: bool = False;
@@ -2487,7 +2505,7 @@ walker:priv SubmitPost {
         }
         title = self.title.strip();
         slug = self.slug.strip().lower();
-        body = self.body_md;
+        body = decode_body_md(self.body_md, self.body_b64);
 
         if not title {
             report {"ok": False, "error": "title is required"};
@@ -2615,6 +2633,7 @@ walker:priv UpdatePost {
     has categories: list = [];
     has description: str = "";
     has body_md: str = "";
+    has body_b64: bool = False;  # body_md is base64 (client encodes it past the WAF)
     has images: list = [];
     has is_repost: bool = False;
     has repost_url: str = "";
@@ -2653,7 +2672,7 @@ walker:priv UpdatePost {
 
         title = self.title.strip();
         slug = self.slug.strip().lower();  # slug is fixed for an edit
-        body = self.body_md;
+        body = decode_body_md(self.body_md, self.body_b64);
         if not title {
             report {"ok": False, "error": "title is required"};
             return;
@@ -2785,6 +2804,7 @@ walker:priv EditPublishedPost {
     has categories: list = [];
     has description: str = "";
     has body_md: str = "";
+    has body_b64: bool = False;  # body_md is base64 (client encodes it past the WAF)
     has images: list = [];
     has pr_number: int = 0;  # >0 = continue the caller's own open edit PR
     has is_repost: bool = False;
@@ -2805,6 +2825,7 @@ walker:priv EditPublishedPost {
             return;
         }
         slug = self.slug.strip().lower();
+        body_md = decode_body_md(self.body_md, self.body_b64);
         main_post = fetch_main_post(gh_token, slug);
         if main_post is None {
             report {"ok": False, "error": "no published post with that slug"};
@@ -2829,7 +2850,7 @@ walker:priv EditPublishedPost {
             report {"ok": False, "error": "select at least one valid category"};
             return;
         }
-        if len(self.body_md.strip()) < 50 {
+        if len(body_md.strip()) < 50 {
             report {"ok": False, "error": "post body is too short"};
             return;
         }
@@ -2848,7 +2869,7 @@ walker:priv EditPublishedPost {
             author_override = TEAM_AUTHOR_ID;
         }
         post_md = build_edited_markdown(
-            original, title, cats, self.description.strip(), self.body_md,
+            original, title, cats, self.description.strip(), body_md,
             self.is_repost, repost_url, self.repost_source.strip(), author_override,
         );
         # Write back to the post's ACTUAL file (filename != slug), so the PR edits

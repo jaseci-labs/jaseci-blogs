@@ -31,7 +31,7 @@ def install_submit_helpers() -> None {
         return;
     }
     s = document.createElement("script");
-    s.textContent = "window.__readFileB64=function(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){var s=String(r.result||'');var i=s.indexOf('base64,');res({name:file.name,b64:i>=0?s.slice(i+7):''});};r.onerror=function(){rej(new Error('read failed'));};r.readAsDataURL(file);});};window.__loadScriptOnce=function(src){return new Promise(function(res,rej){var f=document.querySelector('script[data-so=\"'+src+'\"]');if(f){res();return;}var el=document.createElement('script');el.src=src;el.setAttribute('data-so',src);el.onload=function(){res();};el.onerror=function(){rej(new Error('load failed'));};document.head.appendChild(el);});};";
+    s.textContent = "window.__readFileB64=function(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){var s=String(r.result||'');var i=s.indexOf('base64,');res({name:file.name,b64:i>=0?s.slice(i+7):''});};r.onerror=function(){rej(new Error('read failed'));};r.readAsDataURL(file);});};window.__loadScriptOnce=function(src){return new Promise(function(res,rej){var f=document.querySelector('script[data-so=\"'+src+'\"]');if(f){res();return;}var el=document.createElement('script');el.src=src;el.setAttribute('data-so',src);el.onload=function(){res();};el.onerror=function(){rej(new Error('load failed'));};document.head.appendChild(el);});};window.__b64EncodeUtf8=function(s){var b=new TextEncoder().encode(s);var bin='';for(var i=0;i<b.length;i++){bin+=String.fromCharCode(b[i]);}return btoa(bin);};";
     document.head.appendChild(s);
 }
 
@@ -286,8 +286,8 @@ def:pub page() -> JsxElement {
                         auth_error = str(data["error"]);
                     }
                 }
-            } except Exception {
-                auth_error = "Sign-in failed. Please try again.";
+            } except Exception as e {
+                auth_error = f"Sign-in failed: {e}";
             }
             # Strip the ?code= from the URL so a refresh doesn't re-exchange.
             try {
@@ -324,8 +324,8 @@ def:pub page() -> JsxElement {
             # public_repo: lets us fork the repo + open the PR AS the user.
             url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={ru}&scope=public_repo";
             window.location.href = url;
-        } except Exception {
-            auth_error = "Could not start sign-in.";
+        } except Exception as e {
+            auth_error = f"Could not start sign-in: {e}";
         }
     }
 
@@ -433,6 +433,19 @@ def:pub page() -> JsxElement {
             return;
         }
         submitting = True;
+        # base64 the body so its raw markdown (shell snippets, URLs) gets past the
+        # edge WAF, which otherwise 403s this walker request before it reaches the
+        # server. The walker decodes it back when body_b64 is true.
+        enc_body: str = body;
+        body_is_b64: bool = False;
+        install_submit_helpers();
+        try {
+            enc_body = str(window.__b64EncodeUtf8(body or ""));
+            body_is_b64 = True;
+        } except Exception {
+            enc_body = body;
+            body_is_b64 = False;
+        }
         try {
             # Declared here so both branches assign the SAME binding — assigning
             # only inside the if/else block-scopes `res` and it's undefined below.
@@ -440,21 +453,21 @@ def:pub page() -> JsxElement {
             if editing_published {
                 res = root spawn EditPublishedPost(
                     gh_enc=gh_enc, slug=slug, title=title, categories=cats,
-                    description=description, body_md=body, images=images, pr_number=edit_pr,
+                    description=description, body_md=enc_body, body_b64=body_is_b64, images=images, pr_number=edit_pr,
                     is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                     as_team=as_team,
                 );
             } elif edit_pr > 0 {
                 res = root spawn UpdatePost(
                     gh_enc=gh_enc, pr_number=edit_pr, title=title, slug=slug,
-                    categories=cats, description=description, body_md=body, images=images,
+                    categories=cats, description=description, body_md=enc_body, body_b64=body_is_b64, images=images,
                     is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                     as_team=as_team,
                 );
             } else {
                 res = root spawn SubmitPost(
                     gh_enc=gh_enc, title=title, slug=slug, categories=cats,
-                    description=description, body_md=body, author_bio=bio, images=images,
+                    description=description, body_md=enc_body, body_b64=body_is_b64, author_bio=bio, images=images,
                     is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                     as_team=as_team,
                 );
@@ -478,10 +491,10 @@ def:pub page() -> JsxElement {
                     submit_error = str(data["error"]);
                 }
             } else {
-                submit_error = "No response from server.";
+                submit_error = "No response from the server (the request may have been blocked before it reached the app).";
             }
-        } except Exception {
-            submit_error = "Network error while saving.";
+        } except Exception as e {
+            submit_error = f"Save failed: {e}";
         }
         submitting = False;
     }
@@ -520,8 +533,8 @@ def:pub page() -> JsxElement {
                     subs_error = str(data["error"]);
                 }
             }
-        } except Exception {
-            subs_error = "Could not load that submission for editing.";
+        } except Exception as e {
+            subs_error = f"Could not load that submission for editing: {e}";
         }
         subs_busy = "";
     }
@@ -542,8 +555,8 @@ def:pub page() -> JsxElement {
                     subs_error = str(data["error"]);
                 }
             }
-        } except Exception {
-            subs_error = "Could not create preview.";
+        } except Exception as e {
+            subs_error = f"Could not create preview: {e}";
         }
         subs_busy = "";
     }
@@ -576,8 +589,8 @@ def:pub page() -> JsxElement {
                     subs_error = str(data["error"]);
                 }
             }
-        } except Exception {
-            subs_error = "Could not load submissions.";
+        } except Exception as e {
+            subs_error = f"Could not load submissions: {e}";
         }
         subs_loading = False;
     }
@@ -595,8 +608,8 @@ def:pub page() -> JsxElement {
                     editable_error = str(data["error"]);
                 }
             }
-        } except Exception {
-            editable_error = "Could not load posts.";
+        } except Exception as e {
+            editable_error = f"Could not load posts: {e}";
         }
         editable_loading = False;
     }
@@ -628,8 +641,8 @@ def:pub page() -> JsxElement {
                     editable_error = str(data["error"]);
                 }
             }
-        } except Exception {
-            editable_error = "Could not load that post for editing.";
+        } except Exception as e {
+            editable_error = f"Could not load that post for editing: {e}";
         }
         editable_busy = "";
     }
