@@ -1,0 +1,81 @@
+name: Pod logs (read-only)
+
+# Manually-triggered, READ-ONLY diagnostics for the jaseci-blogs app pods.
+# Reuses the same OIDC role as deploy.yml but never mutates the cluster or
+# redeploys — it only reads pod status and logs into the job summary.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tail:
+        description: "Log lines to tail per pod"
+        required: false
+        default: "800"
+      grep:
+        description: "Optional case-insensitive filter (e.g. SubmitPost, Traceback, 500)"
+        required: false
+        default: ""
+      previous:
+        description: "Also fetch logs from the previous (crashed) container"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  pod-logs:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.0
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::776241927220:role/GitHubActionsJaseciDeployRole
+          role-session-name: GitHubActions-JaseciBlogsLogs
+          audience: sts.amazonaws.com
+
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --region us-east-2 --name jaseci-cluster
+
+      - name: Collect pod status + logs
+        env:
+          TAIL: ${{ github.event.inputs.tail }}
+          GREP: ${{ github.event.inputs.grep }}
+          PREVIOUS: ${{ github.event.inputs.previous }}
+        run: |
+          NS=jaseci-blogs
+          DEPLOY=deployment/jaseci-blogs
+          {
+            echo "## jaseci-blogs pod diagnostics"
+            echo "_$(date -u) — tail=${TAIL:-800} grep='${GREP}' previous=${PREVIOUS}_"
+            echo ""
+            echo "### Pods"
+            echo '```'
+            kubectl get pods -n "$NS" -o wide 2>&1 || true
+            echo '```'
+            echo "### App logs ($DEPLOY)"
+            echo '```'
+            if [ -n "$GREP" ]; then
+              kubectl logs -n "$NS" "$DEPLOY" --all-containers --timestamps --tail="${TAIL:-800}" 2>&1 \
+                | grep -iE "$GREP" || echo "(no lines matched '$GREP')"
+            else
+              kubectl logs -n "$NS" "$DEPLOY" --all-containers --timestamps --tail="${TAIL:-800}" 2>&1 || true
+            fi
+            echo '```'
+            if [ "$PREVIOUS" = "true" ]; then
+              echo "### Previous (crashed) container logs"
+              echo '```'
+              kubectl logs -n "$NS" "$DEPLOY" --all-containers --previous --tail="${TAIL:-800}" 2>&1 || echo "(no previous container)"
+              echo '```'
+            fi
+            echo "### describe (events / restarts)"
+            echo '```'
+            kubectl describe pods -n "$NS" -l app=jaseci-blogs 2>&1 | tail -60 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
