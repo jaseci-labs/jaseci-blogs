@@ -1,11 +1,10 @@
 ---
-date: 2026-07-09
+date: '2026-07-09'
 authors:
-  - mars
+- mars
 categories:
-  - Tutorials
+- Tutorials
 slug: one-binary-build-anything
-draft: true
 ---
 
 # One Binary, Build Anything

@@ -115,3 +115,8 @@ schedule:
   published_at: '2026-07-01T17:52:00Z'
   published_by: Jayanaka-98
   first_publish: true
+- slug: one-binary-build-anything
+  status: published
+  published_at: '2026-07-09T14:39:29Z'
+  published_by: Jayanaka-98
+  first_publish: true
