@@ -1,14 +1,13 @@
 ---
-date: 2026-07-12
+date: '2026-07-12'
 authors:
-  - jaseci-team
+- jaseci-team
 categories:
-  - Built with Jac
-  - Community
+- Built with Jac
+- Community
 slug: ghostwatch-how-one-of-the-jachacks-winter-winners-built-an-autonomous-code-guardian-in-jac
 repost: true
-repost_url: "https://dev.to/ayushmk/we-built-an-autonomous-code-guardian-in-a-weekend-heres-what-happened-4982"
-draft: true
+repost_url: https://dev.to/ayushmk/we-built-an-autonomous-code-guardian-in-a-weekend-heres-what-happened-4982
 ---
 
 # GhostWatch: how one of the JacHacks Winter winners built an autonomous code guardian in Jac
