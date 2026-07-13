@@ -79,7 +79,42 @@ jobs:
           # at startup and registers the `--scale` flag — the global `jac` (from
           # `pip install jaclang`) builds its arg parser before the venv is on
           # the path, so it does not recognize `--scale`.
-          .jac/venv/bin/jac start main.jac --scale
+          #
+          # Zero-touch retry for the RWO code-sync race (permanent fix tracked in
+          # .github/CODE_SYNC_RWO_FIX.md). jac-scale syncs code via a throwaway
+          # `jaseci-blogs-code-sync` pod that mounts the ReadWriteOnce (EBS) code
+          # PVC. An EBS volume attaches to one node at a time, and the long-lived
+          # code-server pod already holds it; if the scheduler places code-sync on
+          # a DIFFERENT node it wedges in ContainerCreating (Multi-Attach) and the
+          # deploy times out at "Syncing application code to PVC". Whether it
+          # co-locates is scheduler luck — deploys pass for weeks, then fail with
+          # no code change. So we retry: force-delete the wedged code-sync pod and
+          # re-run, re-rolling the placement each time. The live app pod (which
+          # serves from an emptyDir, not this PVC) is NEVER scaled or evicted, so
+          # even a total failure leaves the site UP on the last-synced code
+          # (identical to not deploying) — it never goes down.
+          NS=jaseci-blogs
+          for attempt in 1 2 3 4 5; do
+            echo "::group::Deploy attempt ${attempt}/5"
+            # Clear any code-sync pod wedged by this or a prior failed run, so
+            # jac-scale can create a fresh one (avoids an AlreadyExists conflict).
+            kubectl delete pod jaseci-blogs-code-sync -n "$NS" \
+              --ignore-not-found --force --grace-period=0 2>/dev/null || true
+            kubectl wait --for=delete pod/jaseci-blogs-code-sync -n "$NS" \
+              --timeout=60s 2>/dev/null || true
+            if .jac/venv/bin/jac start main.jac --scale; then
+              echo "::endgroup::"
+              echo "Deployed successfully on attempt ${attempt}."
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "Attempt ${attempt} failed (likely code-sync Multi-Attach on an off-node); retrying…"
+          done
+          echo "All 5 attempts failed. The live app pod was never touched, so the site"
+          echo "is still serving the last successfully-synced code. Re-run this workflow —"
+          echo "it usually succeeds once code-sync happens to co-schedule with the app pod."
+          echo "For the permanent fix, see .github/CODE_SYNC_RWO_FIX.md."
+          exit 1
 
       - name: Verify deployment
         run: |
