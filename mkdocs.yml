@@ -79,6 +79,7 @@ extra_javascript:
 
 plugins:
   - search
+  - mkdocs-video
   - blog:
       blog_dir: blog
       post_dir: "{blog}/posts"
@@ -100,8 +101,10 @@ plugins:
         - Tutorials
         - Fixing the Broken
         - AI
+        - AI & ML
         - Web Development
         - Developers
+        - Hackathon
         - Community
       authors: true
       authors_file: "{blog}/.authors.yml"
