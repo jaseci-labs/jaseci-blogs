@@ -245,9 +245,16 @@ def:pub page() -> JsxElement {
             if res.reports and len(res.reports) > 0 {
                 data = res.reports[0];
                 if data["ok"] {
-                    preview_link = str(data["url"]);
+                    # Open the local url, NOT the preview_link state field: a
+                    # `has` field compiles to useState, so the assignment above
+                    # is a setter call and `preview_link` still reads as "" for
+                    # the rest of this render — window.open("") opens a blank
+                    # about:blank tab. submit.jac's open_preview already opens
+                    # the local value for this reason.
+                    url = str(data["url"]);
+                    preview_link = url;
                     try {
-                        window.open(preview_link, "_blank");
+                        window.open(url, "_blank");
                     } except Exception {
                         _ignore = None;
                     }
