@@ -49,9 +49,9 @@ To check out the tutorial for yourself go to [Agentic AI tutorial GitHub repo](h
 
 ## **Former Y-Combinator Speaker**
 
-Vatsul Shah, co-founder of Narrative (YC F25), shared the 'founder’s journey' of building AI-powered video tools. He pivoted from technical architecture to the realities of the startup grind, offering participants a roadmap for transitioning their hackathon prototypes into viable products. His session highlighted the importance of solving 'hair-on-fire' problems, a mindset many teams adopted for their final builds.
+Vatsal Shah, co-founder of Narrative (YC F25), shared the 'founder’s journey' of building AI-powered video tools. He pivoted from technical architecture to the realities of the startup grind, offering participants a roadmap for transitioning their hackathon prototypes into viable products. His session highlighted the importance of solving 'hair-on-fire' problems, a mindset many teams adopted for their final builds.
 
-<img src="/assets/jachacks-2026/YC-Speaker.jpg" alt="Vatsul Shah (former co-founder) speaking at JacHacks to large crowd" />
+<img src="/assets/jachacks-2026/YC-Speaker.jpg" alt="Vatsal Shah (former co-founder) speaking at JacHacks to large crowd" />
 
 ## **Top 3 Projects That Stole the Spotlight**
 
