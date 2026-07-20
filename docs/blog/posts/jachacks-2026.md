@@ -7,6 +7,7 @@ categories:
   - AI
   - Hackathon
 slug: jachacks-2026
+draft: true
 ---
 
 # **JacHacks: The premier AI hackathon at the University of Michigan**
