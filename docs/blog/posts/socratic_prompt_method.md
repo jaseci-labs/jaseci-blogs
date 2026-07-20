@@ -3,8 +3,7 @@ date: 2026-03-10
 authors:
   - mars
 categories:
-  - Jac Programming
-  - Developers
+  - Tutorials
 slug: socratic-prompt-method
 ---
 

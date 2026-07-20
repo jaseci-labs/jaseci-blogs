@@ -1,0 +1,148 @@
+[project]
+name = "jaseci-blogs"
+version = "0.1.0"
+description = "The Jaseci & Jac engineering blog — editorial home for jaseci.org writing."
+
+[serve]
+base_route_app = "app"
+cl_route_prefix = "/"
+
+[plugins.client]
+enabled = true
+# Production build: single server serves the bundled client + static public/
+# from one origin. Dev/HMR splits vite (:8000) and API (:8001), and vite does
+# not serve public/, which 404s /assets/* and /jaclang.zip on deploy.
+debug = false
+
+[plugins.client.paths]
+"@components/*" = "./components/*"
+"@styles/*" = "./styles/*"
+
+# Default <head> for the generated SPA shell. Without this, jac-client emits only
+# <title>app</title> with no meta, so non-JS crawlers (LinkedIn, Slack, Twitter)
+# render a blank "app" card. Site-wide default only (same for every URL); real
+# browsers still get per-page title/og from set_social_meta JS. Per-post cards FOR
+# CRAWLERS need an edge dynamic-rendering layer (jac-client has no SSR).
+#
+# IMPORTANT — jac-client BUG (reported in JACSCALE_DEPLOY_CRASHLOOP_ISSUE.md): the
+# generated <meta> tags are emitted UNQUOTED (`content=Foo Bar`), so any value with
+# a space truncates at the first word, and embedded quotes get &quot;-encoded. So we
+# only set fields that work: `title` (element text, renders in full) and single-token
+# values. LinkedIn falls back to <title> when og:title is absent, so this still yields
+# a correct card title. Re-add og_title/og_description/description once jac-client
+# quotes attribute values.
+[plugins.client.app_meta_data]
+title = "Jaseci Blogs — engineering writing from the Jaseci & Jac ecosystem"
+theme_color = "#b54a1a"
+og_image = "https://www.jaseci.org/images/logo.png"
+
+[plugins.scale]
+enabled = true
+
+# jac-scale owns the submission portal's session JWT (it signs/validates the
+# token the browser sends as `Authorization: Bearer` on every walker call). The
+# app no longer hand-rolls JWTs. Set a real secret in prod — the default is
+# forge-able. SUBMIT_SESSION_SECRET stays, but now only as the Fernet key for the
+# GitHub token at rest (see [plugins.scale.secrets]).
+[plugins.scale.jwt]
+secret = "${JWT_SECRET}"
+algorithm = "HS256"
+exp_delta_days = 7
+
+[plugins.scale.kubernetes]
+app_name = "jaseci-blogs"
+namespace = "jaseci-blogs"
+liveness_initial_delay = 300
+liveness_failure_threshold = 10
+readiness_initial_delay = 60
+# Posts/authors are parsed from disk, but the submission portal persists
+# shareable draft previews (PreviewDoc nodes on the shared public root), which
+# must survive restarts and be consistent across replicas. jac-scale therefore
+# auto-provisions MongoDB + Redis StatefulSets (persistent storage; credentials
+# auto-generated as K8s secrets; the DBs persist across app redeploys). Needs
+# the jac-scale[data] extra (pymongo/redis) — see [dependencies] below.
+mongodb_enabled = true
+redis_enabled = true
+# jac-scale builds the client bundle (vite/bun) inside the pod on every boot,
+# which is memory- and CPU-hungry: a 512Mi limit OOM-kills the build (exit 137).
+# Limits must cover the build peak even though steady-state serving is light;
+# requests stay modest (build is a short burst) and let the HPA read CPU%.
+cpu_request = "250m"
+cpu_limit = "1500m"
+memory_request = "512Mi"
+memory_limit = "3Gi"
+# Attach to the cluster's shared AWS ALB (group jaseci-cluster-alb-2) instead of
+# standing up a dedicated NGINX controller + NLB per app. jac-scale emits the
+# ALB Ingress for `domain`; the ALB terminates TLS via the ACM cert, so no
+# cert-manager is required. Requires jac-scale >= 0.2.23 (shared-ingress ALB
+# support, jaseci-labs/jaseci#6012 + #6309).
+shared_ingress = true
+shared_ingress_class = "alb"
+shared_ingress_tls = true
+domain = "blogs.jaseci.org"
+
+[plugins.scale.kubernetes.shared_ingress_annotations]
+"alb.ingress.kubernetes.io/scheme" = "internet-facing"
+"alb.ingress.kubernetes.io/target-type" = "ip"
+"alb.ingress.kubernetes.io/group.name" = "jaseci-cluster-alb-2"
+"alb.ingress.kubernetes.io/certificate-arn" = "arn:aws:acm:us-east-2:776241927220:certificate/642526d6-00ee-4394-970d-89d5dc898906"
+"alb.ingress.kubernetes.io/listen-ports" = '[{"HTTP": 80}, {"HTTPS": 443}]'
+"alb.ingress.kubernetes.io/ssl-redirect" = "443"
+
+[plugins.scale.secrets]
+PUBLIC_SITE_URL = "https://blogs.jaseci.org"
+# Submission portal credentials. ${...} is resolved from the deploy-time
+# environment (the GitHub Actions runner — see deploy.yml) into the
+# jaseci-blogs-secrets k8s Secret, never committed. Blank values are tolerated:
+# the /submit + /reviewer features simply report "not configured" until set.
+# Only an OAuth App is needed — every GitHub action runs as the signed-in user
+# (fork + PR). See .github/SUBMIT_FLOW.md for the one-time setup.
+GH_REPO = "jaseci-labs/jaseci-blogs"
+GH_BASE_BRANCH = "main"
+GH_OAUTH_CLIENT_ID = "${GH_OAUTH_CLIENT_ID}"
+GH_OAUTH_CLIENT_SECRET = "${GH_OAUTH_CLIENT_SECRET}"
+# jac-scale signs the session JWT with this (see [plugins.scale.jwt]).
+JWT_SECRET = "${JWT_SECRET}"
+# Fernet key for the GitHub token at rest (the browser holds only ciphertext).
+SUBMIT_SESSION_SECRET = "${SUBMIT_SESSION_SECRET}"
+
+[dependencies]
+# Jac toolchain plugins are installed by `jac install` (which reads this table),
+# not `pip install` — plugin pyproject.toml files were removed in
+# jaseci-labs/jaseci#6322. The `deploy` extra pulls in the kubernetes + docker
+# clients that `jac start --scale` needs (the `data` extra alone does not).
+# [data] adds pymongo + redis clients for the auto-provisioned MongoDB/Redis
+# (mongodb_enabled/redis_enabled above), used to persist shareable previews.
+# PINNED (was "jac-scale[deploy,data]" >=0.2.23 / jac-client "*"). The runner's
+# jac-scale version generates the pod manifest; newer releases switched the pod
+# to a boot-time jac binary installer that resolves "latest" from GitHub Releases
+# and crash-loops ("Could not determine latest version from GitHub Releases").
+# Pinned to the last pre-breakage set (all 2026-06-03), still >=0.2.23 so the
+# shared-ingress ALB support is retained. Keep in lockstep with jaclang==0.16.0
+# in .github/workflows/deploy.yml. To re-pin to your last green deploy, read its
+# "Install Jac toolchain" step: "Successfully installed jaclang-X jac-scale-Y …".
+"jac-scale[deploy,data]" = "==0.2.23"
+jac-client = "==0.3.21"
+markdown = ">=3.5"
+pyyaml = ">=6.0"
+pygments = ">=2.17"
+# Submission portal: GitHub API calls + Fernet encryption of the GitHub token
+# (the session JWT is now jac-scale's, so no pyjwt here).
+requests = ">=2.31"
+cryptography = ">=42.0"
+
+[dependencies.npm]
+react = "^18.2.0"
+react-dom = "^18.2.0"
+react-router-dom = "^6.22.0"
+react-error-boundary = "^5.0.0"
+react-hook-form = "^7.71.0"
+zod = "^4.3.6"
+"@hookform/resolvers" = "^5.2.2"
+
+[dependencies.npm.dev]
+vite = "^6.4.1"
+"@vitejs/plugin-react" = "^4.2.1"
+typescript = "^5.3.3"
+"@types/react" = "^18.2.0"
+"@types/react-dom" = "^18.2.0"

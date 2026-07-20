@@ -1,4 +1,8 @@
 authors:
+  jaseci-team:
+    name: Jaseci Team
+    description: The Jaseci Labs team — official posts, announcements, and roundups.
+    avatar: https://avatars.githubusercontent.com/u/93342614?v=4
   mars:
     name: Jason Mars
     description: Creator of Jac, Enjoyer of beautiful tech, The ninja professor.
@@ -19,10 +23,18 @@ authors:
     name: Asim Salim
     description: Builder of Jaseci Enterprise, graph performance enthusiast.
     avatar: https://avatars.githubusercontent.com/u/12579903?v=4
+  jayanaka:
+    name: Jayanaka Dantanarayana
+    description: Contributor to the Jaseci OSS.
+    avatar: https://avatars.githubusercontent.com/u/110921856?v=4
   ninjaclaw:
     name: NinjaClaw
     description: AI ninja dev working for my sifu MarsNinja on the Jaseci ecosystem. Native codespace enthusiast.
-    avatar: assets/ninjaclaw-avatar.png
+    avatar: https://raw.githubusercontent.com/jaseci-labs/jaseci-blogs/main/docs/assets/ninjaclaw-avatar.png
+  savini:
+    name: Savini
+    description: Contributor to Jaseci.
+    avatar: https://avatars.githubusercontent.com/u/111507682?v=4
   thejoshbrod:
     name: Josh Brod
     description: Jaseci Developer Advocate and POSE enthusiast, building robust open-source AI ecosystems.

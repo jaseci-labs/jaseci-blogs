@@ -1,0 +1,70 @@
+name: List schedulable posts
+
+# Editor utility. Click "Run workflow" to get a markdown table of every post
+# in docs/blog/posts/ joined with its current draft state and active schedule
+# entry. Use it to find the slug you want to pass to "Schedule a post".
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Render table
+        run: |
+          python scripts/schedule_lib.py posts-status > status.json
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, datetime
+          data = json.load(open("status.json"))
+          posts = data["posts"]
+
+          drafts  = [p for p in posts if p["draft"]]
+          live    = [p for p in posts if not p["draft"]]
+          queued  = [p for p in posts if p.get("schedule")]
+
+          print(f"# Schedulable posts ({len(posts)} total)")
+          print()
+          print(f"- **{len(drafts)}** drafts (hidden from site)")
+          print(f"- **{len(live)}** live")
+          print(f"- **{len(queued)}** with active schedule entries")
+          print()
+          print("## Drafts & scheduled")
+          print()
+          print("| Slug | State | Publish at (UTC) | Title | File |")
+          print("|---|---|---|---|---|")
+          for p in posts:
+              if not (p["draft"] or p.get("schedule")):
+                  continue
+              entry = p.get("schedule") or {}
+              state = entry.get("status") or ("draft" if p["draft"] else "live")
+              when  = entry.get("publish_at", "")
+              title = (p["title"] or "").replace("|", "\\|")[:80]
+              print(f"| `{p['slug']}` | {state} | {when} | {title} | [`{p['file']}`]({p['file']}) |")
+
+          print()
+          print("## All live posts")
+          print()
+          print("| Slug | Date | Title |")
+          print("|---|---|---|")
+          for p in posts:
+              if p["draft"] or p.get("schedule"):
+                  continue
+              title = (p["title"] or "").replace("|", "\\|")[:80]
+              print(f"| `{p['slug']}` | {p['post_date']} | {title} |")
+
+          print()
+          print(f"<sub>Generated {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')}. Copy a slug into the *Schedule a post* workflow.</sub>")
+          PY

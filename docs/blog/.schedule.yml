@@ -1,0 +1,127 @@
+# Editorial publish calendar for blogs.jaseci.org
+#
+# This file is maintained by the scheduling workflows (do not hand-edit unless
+# you know what you're doing). It is the source of truth for what is queued
+# to publish and when.
+#
+# Each entry corresponds to a post in docs/blog/posts/<slug>.md whose
+# frontmatter has draft: true. The hourly auto-publish workflow watches this
+# file and, when an entry's publish_at time has passed:
+#   1. removes draft: true from the post's frontmatter
+#   2. rewrites the post's `date:` to the actual publish time (UTC)
+#   3. marks the schedule entry as published
+#   4. commits the change, which triggers a normal deploy
+#
+# To add/hold/cancel/publish-now an entry, use the GitHub Actions tab
+# ("Schedule a post" workflow) or `/schedule`, `/hold`, `/cancel`,
+# `/publish-now` slash-commands on the post's PR.
+#
+# Schema:
+#   schedule:
+#     - slug: <matches the `slug:` frontmatter of the target post>
+#       publish_at: <ISO 8601 UTC datetime, e.g. 2026-06-01T14:00:00Z>
+#       status: scheduled | held | published | cancelled
+#       added_by: <github login, set by the workflow>
+#       added_at: <ISO 8601 UTC, set by the workflow>
+#       notes: <free text, optional>
+
+schedule:
+- slug: browser-automation-walkers-fix-it
+  status: published
+  published_at: '2026-03-14T00:58:27Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: building-agentic-ai-with-jac
+  status: published
+  published_at: '2026-05-14T01:28:57Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: building-protomcp
+  status: published
+  published_at: '2026-03-16T15:21:55Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: dataclasses-and-jac-objects
+  status: published
+  published_at: '2025-11-14T03:31:00Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: four-things-object-spatial-programming
+  status: published
+  published_at: '2025-11-14T03:31:00Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: jac-vs-sota-todo-app
+  status: published
+  published_at: '2026-04-09T22:04:49Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: python-getting-jacd
+  status: published
+  published_at: '2025-11-14T03:31:00Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: making-jac-scale-traversals-faster
+  status: published
+  published_at: '2026-04-10T11:44:08Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: nairobi-ai-jaseci-ouk
+  status: published
+  published_at: '2026-02-24T15:21:50Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: nairobi-hackathon-feedback
+  status: published
+  published_at: '2026-03-12T06:15:49Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: socratic-prompt-method
+  status: published
+  published_at: '2026-03-10T20:00:14Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: why-jac-client-should-drop-meta-packages
+  status: published
+  published_at: '2026-03-31T11:49:31Z'
+  published_by: backfill
+  first_publish: true
+  notes: Backfilled from git history; original publish predates the editorial scheduler.
+- slug: topology-index-rebuild
+  status: published
+  published_at: '2026-05-09T15:14:02Z'
+  published_by: backfill
+  first_publish: true
+  notes: 'Restored from PR #17 (merged 2026-05-09, dropped by main force-push). See
+    issue #21.'
+- slug: tobu-memory-graph-case-study
+  status: published
+  published_at: '2026-06-06T13:48:34Z'
+  published_by: Jayanaka-98
+  first_publish: true
+- slug: 449-project-repost
+  status: published
+  published_at: '2026-07-01T17:52:00Z'
+  published_by: Jayanaka-98
+  first_publish: true
+- slug: one-binary-build-anything
+  status: published
+  published_at: '2026-07-09T14:39:29Z'
+  published_by: Jayanaka-98
+  first_publish: true
+- slug: ghostwatch-how-one-of-the-jachacks-winter-winners-built-an-autonomous-code-guardian-in-jac
+  status: published
+  published_at: '2026-07-12T22:40:12Z'
+  published_by: Jayanaka-98
+  first_publish: true

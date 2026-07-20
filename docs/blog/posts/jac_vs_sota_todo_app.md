@@ -3,8 +3,8 @@ date: 2026-04-09
 authors:
   - mars
 categories:
-  - Jac Programming
-  - Web Development
+  - Built with Jac
+  - Engineering
 slug: jac-vs-sota-todo-app
 ---
 

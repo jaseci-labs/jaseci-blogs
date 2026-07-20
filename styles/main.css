@@ -1,0 +1,2048 @@
+/* Color tokens, layout primitives, header/footer chrome.
+   Editorial palette: warm off-white, ink black, restrained accent. */
+
+:root[data-theme="light"], :root {
+    --bg: #faf7f2;
+    --bg-elev: #ffffff;
+    --bg-subtle: #f1ece2;
+    --text: #1a1a1a;
+    --text-strong: #0d0d0d;
+    --text-muted: #6a6a6a;
+    --rule: #e6dfd1;
+    --accent: #b54a1a;
+    --accent-soft: #fef3eb;
+    --link: #b54a1a;
+    --link-hover: #8a3812;
+    --code-bg: #f1ece2;
+    --code-border: #e6dfd1;
+    --shadow-card: 0 1px 2px rgba(20, 14, 4, 0.04), 0 8px 24px rgba(20, 14, 4, 0.04);
+}
+
+:root[data-theme="dark"] {
+    --bg: #0e0d0c;
+    --bg-elev: #161513;
+    --bg-subtle: #1c1a17;
+    --text: #e7e3da;
+    --text-strong: #ffffff;
+    --text-muted: #8a857b;
+    --rule: #2a2723;
+    --accent: #e07b3f;
+    --accent-soft: #2a1c12;
+    --link: #e07b3f;
+    --link-hover: #f49862;
+    --code-bg: #161513;
+    --code-border: #2a2723;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+body {
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+    color: var(--link);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+a:hover {
+    color: var(--link-hover);
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 3rem 0;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+.container.narrow {
+    max-width: 720px;
+}
+.container.wide {
+    max-width: 1400px;
+}
+/* App-like pages (submit / reviewer) that want most of the viewport width. */
+.container.app {
+    max-width: min(1600px, 96vw);
+}
+
+/* Side-by-side markdown editor + live preview; stacks on narrow screens.
+   minmax(0, 1fr) (not bare 1fr = minmax(auto,1fr)) forces EQUAL columns —
+   otherwise the textarea's min-content width steals space from the preview. */
+.submit-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: stretch;
+}
+.submit-editor-grid > * {
+    min-width: 0;
+}
+/* The preview pane should fill its column, not the 64ch reading cap .prose sets. */
+.submit-editor-grid > .prose {
+    max-width: none;
+    margin: 0;
+}
+@media (max-width: 720px) {
+    .submit-editor-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Native date/time/select controls render their icons via color-scheme; in dark
+   mode tell the browser so the calendar/clock indicators aren't black-on-dark. */
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"],
+[data-theme="dark"] select {
+    color-scheme: dark;
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--text-strong);
+    color: var(--bg);
+    padding: 0.75rem 1rem;
+    z-index: 100;
+}
+.skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+}
+
+/* Header */
+/* Inverted header — same trick as the footer: the chrome carries the opposite
+   theme's palette so it bookends the page. Re-declaring the semantic tokens on
+   .site-header flips every descendant that reads them. */
+:root[data-theme="light"] .site-header, :root .site-header {
+    --bg: #0e0d0c;
+    --bg-subtle: #1c1a17;
+    --text: #e7e3da;
+    --text-strong: #ffffff;
+    --text-muted: #8a857b;
+    --rule: #2a2723;
+    --accent: #e07b3f;
+    --link: #e07b3f;
+    --link-hover: #f49862;
+}
+:root[data-theme="dark"] .site-header {
+    --bg: #faf7f2;
+    --bg-subtle: #f1ece2;
+    --text: #1a1a1a;
+    --text-strong: #0d0d0d;
+    --text-muted: #6a6a6a;
+    --rule: #e6dfd1;
+    --accent: #b54a1a;
+    --link: #b54a1a;
+    --link-hover: #8a3812;
+}
+.site-header {
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: saturate(180%) blur(8px);
+    background-color: color-mix(in srgb, var(--bg) 88%, transparent);
+}
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    min-height: 64px;
+}
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--text-strong);
+}
+.brand:hover {
+    color: var(--text-strong);
+}
+.brand-logo-link {
+    display: inline-flex;
+    align-items: center;
+}
+.brand-logo {
+    border-radius: 6px;
+}
+.brand-text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    /* .brand-text is now the anchor (links to the blog index), so re-assert the
+       brand color the parent used to provide and override the global `a` link
+       color. */
+    color: var(--text-strong);
+}
+.brand-text:hover {
+    color: var(--text-strong);
+}
+.brand-sub {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-style: italic;
+}
+.primary-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+}
+.primary-nav a {
+    color: var(--text);
+    font-weight: 500;
+}
+.primary-nav a:hover {
+    color: var(--accent);
+}
+.primary-nav a.nav-jaseci {
+    color: var(--accent);
+    font-weight: 600;
+}
+.primary-nav a.nav-jaseci:hover {
+    color: var(--link-hover);
+}
+/* Contribute: a highlighted pill button so it reads as the primary call to
+   action among the plain text nav links. */
+.primary-nav a.nav-write {
+    padding: 0.4rem 0.95rem;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.primary-nav a.nav-write:hover {
+    color: var(--bg);
+    background: var(--text-strong);
+    transform: translateY(-1px);
+}
+/* Reviewer-only tools (Reviewer, Analytics): outlined pills so they read as a
+   distinct secondary action group, set apart from the solid Contribute pill. */
+.primary-nav a.nav-staff {
+    padding: 0.4rem 0.95rem;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.primary-nav a.nav-staff:hover {
+    background: var(--accent);
+    color: var(--bg);
+    transform: translateY(-1px);
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.icon-btn {
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.icon-btn:hover {
+    background: var(--bg-subtle);
+    color: var(--accent);
+}
+
+/* Draft-preview band: pinned just beneath the sticky site header so it stays
+   visible while reading instead of scrolling away with the post body. top
+   matches .header-inner's 64px min-height; z-index sits under the header (30)
+   but above post content. */
+.preview-banner {
+    position: sticky;
+    top: 64px;
+    z-index: 25;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.6rem 0;
+    text-align: center;
+}
+
+/* Mobile menu: the hamburger toggle and dropdown panel are desktop-hidden and
+   only appear once the primary nav collapses at the breakpoint below. */
+.nav-toggle {
+    display: none;
+}
+.mobile-nav {
+    display: none;
+}
+@media (max-width: 860px) {
+    .primary-nav {
+        display: none;
+    }
+    .nav-toggle {
+        display: inline-flex;
+    }
+    .mobile-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding-top: 0.75rem;
+        padding-bottom: 1rem;
+        border-top: 1px solid var(--rule);
+    }
+    .mobile-nav a {
+        color: var(--text);
+        font-weight: 500;
+        padding: 0.6rem 0;
+    }
+    .mobile-nav a:hover {
+        color: var(--accent);
+    }
+    .mobile-nav a.nav-jaseci {
+        color: var(--accent);
+        font-weight: 600;
+    }
+    .mobile-nav a.nav-write {
+        align-self: flex-start;
+        margin-top: 0.25rem;
+        padding: 0.5rem 1.1rem;
+        background: var(--accent);
+        color: var(--bg);
+        border-radius: 999px;
+        font-weight: 600;
+    }
+    .mobile-nav a.nav-staff {
+        align-self: flex-start;
+        margin-top: 0.25rem;
+        padding: 0.5rem 1.1rem;
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        border-radius: 999px;
+        font-weight: 600;
+    }
+}
+
+/* Main */
+.site-main {
+    min-height: calc(100vh - 64px - 200px);
+    padding: 0 0 6rem;
+}
+
+/* Footer */
+/* Inverted footer: it grounds the page by carrying the opposite theme's
+   palette. We re-declare the semantic tokens scoped to .site-footer, so every
+   descendant that reads var(--bg-subtle)/var(--text)/... flips automatically. */
+:root[data-theme="light"] .site-footer, :root .site-footer {
+    --bg-subtle: #1c1a17;
+    --text: #e7e3da;
+    --text-strong: #ffffff;
+    --text-muted: #8a857b;
+    --rule: #2a2723;
+    --accent: #e07b3f;
+}
+:root[data-theme="dark"] .site-footer {
+    --bg-subtle: #f1ece2;
+    --text: #1a1a1a;
+    --text-strong: #0d0d0d;
+    --text-muted: #6a6a6a;
+    --rule: #e6dfd1;
+    --accent: #b54a1a;
+}
+.site-footer {
+    border-top: 1px solid var(--rule);
+    background: var(--bg-subtle);
+    color: var(--text);
+    padding: 3rem 0 2rem;
+    margin-top: 4rem;
+}
+.footer-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 2fr;
+    gap: 3rem;
+    align-items: start;
+}
+/* Contribute CTA in the footer: same highlighted accent pill as the nav, so
+   the call to action is reachable from the bottom of every page too. Scoped
+   under .site-footer to beat .cta-pill's later-declared background/color. */
+.site-footer .footer-cta {
+    margin-top: 1.25rem;
+    background: var(--accent);
+    color: var(--bg-subtle);
+}
+.site-footer .footer-cta:hover {
+    background: var(--text-strong);
+    color: var(--bg-subtle);
+}
+.footer-brand {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+}
+.footer-title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-family: var(--font-serif);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    margin: 0 0 0.25rem;
+}
+/* .footer-title is now a link to the index; keep it visually unchanged by
+   holding the brand color on hover instead of the global link-hover color. */
+.footer-title:hover {
+    color: var(--text-strong);
+}
+.footer-tagline {
+    margin: 0;
+    font-size: 0.9375rem;
+    max-width: 32ch;
+}
+.footer-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+.footer-nav .eyebrow {
+    margin-bottom: 0.75rem;
+}
+.footer-nav a {
+    display: block;
+    padding: 0.25rem 0;
+    color: var(--text);
+    font-size: 0.9375rem;
+}
+.footer-nav a:hover {
+    color: var(--accent);
+}
+.footer-nav a.footer-social {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.footer-nav a.footer-social svg {
+    flex-shrink: 0;
+}
+.footer-bottom {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.built-with-jaseci {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+}
+.built-with-jaseci:hover {
+    color: var(--text);
+}
+.built-with-jaseci-logo {
+    height: 14px;
+    width: auto;
+    vertical-align: middle;
+}
+.built-with-jaseci-wordmark {
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--text);
+}
+@media (max-width: 720px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    .footer-nav {
+        gap: 1.5rem;
+    }
+}
+
+/* Post page chrome */
+.post-shell {
+    padding-top: 3.5rem;
+}
+
+/* On-this-page TOC — floats in the left gutter beside the centered reading
+   column. Fixed so it stays put while reading; only shown when the viewport is
+   wide enough to have room for it (see media query below). */
+.post-toc {
+    position: fixed;
+    top: 7.5rem;
+    left: calc((100vw - 720px) / 2 - 232px);
+    width: 212px;
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    z-index: 5;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+.post-toc.post-toc-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.post-toc-title {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem;
+}
+.post-toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 1px solid var(--rule);
+}
+.post-toc-item {
+    margin: 0;
+}
+.post-toc-link {
+    display: block;
+    padding: 0.3rem 0 0.3rem 0.875rem;
+    margin-left: -1px;
+    border-left: 2px solid transparent;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.post-toc-l3 .post-toc-link {
+    padding-left: 1.75rem;
+    font-size: 0.78125rem;
+}
+.post-toc-link:hover {
+    color: var(--text);
+}
+.post-toc-link.is-active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 600;
+}
+@media (max-width: 1199px) {
+    .post-toc {
+        display: none;
+    }
+}
+
+/* Reference rail — mirrors the TOC but in the right gutter. A vertical spine
+   with a favicon dot per outbound link (GitHub / YouTube / external site);
+   cards expand as you scroll near their anchor (the active link + its two
+   neighbours, so at most three open at once), the rest stay as dots. Needs a
+   wider gutter than the TOC because the cards carry content, so it appears
+   only on roomier viewports. */
+.link-rail {
+    position: fixed;
+    top: 7.5rem;
+    left: calc((100vw + 720px) / 2 + 20px);
+    width: 236px;
+    /* Not a scroll container: overflow:auto would force horizontal clipping
+       that cuts dots and card shadows. Visible keeps everything intact; the
+       expanded-card cap + auto-hide keep the height bounded in practice. */
+    overflow: visible;
+    padding-left: 30px;
+    padding-top: 6px;
+    z-index: 5;
+}
+.link-rail {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+.link-rail.link-rail-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.link-rail::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    top: 0.7rem;
+    bottom: 0.4rem;
+    width: 2px;
+    background: var(--rule);
+}
+.link-node {
+    position: relative;
+    margin: 0 0 0.45rem;
+    min-height: 18px;
+}
+.link-dot {
+    position: absolute;
+    left: -25px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Light, glossy bead so favicons (designed for light backgrounds) read in
+       both themes; the bg-coloured ring masks the spine running behind it. */
+    background: radial-gradient(circle at 32% 26%, #ffffff, #ece7dd 82%);
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    box-shadow: 0 1px 3px rgba(20, 14, 4, 0.22), 0 0 0 3px var(--bg);
+    overflow: hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.link-dot-img {
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    filter: grayscale(0.5);
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+.link-node.is-active .link-dot,
+.link-node:hover .link-dot {
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px var(--accent);
+    transform: scale(1.22);
+}
+.link-node.is-active .link-dot-img,
+.link-node:hover .link-dot-img {
+    filter: grayscale(0);
+}
+/* Collapsed by default → the rail reads as a timeline of dots until you
+   scroll near a link. */
+.link-card {
+    margin-left: 4px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-4px);
+    transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+.link-node.is-expanded .link-card,
+.link-node:hover .link-card {
+    max-height: 460px;
+    opacity: 1;
+    transform: none;
+}
+/* Hovering a dot expands its card even when it's minimized, and lifts it above
+   neighbouring cards (dot highlight handled with the is-active rules above). */
+.link-node:hover {
+    z-index: 6;
+}
+.link-card-link {
+    display: block;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--bg-elev);
+    box-shadow: var(--shadow-card);
+    text-decoration: none;
+    transition: border-color 0.15s ease;
+}
+.link-card-link:hover,
+.link-node.is-active .link-card-link {
+    border-color: var(--accent);
+}
+.link-card-host {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+.link-card-title {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+}
+.link-card-desc {
+    margin-top: 0.25rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.link-card-meta {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+}
+.link-card-media {
+    padding-top: 0.5rem;
+}
+.link-thumb {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+}
+.link-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.link-thumb-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+    .link-card,
+    .link-dot,
+    .link-dot-img {
+        transition: none;
+    }
+}
+@media (max-width: 1239px) {
+    .link-rail {
+        display: none;
+    }
+}
+.post-header {
+    margin-bottom: 2.5rem;
+}
+.post-header .eyebrow a {
+    color: var(--accent);
+}
+.post-title {
+    font-family: var(--font-serif);
+    font-size: var(--fs-step-up-3);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin: 0.5rem 0 1rem;
+}
+.post-deck {
+    font-family: var(--font-serif);
+    font-size: 1.375rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0 0 2rem;
+    max-width: 36ch;
+}
+.post-byline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-top: 2rem;
+}
+.byline-authors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.byline-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text);
+    font-weight: 500;
+    font-size: 0.9375rem;
+}
+.byline-author:hover {
+    color: var(--accent);
+}
+.byline-avatar {
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+@media (max-width: 600px) {
+    .post-byline {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .post-byline .byline-meta {
+        font-size: 0.875rem;
+    }
+    .share-trigger {
+        margin-left: 0;
+    }
+}
+.byline-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+}
+.byline-meta .dot {
+    opacity: 0.5;
+}
+
+.post-cover {
+    margin: 0 0 3rem;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 1.5rem;
+}
+.post-cover img {
+    width: 100%;
+    border-radius: 8px;
+}
+
+.tag-row {
+    list-style: none;
+    padding: 0;
+    margin: 3rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.tag {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text);
+}
+.tag:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+/* Selected/active state for tag chips — category pickers, the write/mine/edit
+   tabs, reviewer toggles. Without this the `is-active` class had no visual, so
+   toggling a category looked like nothing happened even though state updated. */
+.tag.is-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+}
+.tag.is-active:hover {
+    background: var(--text-strong);
+    border-color: var(--text-strong);
+    color: var(--bg);
+}
+
+/* Share trigger in the byline — understated, matches the muted meta type */
+.share-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.share-trigger svg {
+    opacity: 0.8;
+}
+.share-trigger:hover {
+    color: var(--accent);
+}
+
+/* Share modal */
+.share-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    animation: share-fade 0.18s ease;
+}
+@keyframes share-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.share-modal-card {
+    position: relative;
+    width: 100%;
+    max-width: 26rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 40px rgba(20, 14, 4, 0.18);
+    animation: share-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes share-pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+[data-theme="dark"] .share-modal-card {
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+.share-modal-close {
+    position: absolute;
+    top: 0.875rem;
+    right: 1rem;
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.share-modal-close:hover {
+    color: var(--text-strong);
+}
+.share-modal-title {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0.5rem 0 1.5rem;
+    color: var(--text-strong);
+}
+.share-preview {
+    margin: 0 0 1.5rem;
+    padding: 0.875rem 1rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+}
+.share-preview-text {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text);
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.share-preview-badge {
+    display: inline-block;
+    margin-top: 0.625rem;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.share-link-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+.share-link-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.625rem 0.875rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    outline: none;
+}
+.share-link-input:focus {
+    border-color: var(--accent);
+    color: var(--text);
+}
+.share-link-copy {
+    flex-shrink: 0;
+    padding: 0 1rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    color: var(--text-strong);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+.share-link-copy:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.share-copy-link {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--text-strong);
+    color: var(--bg);
+    border: 0;
+    border-radius: 10px;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.share-copy-link:hover {
+    background: var(--accent);
+}
+
+.share-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.share-modal-card .share-buttons {
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.share-modal-card .share-btn {
+    flex: 1;
+    width: auto;
+    height: 3rem;
+}
+.share-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.share-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+.share-copy {
+    width: auto;
+    min-width: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: 999px;
+}
+.share-copied {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+.post-rule {
+    margin: 3rem 0 2rem;
+}
+.post-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 4rem;
+}
+.post-nav-link {
+    display: block;
+    padding: 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    color: var(--text);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.post-nav-link:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+.post-nav-link.next {
+    text-align: right;
+}
+.post-nav-link .eyebrow {
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.post-nav-title {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    line-height: 1.3;
+    display: block;
+}
+@media (max-width: 600px) {
+    .post-nav {
+        grid-template-columns: 1fr;
+    }
+    .post-nav-link.next {
+        text-align: left;
+    }
+}
+
+.post-related {
+    background: var(--bg-subtle);
+    padding: 3.5rem 0 4rem;
+    margin-top: 4rem;
+}
+.related-grid {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+.related-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.related-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+.related-card a {
+    display: block;
+    padding: 1.25rem;
+    color: var(--text-strong);
+}
+.related-title {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+}
+
+/* Skeleton loading states — show the page shape while content loads. */
+@keyframes shimmer {
+    0% { background-position: -800px 0; }
+    100% { background-position: 800px 0; }
+}
+.skeleton {
+    display: block;
+    background: linear-gradient(
+        90deg,
+        var(--bg-subtle) 0%,
+        color-mix(in srgb, var(--bg-subtle) 60%, var(--rule) 40%) 50%,
+        var(--bg-subtle) 100%
+    );
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 4px;
+    color: transparent;
+}
+.skeleton.round {
+    border-radius: 50%;
+}
+.skeleton-line {
+    height: 0.875em;
+    margin: 0.5rem 0;
+}
+.skeleton-line.short { width: 30%; }
+.skeleton-line.medium { width: 60%; }
+.skeleton-line.long { width: 92%; }
+.skeleton-line.full { width: 100%; }
+.skeleton-title {
+    height: 2.5rem;
+    margin: 0.5rem 0 1rem;
+    width: 80%;
+}
+.skeleton-block {
+    height: 12rem;
+    width: 100%;
+    margin: 1.5rem 0;
+}
+.skeleton-avatar {
+    width: 28px;
+    height: 28px;
+}
+
+.stream-skeleton-item {
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--rule);
+}
+.stream-skeleton-item:last-child {
+    border-bottom: 0;
+}
+.stream-skeleton-byline {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0.75rem 0 1rem;
+}
+
+/* Top loading progress bar — fires during route transitions, fades out
+   when the new page reports ready. */
+.route-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: transparent;
+    z-index: 100;
+    pointer-events: none;
+}
+.route-progress::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 30%;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+    animation: progress-slide 1.2s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--accent);
+}
+@keyframes progress-slide {
+    0%   { transform: translateX(-100%); width: 30%; }
+    50%  { width: 50%; }
+    100% { transform: translateX(360%); width: 20%; }
+}
+
+/* Buttons */
+.cta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--text-strong);
+    color: var(--bg);
+    border: 0;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.cta-pill:hover {
+    color: var(--bg);
+    background: var(--accent);
+    transform: translateY(-1px);
+}
+
+/* Medium-style post stream */
+.post-stream {
+    padding: 0 0 4rem;
+}
+.stream-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.stream-item {
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--rule);
+}
+.stream-item:last-child {
+    border-bottom: 0;
+}
+.stream-article {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+}
+.stream-article:has(.stream-cover) {
+    grid-template-columns: 1fr 180px;
+}
+.stream-body {
+    min-width: 0;
+}
+.stream-body .eyebrow {
+    margin-bottom: 0.75rem;
+}
+.stream-body .eyebrow a {
+    color: var(--accent);
+}
+.stream-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2.125rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.875rem;
+}
+.stream-title a {
+    color: var(--text-strong);
+}
+.stream-title a:hover {
+    color: var(--accent);
+}
+.stream-byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.stream-byline .byline-author {
+    color: var(--text);
+}
+.stream-excerpt {
+    position: relative;
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--text);
+}
+.excerpt-content > *,
+.peek-content > * {
+    margin: 0 0 0.6em;
+}
+.excerpt-content p,
+.peek-content p {
+    margin: 0 0 0.6em;
+}
+.excerpt-content a,
+.peek-content a {
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-decoration-color: var(--rule);
+    text-underline-offset: 2px;
+}
+.excerpt-content img,
+.excerpt-content figure,
+.excerpt-content pre,
+.excerpt-content .code-shell,
+.excerpt-content .mermaid-block,
+.excerpt-content h1,
+.excerpt-content h2,
+.excerpt-content h3,
+.peek-content img,
+.peek-content figure,
+.peek-content pre,
+.peek-content .code-shell,
+.peek-content .mermaid-block,
+.peek-content h1,
+.peek-content h2,
+.peek-content h3 {
+    display: none;
+}
+
+/* Faded "peek" of content after <!-- more -->. Mirrors the mkdocs hook. */
+.post-peek {
+    position: relative;
+    margin-top: 0.4em;
+    max-height: 5em;
+    overflow: hidden;
+}
+.post-peek::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent 0%, var(--bg) 90%);
+}
+
+/* "Show more" pill — sits below the faded peek. */
+.post-action {
+    display: flex;
+    justify-content: center;
+    margin: 0.6rem 0 0;
+}
+.post-action a {
+    display: inline-block;
+    color: var(--text-strong);
+    background: var(--bg);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.post-action a:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .post-peek::after {
+    background: linear-gradient(to bottom, transparent 0%, var(--bg) 90%);
+}
+[data-theme="dark"] .post-action a {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .post-action a:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.stream-cover {
+    display: block;
+    align-self: start;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-subtle);
+}
+.stream-cover img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.stream-cover:hover img {
+    transform: scale(1.03);
+}
+
+.stream-more {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    margin: 3rem 0 1rem;
+    flex-wrap: wrap;
+}
+.page-btn {
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0.625rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.page-btn:hover:not(:disabled):not(.page-current) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.page-btn:disabled,
+.page-disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+}
+.page-current {
+    background: var(--text-strong);
+    border-color: var(--text-strong);
+    color: var(--bg);
+    cursor: default;
+}
+.page-arrow {
+    font-size: 1.0625rem;
+}
+.page-gap {
+    min-width: 1.5rem;
+    text-align: center;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+@media (max-width: 640px) {
+    .stream-article:has(.stream-cover) {
+        grid-template-columns: 1fr;
+    }
+    .stream-cover img {
+        height: 220px;
+    }
+}
+
+/* Landing page */
+.landing-hero {
+    padding: 5rem 0 3rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 4rem;
+}
+.landing-hero .display {
+    margin-top: 0.5rem;
+}
+.landing-hero .post-deck {
+    margin-top: 1.5rem;
+    font-style: normal;
+    font-size: 1.25rem;
+    max-width: 44ch;
+}
+
+.landing-hero.compact {
+    padding: 3rem 0 2rem;
+    margin-bottom: 2.5rem;
+}
+.landing-hero.compact .hero-headline {
+    font-family: var(--font-serif);
+    font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.625rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0.625rem 0 0.875rem;
+    max-width: 22ch;
+}
+.landing-hero.compact .hero-deck {
+    font-family: var(--font-serif);
+    font-size: 1.125rem;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 56ch;
+    font-style: normal;
+}
+
+/* Featured block — magazine-cover treatment. Cover image on top, big
+   serif headline, generous spacing, sits in a tinted card to set it apart
+   from the regular stream below. */
+.featured-block {
+    padding: 3rem 0 3.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+.featured-block::before {
+    content: "";
+    position: absolute;
+    inset: 1.5rem 0 0 0;
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(20, 14, 4, 0.03), 0 12px 32px rgba(20, 14, 4, 0.04);
+    z-index: 0;
+    margin: 0 -1rem;
+}
+.featured-block > .container {
+    position: relative;
+    z-index: 1;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+}
+[data-theme="dark"] .featured-block::before {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.featured-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-bottom: 1.25rem;
+}
+.featured-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3rem 0.75rem;
+    background: var(--accent);
+    color: var(--bg-elev);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.featured-category a {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.featured-category a:hover {
+    color: var(--accent);
+}
+
+.featured-cover-banner {
+    display: block;
+    margin: 0 0 1.5rem;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-subtle);
+    border: 1px solid var(--rule);
+}
+.featured-cover-banner img {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+.featured-cover-banner:hover img {
+    transform: scale(1.02);
+}
+
+.featured-block .featured-title {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 1.4rem + 2.6vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    margin: 0 0 0.875rem;
+    max-width: 24ch;
+}
+.featured-block .featured-title a {
+    color: var(--text-strong);
+}
+.featured-block .featured-title a:hover {
+    color: var(--accent);
+}
+.featured-deck {
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+    max-width: 56ch;
+    font-style: italic;
+}
+.featured-byline {
+    margin-bottom: 1.5rem;
+}
+
+.featured-block .stream-excerpt {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+}
+/* Peek fade + Show-more pill sit on the elevated card, not the page bg. */
+.featured-block .post-peek::after {
+    background: linear-gradient(to bottom, transparent 0%, var(--bg-elev) 90%);
+}
+.featured-block .post-action a {
+    background: var(--bg-elev);
+}
+
+.stream-section-label {
+    margin: 0 0 0.5rem;
+}
+.stream-top {
+    padding-top: 3rem;
+}
+
+@media (max-width: 720px) {
+    .featured-block::before {
+        margin: 0;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+    .featured-cover-banner img {
+        height: 220px;
+    }
+}
+
+.featured {
+    margin-bottom: 5rem;
+}
+.featured-link {
+    display: block;
+    padding: 2rem 0;
+    color: var(--text-strong);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    transition: border-color 0.15s ease;
+}
+.featured-link:hover {
+    color: var(--text-strong);
+    border-color: var(--accent);
+}
+.featured-title {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 1.4rem + 2.5vw, 3.25rem);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin: 0.5rem 0 1rem;
+}
+.featured-deck {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+    max-width: 56ch;
+}
+.featured-link:hover .featured-title {
+    color: var(--accent);
+}
+
+.recent {
+    padding-bottom: 4rem;
+}
+.recent .eyebrow {
+    margin-bottom: 1.5rem;
+}
+.post-grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+.post-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.post-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+}
+.post-card > a {
+    display: block;
+    padding: 1.5rem;
+    color: var(--text-strong);
+}
+.card-eyebrow {
+    color: var(--accent);
+}
+.card-title {
+    font-family: var(--font-serif);
+    font-size: 1.3125rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    margin: 0.625rem 0 0.625rem;
+}
+.card-deck {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.card-meta {
+    margin: 0;
+}
+
+/* Archive */
+.archive-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.archive-year {
+    font-family: var(--font-serif);
+    font-size: 2.25rem;
+    font-weight: 600;
+    margin: 3rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+}
+.archive-item {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+}
+.archive-item:hover .archive-title {
+    color: var(--accent);
+}
+.archive-date {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+}
+.archive-title {
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    color: var(--text-strong);
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+/* Category index */
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0 0;
+}
+.category-tile {
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    transition: border-color 0.15s ease;
+    color: var(--text-strong);
+    display: block;
+}
+.category-tile:hover {
+    border-color: var(--accent);
+    color: var(--text-strong);
+}
+.category-name {
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    font-weight: 600;
+}
+.category-count {
+    margin-top: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* Author page */
+.author-header {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 2.5rem;
+}
+.author-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.author-name {
+    font-family: var(--font-serif);
+    font-size: var(--fs-step-up-2);
+    margin: 0;
+}
+.author-bio {
+    color: var(--text-muted);
+    margin: 0.5rem 0 0;
+    max-width: 56ch;
+}
+
+/* Search */
+.search-input {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-family: var(--font-sans);
+    font-size: 1.125rem;
+    color: var(--text-strong);
+    transition: border-color 0.15s ease;
+}
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.search-results {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0 0;
+}
+.search-result {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--rule);
+}
+.search-result-title {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-strong);
+}
+.search-result:hover .search-result-title {
+    color: var(--accent);
+}
+.search-snippet {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    margin-top: 0.375rem;
+    line-height: 1.5;
+}
+.search-snippet mark {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 0 0.15em;
+    border-radius: 2px;
+}
+
+/* ── Reposts ──────────────────────────────────────────────────────────────
+   A repost is a short write-up that points at an external article. The home
+   stream tags it with a small badge; the post page shows a prominent card. */
+.stream-eyebrow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.repost-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+
+.repost-card {
+    margin: 0 0 2rem;
+}
+.repost-card-link {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    background: var(--bg-elev);
+    box-shadow: var(--shadow-card);
+    text-decoration: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.repost-card-link:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.1);
+}
+.repost-card-thumb {
+    flex: 0 0 132px;
+    align-self: center;
+    aspect-ratio: 16 / 10;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--accent-soft);
+}
+.repost-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.repost-card-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.repost-card-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+}
+.repost-card-favicon {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+}
+.repost-card-title {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-strong);
+}
+.repost-card-desc {
+    margin-top: 0.35rem;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.repost-card-cta {
+    margin-top: 0.6rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+@media (max-width: 599px) {
+    .repost-card-thumb {
+        display: none;
+    }
+}
+

@@ -1,0 +1,744 @@
+/* Post body — long-form reading. Serif body, generous spacing, restrained accents. */
+
+.prose {
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    line-height: 1.72;
+    color: var(--text);
+    max-width: 64ch;
+    margin: 0 auto;
+}
+
+.prose > * + * {
+    margin-top: 1.4em;
+}
+
+.prose p {
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+}
+
+.prose h2,
+.prose h3,
+.prose h4 {
+    font-family: var(--font-serif);
+    color: var(--text-strong);
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    margin-top: 2.5em;
+    margin-bottom: 0.6em;
+}
+.prose h2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--rule);
+}
+.prose h3 {
+    font-size: 1.4375rem;
+    font-weight: 600;
+}
+.prose h4 {
+    font-size: 1.1875rem;
+    font-weight: 600;
+}
+
+.prose h1 {
+    /* Posts already have a real <h1> in the header — hide any h1 in the body. */
+    display: none;
+}
+
+/* Offset jump-link targets so headings clear the sticky header (and the TOC). */
+.prose h2[id],
+.prose h3[id],
+.prose h4[id] {
+    scroll-margin-top: 6rem;
+}
+
+.prose .headerlink {
+    margin-left: 0.4em;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    font-weight: 400;
+}
+.prose h2:hover .headerlink,
+.prose h3:hover .headerlink,
+.prose h4:hover .headerlink {
+    opacity: 1;
+}
+
+.prose a {
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.prose a:hover {
+    color: var(--accent);
+    text-decoration-thickness: 2px;
+}
+
+.prose strong {
+    color: var(--text-strong);
+    font-weight: 600;
+}
+
+.prose em {
+    font-style: italic;
+}
+
+.prose ul,
+.prose ol {
+    margin: 0;
+    padding-left: 1.5em;
+}
+.prose li + li {
+    margin-top: 0.5em;
+}
+.prose li::marker {
+    color: var(--text-muted);
+}
+
+.prose blockquote {
+    margin: 2.5em 0;
+    padding: 1.4rem 1.75rem;
+    background: var(--bg-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    font-style: normal;
+    color: var(--text);
+    font-size: 1.0625em;
+    line-height: 1.6;
+}
+.prose blockquote p {
+    text-align: justify;
+    hyphens: auto;
+}
+
+.prose hr {
+    margin: 3em auto;
+    width: 5rem;
+    border: 0;
+    border-top: 1px solid var(--rule);
+}
+
+.prose img,
+.prose figure {
+    margin: 2em 0;
+}
+.prose figure img {
+    border-radius: 6px;
+}
+.prose figcaption {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.75em;
+}
+
+/* Phone screenshot — portrait app captures shown at a phone-like width. */
+.prose .phone {
+    max-width: 300px;
+    margin: 2.5em auto;
+}
+.prose .phone img {
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-card);
+}
+/* Two phone screenshots side by side with one shared caption below; the caption
+   spans full width so it sits under both, and the images stack on narrow screens. */
+.prose .phone-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 2.5em auto;
+}
+.prose .phone-row img {
+    flex: 0 0 auto;
+    height: 30rem;
+    width: auto;
+    max-width: 47%;
+    object-fit: contain;
+    margin: 0;
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-card);
+}
+.prose .phone-row figcaption {
+    flex-basis: 100%;
+}
+/* Stack and drop the fixed height on phones so the screenshots fit the width. */
+@media (max-width: 640px) {
+    .prose .phone-row img {
+        height: auto;
+        max-width: 100%;
+    }
+}
+
+/* Inline code */
+.prose :not(pre) > code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    padding: 0.125em 0.35em;
+    color: var(--text-strong);
+}
+
+/* Code blocks */
+.prose pre,
+.prose .highlight {
+    margin: 1.75em 0;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+.prose pre code,
+.prose .highlight pre {
+    display: block;
+    padding: 1.25rem 1.5rem;
+    font-family: var(--font-mono);
+    background: transparent;
+    border: 0;
+    color: var(--text);
+}
+.prose .highlight pre {
+    margin: 0;
+}
+
+/* Tables */
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    margin: 2em 0;
+}
+.prose th,
+.prose td {
+    text-align: left;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--rule);
+}
+.prose th {
+    color: var(--text-strong);
+    font-weight: 600;
+    background: var(--bg-subtle);
+}
+
+/* Admonitions */
+.prose .admonition {
+    margin: 2em 0;
+    padding: 1em 1.25em;
+    background: var(--bg-subtle);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+}
+.prose .admonition-title {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--text-strong);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.5em;
+}
+
+/* Stat grid — hero metrics callout. Cards with a big accent number and a short
+   label, divided by hairline rules. Used to feature headline results. The grid
+   sizes to its child count (--cols), so it never leaves an orphan empty cell. */
+.prose .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 3), 1fr);
+    gap: 1px;
+    margin: 2.5em 0;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+}
+.prose .stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elev);
+    padding: 1.75rem 1.25rem;
+    text-align: center;
+    transition: background-color 0.15s ease;
+}
+.prose .stat-card:hover {
+    background: var(--accent-soft);
+}
+/* python-markdown wraps the two spans in a <p>; reset it so the spans control
+   their own spacing and the card stays compact. */
+.prose .stat-card > p {
+    margin: 0;
+    text-align: center;
+    hyphens: none;
+}
+.prose .stat-num {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+.prose .stat-label {
+    display: block;
+    margin-top: 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    text-wrap: balance;
+}
+/* Collapse to 2 columns on tablets, 2 across on phones (still no orphan cell). */
+@media (max-width: 640px) {
+    .prose .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .prose .stat-num {
+        font-size: 1.875rem;
+    }
+}
+
+/* Citation — small, muted reference line set apart from the body text. */
+.prose .citation {
+    margin: 1.25em 0 2em;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+.prose .citation p {
+    margin: 0;
+    text-align: left;
+    hyphens: none;
+}
+
+/* Call-to-action — closing card with a pill button. Same warm fill + accent edge
+   as the other cards, but the link renders as a button so it reads as an action. */
+.prose .cta {
+    margin: 3em 0 1em;
+    padding: 2rem;
+    background: var(--bg-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    text-align: center;
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--text-strong);
+}
+.prose .cta p {
+    margin: 0;
+    text-align: center;
+    hyphens: none;
+}
+/* Only the link explicitly marked .cta-button becomes a button; inline links in
+   the CTA copy keep the normal underlined link style. (Can't use :only-child —
+   it ignores text-node siblings, so an inline link in a sentence matches too.) */
+.prose .cta a.cta-button {
+    display: inline-block;
+    margin-top: 1.1rem;
+    padding: 0.7rem 1.6rem;
+    background: var(--accent);
+    color: var(--bg-elev);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.prose .cta a.cta-button:hover {
+    background: var(--link-hover);
+    color: var(--bg-elev);
+    transform: translateY(-1px);
+}
+
+/* Rich variant — a self-contained card (full hairline border + soft shadow
+   instead of the left accent bar) with a little more breathing room and a
+   button that lifts off the surface. */
+.prose .cta.cta-rich {
+    margin: 3.5em 0 1em;
+    padding: 2.75rem 2.5rem;
+    border-left: none;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+}
+.prose .cta.cta-rich a.cta-button {
+    margin-top: 1.4rem;
+    padding: 0.8rem 1.9rem;
+    box-shadow: 0 8px 20px -8px var(--accent);
+}
+.prose .cta.cta-rich a.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px -8px var(--accent);
+}
+
+/* Lead paragraph — the standfirst right under the title. A soft card on a warm
+   neutral fill (not an accent tint, which reads synthetic) with a thin accent
+   edge, same serif as the body, justified to match the article. */
+.prose .lead {
+    margin: 1.5em 0 2em;
+    padding: 1.4rem 1.75rem;
+    background: var(--bg-subtle);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-family: var(--font-serif);
+    font-size: 1.3125rem;
+    line-height: 1.58;
+    font-weight: 600;
+    color: var(--text-strong);
+    text-align: justify;
+    hyphens: auto;
+}
+.prose .lead strong {
+    color: var(--text-strong);
+    font-weight: 600;
+}
+
+/* Footnotes */
+.prose .footnote {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 4em;
+    padding-top: 2em;
+    border-top: 1px solid var(--rule);
+}
+.prose .footnote ol {
+    padding-left: 1.25em;
+}
+
+/* Code shell — wraps each <pre><code> with chrome (lang label + copy button). */
+.prose .code-shell {
+    margin: 1.75em 0;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+.prose .code-shell pre,
+.prose .code-shell .highlight {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+.code-shell-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+    background: color-mix(in srgb, var(--code-bg) 92%, var(--text) 8%);
+    border-bottom: 1px solid var(--code-border);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+}
+.code-lang {
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+/* Language identity: colour the code-block header so Jac and Python read as
+   distinct at a glance. The post page renders each block as a CodeMirror shell
+   (.runnable-jac) tagged with lang-<lang> in [slug].jac. Jac → Jaseci orange,
+   Python → Python-logo blue; other languages keep the neutral default. */
+.prose .runnable-jac.lang-jac {
+    border-left: 3px solid #ff6b35;
+}
+.prose .runnable-jac.lang-jac .runnable-header {
+    background: color-mix(in srgb, #ff6b35 14%, var(--code-bg));
+    border-bottom-color: color-mix(in srgb, #ff6b35 34%, var(--code-border));
+}
+.prose .runnable-jac.lang-jac .code-lang {
+    color: #ff6b35;
+}
+
+.prose .runnable-jac.lang-python {
+    border-left: 3px solid #3776ab;
+}
+.prose .runnable-jac.lang-python .runnable-header {
+    background: color-mix(in srgb, #3776ab 14%, var(--code-bg));
+    border-bottom-color: color-mix(in srgb, #3776ab 34%, var(--code-border));
+}
+.prose .runnable-jac.lang-python .code-lang {
+    color: #3776ab;
+}
+.code-copy {
+    background: transparent;
+    border: 1px solid var(--code-border);
+    color: var(--text-muted);
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.code-copy:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.code-shell-collapsible.code-shell-collapsed pre {
+    max-height: 18rem;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent);
+    mask-image: linear-gradient(to bottom, black 70%, transparent);
+}
+.code-shell-toggle {
+    width: 100%;
+    background: color-mix(in srgb, var(--code-bg) 92%, var(--text) 8%);
+    border: 0;
+    border-top: 1px solid var(--code-border);
+    color: var(--text-muted);
+    padding: 0.625rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.code-shell-toggle:hover {
+    color: var(--accent);
+}
+
+/* Mermaid */
+.prose .mermaid-block {
+    margin: 2em 0;
+    padding: 1.5rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow-x: auto;
+    text-align: center;
+}
+.prose .mermaid-block svg {
+    max-width: 100%;
+    height: auto;
+}
+/* Both palettes are rendered into the block up front; show only the one that
+   matches the active theme so toggling is instant (see render_mermaid_blocks). */
+.mermaid-variant-dark {
+    display: none;
+}
+:root[data-theme="dark"] .mermaid-variant-light {
+    display: none;
+}
+:root[data-theme="dark"] .mermaid-variant-dark {
+    display: block;
+}
+
+/* Runnable Jac block */
+.prose .runnable-jac {
+    margin: 1.75em 0;
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--code-bg);
+}
+.runnable-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+    background: color-mix(in srgb, var(--code-bg) 92%, var(--accent) 8%);
+    border-bottom: 1px solid var(--code-border);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+}
+.runnable-run {
+    background: var(--accent);
+    color: var(--bg-elev);
+    border: 0;
+    padding: 0.375rem 0.875rem;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.runnable-run:hover:not(:disabled) {
+    background: var(--link-hover);
+    transform: translateY(-1px);
+}
+.runnable-run:disabled {
+    opacity: 0.6;
+    cursor: progress;
+    transform: none;
+}
+/* CodeMirror editor inside a runnable block — real editing + syntax colors. */
+.runnable-editor-host {
+    background: var(--code-bg);
+}
+.runnable-editor-host .CodeMirror {
+    height: auto;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--text);
+}
+.runnable-editor-host .CodeMirror-gutters {
+    /* Opaque, matching the editor background — the gutter is pinned (fixedGutter)
+       while the code scrolls under it. A transparent gutter let horizontally
+       scrolled code bleed through behind the line numbers, looking like a
+       collision. An opaque fill keeps the number column clean during h-scroll. */
+    background: var(--code-bg);
+    border-right: 1px solid var(--code-border);
+}
+.runnable-editor-host .CodeMirror-linenumber {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+.runnable-editor-host .CodeMirror-cursor {
+    border-left-color: var(--accent);
+}
+.runnable-editor-host .CodeMirror-lines {
+    padding: 0.75rem 0;
+}
+/* Static (read-only) blocks: no caret. */
+.code-static .runnable-editor-host .CodeMirror-cursors {
+    display: none;
+}
+
+/* Token colors — matched to the pygments palette used for any non-CM code so
+   highlighting is identical everywhere. Light theme. */
+.runnable-editor-host .cm-comment { color: #8a857b; font-style: italic; }
+.runnable-editor-host .cm-keyword { color: #b54a1a; font-weight: 600; }
+.runnable-editor-host .cm-atom { color: #b54a1a; }
+.runnable-editor-host .cm-string,
+.runnable-editor-host .cm-string-2 { color: #5d7a3c; }
+.runnable-editor-host .cm-number { color: #8b5a2b; }
+.runnable-editor-host .cm-def { color: #1f6688; }
+.runnable-editor-host .cm-variable-2 { color: #1f6688; }
+.runnable-editor-host .cm-builtin { color: #b54a1a; }
+.runnable-editor-host .cm-operator { color: var(--text); }
+.runnable-editor-host .cm-meta { color: #8a857b; }
+.runnable-editor-host .cm-property { color: var(--text); }
+
+/* Dark theme token colors. */
+[data-theme="dark"] .runnable-editor-host .cm-comment { color: #6a655c; }
+[data-theme="dark"] .runnable-editor-host .cm-keyword { color: #e07b3f; }
+[data-theme="dark"] .runnable-editor-host .cm-atom { color: #e07b3f; }
+[data-theme="dark"] .runnable-editor-host .cm-string,
+[data-theme="dark"] .runnable-editor-host .cm-string-2 { color: #9bbf6a; }
+[data-theme="dark"] .runnable-editor-host .cm-number { color: #d4a574; }
+[data-theme="dark"] .runnable-editor-host .cm-def { color: #6cb3d6; }
+[data-theme="dark"] .runnable-editor-host .cm-variable-2 { color: #6cb3d6; }
+[data-theme="dark"] .runnable-editor-host .cm-builtin { color: #e07b3f; }
+[data-theme="dark"] .runnable-editor-host .cm-meta { color: #6a655c; }
+
+/* Header actions: copy (+ run for runnable). */
+.runnable-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.runnable-copy {
+    background: transparent;
+    border: 1px solid var(--code-border);
+    color: var(--text-muted);
+    padding: 0.375rem 0.875rem;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.runnable-copy:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.runnable-fallback {
+    width: 100%;
+    min-height: 9rem;
+    background: var(--code-bg);
+    color: var(--text);
+    border: 0;
+    padding: 0.875rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    resize: vertical;
+}
+.runnable-fallback:focus {
+    outline: 1px solid var(--accent);
+}
+.runnable-output {
+    margin: 0;
+    padding: 0.875rem 1.25rem;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--code-border);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 18rem;
+    overflow-y: auto;
+}
+.runnable-output:empty {
+    display: none;
+}
+.runnable-output[data-kind="error"] {
+    color: #c4392c;
+    background: var(--accent-soft);
+}
+.runnable-output[data-kind="running"] {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Pygments syntax highlighting tokens (used by python-markdown codehilite) */
+.highlight .c, .highlight .ch, .highlight .cm, .highlight .cp, .highlight .cs, .highlight .c1 { color: #8a857b; font-style: italic; }
+.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt { color: #b54a1a; font-weight: 600; }
+.highlight .s, .highlight .sa, .highlight .sb, .highlight .sc, .highlight .s1, .highlight .s2 { color: #5d7a3c; }
+.highlight .nb { color: #b54a1a; }
+.highlight .nf, .highlight .nc { color: #1f6688; font-weight: 500; }
+.highlight .o { color: #1a1a1a; }
+.highlight .m, .highlight .mi, .highlight .mf { color: #8b5a2b; }
+
+[data-theme="dark"] .highlight .c, [data-theme="dark"] .highlight .c1 { color: #6a655c; }
+[data-theme="dark"] .highlight .k { color: #e07b3f; }
+[data-theme="dark"] .highlight .s, [data-theme="dark"] .highlight .s1, [data-theme="dark"] .highlight .s2 { color: #9bbf6a; }
+[data-theme="dark"] .highlight .nb { color: #e07b3f; }
+[data-theme="dark"] .highlight .nf { color: #6cb3d6; }
+[data-theme="dark"] .highlight .o { color: #e7e3da; }
+[data-theme="dark"] .highlight .m { color: #d4a574; }

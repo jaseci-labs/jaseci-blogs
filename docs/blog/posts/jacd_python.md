@@ -3,8 +3,8 @@ date: 2025-09-17
 authors:
   - mars
 categories:
-  - Jac Programming
   - Tutorials
+  - Engineering
 slug: python-getting-jacd
 ---
 

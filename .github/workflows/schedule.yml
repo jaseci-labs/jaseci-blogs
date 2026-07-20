@@ -1,0 +1,127 @@
+name: Schedule a post
+
+# Editorial scheduling form. Anyone with write access to the repo can run this
+# from the Actions tab. It updates docs/blog/.schedule.yml and the target
+# post's frontmatter, then commits the change to main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        required: true
+        default: add
+        options:
+          - add
+          - hold
+          - cancel
+          - publish-now
+      slug:
+        description: Post slug (matches `slug:` frontmatter, or filename without .md)
+        type: string
+        required: true
+      publish_at:
+        description: ISO 8601 UTC datetime (only for `add`, e.g. 2026-06-01T14:00:00Z)
+        type: string
+        required: false
+      notes:
+        description: Optional notes (only for `add`)
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  actions: write   # to trigger deploy.yml via workflow_dispatch
+
+concurrency:
+  group: schedule-mutation
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate inputs
+        env:
+          ACTION: ${{ inputs.action }}
+          PUBLISH_AT: ${{ inputs.publish_at }}
+        run: |
+          if [ "$ACTION" = "add" ] && [ -z "$PUBLISH_AT" ]; then
+            echo "::error::publish_at is required for action=add"
+            exit 1
+          fi
+
+      - name: Run scheduler
+        id: run
+        env:
+          ACTION:     ${{ inputs.action }}
+          SLUG:       ${{ inputs.slug }}
+          PUBLISH_AT: ${{ inputs.publish_at }}
+          NOTES:      ${{ inputs.notes }}
+          ACTOR:      ${{ github.actor }}
+        run: |
+          set -e
+          ARGS=(--slug "$SLUG" --actor "$ACTOR")
+          if [ "$ACTION" = "add" ]; then
+            ARGS+=(--publish-at "$PUBLISH_AT")
+            if [ -n "$NOTES" ]; then
+              ARGS+=(--notes "$NOTES")
+            fi
+          fi
+          python scripts/schedule_lib.py "$ACTION" "${ARGS[@]}" | tee result.json
+
+      - name: Commit changes
+        id: commit
+        env:
+          ACTION: ${{ inputs.action }}
+          SLUG:   ${{ inputs.slug }}
+          ACTOR:  ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet && [ -z "$(git status --porcelain docs/blog)" ]; then
+            echo "No file changes produced; nothing to commit."
+            exit 0
+          fi
+          git add docs/blog/
+          git commit -m "schedule: $ACTION $SLUG" \
+                     -m "Triggered by @$ACTOR via workflow_dispatch." \
+                     -m "Run: $RUN_URL"
+          git push origin main
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger deploy
+        # A push made with the default GITHUB_TOKEN does NOT fire deploy.yml's
+        # `on: push`. workflow_dispatch is exempt, so kick it explicitly.
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+
+      - name: Job summary
+        if: always()
+        env:
+          ACTION: ${{ inputs.action }}
+          SLUG:   ${{ inputs.slug }}
+        run: |
+          {
+            echo "### Schedule action: \`$ACTION\` on \`$SLUG\`"
+            echo
+            echo '```json'
+            cat result.json 2>/dev/null || echo "{}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -21,7 +21,7 @@ We'll review all submissions and happily accept anything that's insightful or ot
    ```bash
    touch docs/blog/posts/my-awesome-post.md
    ```
-3. Add frontmatter to the top of your post:
+3. Add frontmatter to the top of your post. **`draft: true` is required** — a PR check will reject any new post without it. This is the safety rail that keeps an accidental merge from publishing a post. An editor flips it live later via the scheduling workflows.
    ```yaml
    ---
    date: 2026-03-12
@@ -30,11 +30,98 @@ We'll review all submissions and happily accept anything that's insightful or ot
    categories:
      - Your Category
    slug: my-awesome-post
+   draft: true
    ---
    ```
 4. Write your post in markdown (see [Adding Jac Code Blocks](#adding-jac-code-blocks) for interactive code examples). We also love [Mermaid](https://mermaid.js.org/) diagrams -- use ` ```mermaid ` code blocks to add flowcharts, sequence diagrams, and more. For custom graphics, we prefer SVGs since they scale nicely and keep the site looking crisp
 5. If you need images (e.g., screenshots of what you built), place them in `docs/assets/` and keep file sizes reasonable -- aim for under 100KB per image when possible. Compress PNGs/JPGs before committing
 6. Open a pull request
+
+> **Note on publish timing:** an editor decides when your post goes live. Your post must include `draft: true` (a PR check enforces this); the editor removes it via the scheduling workflows once a publish time is decided. If you have a target date in mind, mention it in the PR description. See [Editorial Scheduling](#editorial-scheduling) for how it works.
+
+### Reposting an external article
+
+Sometimes the thing worth sharing already lives somewhere else — a talk write-up, a partner's engineering blog, a paper. Instead of copying it, write a short take on *why it matters* and link out. The post renders a rich card to the original at the top, and it's tagged **↗ Repost** in the home stream so readers know it points outward.
+
+It's a normal post with three extra frontmatter keys:
+
+```yaml
+---
+date: 2026-03-12
+authors:
+  - your_author_id
+categories:
+  - Your Category
+slug: my-repost
+draft: true
+repost: true                              # the "this is a repost" switch
+repost_url: https://example.com/original  # required — the external article
+repost_source: Example Engineering Blog   # optional — friendly label on the card
+---
+
+# My short take
+
+A few paragraphs on why this is worth your readers' time.
+```
+
+- `repost: true` does nothing on its own — a post only becomes a repost when `repost_url` is also set.
+- The card's title, description, and thumbnail are pulled automatically from the linked page's OpenGraph tags (GitHub repos and YouTube links get richer cards). If that fetch fails, the card falls back to `repost_source` and the link's domain, so it always renders something sensible.
+- Everything else (scheduling, `draft: true`, images, code blocks) works exactly as for a normal post.
+
+### Editorial Scheduling
+
+Posts are not published the instant they merge. An editor schedules each post for a specific UTC publish time. The source of truth is [docs/blog/.schedule.yml](docs/blog/.schedule.yml), and there are three ways for editors to drive it -- none require cloning the repo:
+
+**1. Slash-commands on the PR.** Right in the PR conversation:
+
+```
+/schedule 2026-06-01T14:00:00Z
+/schedule 2026-06-01T14:00:00Z waiting on marketing
+/hold
+/cancel
+/publish-now
+/hide outdated benchmarks, will revisit       (draft in place — reversible)
+/unlist author asked to retract               (move to unlisted/)
+/archive superseded by 2026 retrospective     (move to archived_posts/)
+```
+
+These work both in a PR conversation and on the auto-created **scheduling issue** (see [the release flow](#the-release-flow-at-a-glance) below). The post's slug is inferred from the PR's changed files, or from the scheduling issue itself. To target a different post from any thread, append `slug=<name>`.
+
+**2. "Schedule a post" workflow.** Under the repo's **Actions** tab, run the *Schedule a post* workflow. It's a form with `action` (add / hold / cancel / publish-now), `slug`, `publish_at`, and `notes` inputs. Use this for posts that have already merged.
+
+**3. "Take down a post" workflow.** Also under the Actions tab. Pulls a live post off the site with a `destination` choice:
+
+| Destination | What it does | Use when |
+|---|---|---|
+| `draft` | Sets `draft: true` in the post's frontmatter, file stays in `docs/blog/posts/` | Temporary hide. Easy to re-publish with `/publish-now`. |
+| `unlist` | Moves the file to `docs/blog/unlisted/` and adds `draft: true` defensively | You may revisit it but don't want it anywhere near the live site. |
+| `archive` | Moves the file to `docs/blog/archived_posts/` | Permanently retired (outdated, superseded by another post). |
+
+The blog plugin only indexes `docs/blog/posts/`, so `unlist` and `archive` make the post invisible by location, not by frontmatter — there's no way it can accidentally render.
+
+**4. "List schedulable posts" workflow.** Run it (no inputs) to dump a markdown table of every post with its draft state and active schedule entry — handy when you need to look up a slug.
+
+**5. Hourly auto-publisher.** A cron workflow runs at five-past every hour, finds entries whose `publish_at` has passed, removes `draft: true` from each post's frontmatter, and commits. That commit triggers the existing deploy. Precision is ~1 hour (GitHub-hosted cron is best-effort and can lag by 10–20 minutes under load).
+
+On a **first** publish the post's `date:` is rewritten to the actual publish day, so readers see when the post went live. On a **re-publish** (a previously-live post that was `/hide`d and is going back up), the original `date:` is preserved — RSS feeds, bookmarks, and "originally published on" attributions stay stable.
+
+Every scheduling action -- add, hold, cancel, manual publish, auto-publish -- is a real commit on `main` made by `github-actions[bot]`, so `git log docs/blog/.schedule.yml` is the full editorial history.
+
+Anyone with write access on the repo can run these. The slash-command workflow additionally checks `author_association` so random PR commenters can't trigger it.
+
+### The release flow at a glance
+
+When a post PR passes CI, the bot opens a **scheduling issue** (labelled `blog-schedule`) and links it on the PR. That issue — not the PR — is where editors schedule the post, so scheduling is decoupled from the merge:
+
+1. **Author** opens a PR adding `docs/blog/posts/<slug>.md` with `draft: true`.
+2. **CI** (*Lint new posts*) checks the draft flag. On success the bot opens a scheduling issue (+ a docs-reference issue in the Jac docs repo if configured) and posts a sticky comment on the PR.
+3. **Reviewer** approves and merges — the merge is gated on CI + review, **not** on scheduling.
+4. **Editor** comments `/schedule <ISO8601 UTC>` on the scheduling issue (the same slash-commands as above; they take effect once the post is on `main`).
+5. **Auto-publisher** flips the post live at the scheduled time, closes the scheduling issue with the final URL, and the commit to `main` triggers the deploy.
+
+A post's URL is permanent and slug-only — `https://blogs.jaseci.org/blog/posts/<slug>` — and the Jac app shows an in-page "coming soon" state for that URL until the post is live, then the same link serves the article. The scheduling issue stays open until the post publishes, so a merged-but-unscheduled post is never silently forgotten.
+
+Full details — triggers, tokens, idempotency markers, deploy coupling, and the one-time GitHub App setup — are in [.github/RELEASE_FLOW.md](.github/RELEASE_FLOW.md).
 
 ### Adding Yourself as an Author
 

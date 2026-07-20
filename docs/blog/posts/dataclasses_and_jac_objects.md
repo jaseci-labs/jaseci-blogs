@@ -3,8 +3,7 @@ date: 2025-10-25
 authors:
   - mars
 categories:
-  - Jac Programming
-  - Fixing the Broken
+  - Engineering
 slug: dataclasses-and-jac-objects
 ---
 

@@ -3,9 +3,7 @@ date: 2026-03-16
 authors:
   - sahan
 categories:
-  - Developers
-  - Jac Programming
-  - Web Development
+  - Built with Jac
 slug: building-protomcp
 ---
 # I Built a Postman for MCP Servers. Here's the Story.

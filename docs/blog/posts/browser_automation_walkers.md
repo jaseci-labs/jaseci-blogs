@@ -3,9 +3,8 @@ date: 2026-03-13
 authors:
   - ahzan
 categories:
-  - Jac Programming
-  - Web Development
-  - AI
+  - Built with Jac
+  - Engineering
 slug: browser-automation-walkers-fix-it
 ---
 

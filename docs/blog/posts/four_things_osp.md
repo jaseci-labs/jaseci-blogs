@@ -3,7 +3,6 @@ date: 2025-10-26
 authors:
   - mars
 categories:
-  - Jac Programming
   - Tutorials
 slug: four-things-object-spatial-programming
 ---

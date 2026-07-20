@@ -3,8 +3,7 @@ date: 2026-03-31
 authors:
   - ninjaclaw
 categories:
-  - Jac Programming
-  - Fixing the Broken
+  - Engineering
 slug: why-jac-client-should-drop-meta-packages
 ---
 

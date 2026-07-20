@@ -1,0 +1,120 @@
+name: Take down a post
+
+# Pull a post off the live site. Choose between three destinations:
+#
+#   archive — move to docs/blog/archived_posts/. Use for posts that were
+#             live but are being permanently retired (outdated, superseded).
+#
+#   unlist  — move to docs/blog/unlisted/ AND set draft: true. Use for posts
+#             you may revisit later but don't want anywhere near the site.
+#
+#   draft   — leave the file in docs/blog/posts/, just add draft: true.
+#             Use for temporary, reversible hides (re-publish later via the
+#             Schedule a post workflow or /publish-now).
+#
+# Either way, the change is committed to main and triggers a normal deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: Slug of the post to take down (see "List schedulable posts" if unsure)
+        type: string
+        required: true
+      destination:
+        description: Where to send it
+        type: choice
+        required: true
+        default: draft
+        options:
+          - draft
+          - unlist
+          - archive
+      reason:
+        description: Why (recorded in .schedule.yml for the audit trail)
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  actions: write   # to trigger deploy.yml via workflow_dispatch
+
+concurrency:
+  group: schedule-mutation
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Take down
+        id: run
+        env:
+          SLUG:        ${{ inputs.slug }}
+          DESTINATION: ${{ inputs.destination }}
+          REASON:      ${{ inputs.reason }}
+          ACTOR:       ${{ github.actor }}
+        run: |
+          set -e
+          ARGS=(--slug "$SLUG" --destination "$DESTINATION" --actor "$ACTOR")
+          if [ -n "$REASON" ]; then
+            ARGS+=(--reason "$REASON")
+          fi
+          python scripts/schedule_lib.py takedown "${ARGS[@]}" | tee result.json
+
+      - name: Commit changes
+        id: commit
+        env:
+          SLUG:        ${{ inputs.slug }}
+          DESTINATION: ${{ inputs.destination }}
+          REASON:      ${{ inputs.reason }}
+          ACTOR:       ${{ github.actor }}
+          RUN_URL:     ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet && [ -z "$(git status --porcelain docs/blog)" ]; then
+            echo "No file changes produced; nothing to commit."
+            exit 0
+          fi
+          git add docs/blog/
+          git commit -m "takedown($DESTINATION): $SLUG" \
+                     -m "Triggered by @$ACTOR via workflow_dispatch." \
+                     -m "Reason: $REASON" \
+                     -m "Run: $RUN_URL"
+          git push origin main
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger deploy
+        # A push made with the default GITHUB_TOKEN does NOT fire deploy.yml's
+        # `on: push`. workflow_dispatch is exempt, so kick it explicitly.
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+
+      - name: Job summary
+        if: always()
+        env:
+          SLUG:        ${{ inputs.slug }}
+          DESTINATION: ${{ inputs.destination }}
+        run: |
+          {
+            echo "### Takedown: \`$SLUG\` → \`$DESTINATION\`"
+            echo
+            echo '```json'
+            cat result.json 2>/dev/null || echo "{}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
