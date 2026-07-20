@@ -1568,7 +1568,47 @@ def:priv rewrite_assets_to_raw(body: str, repo: str, sha: str) -> str {
 }
 
 
-def:priv render_submitted_markdown(text: str, raw_repo: str, raw_sha: str) -> dict {
+def:priv fetch_pr_authors(token: str, repo: str, sha: str) -> dict {
+    # A PR that introduces a new author adds their entry to .authors.yml on its
+    # own head ref. The deployed server only has main's copy, so resolve_authors
+    # misses and the byline falls back to the raw author id ("thejoshbrod") with
+    # no avatar. Read the file from the PR's ref instead — the same trick
+    # rewrite_assets_to_raw uses for images that aren't on main yet.
+    #
+    # Best-effort by design, matching fetch_pr_post: any failure (no token, the
+    # PR deletes the file, malformed yaml, a rate-limit object in place of the
+    # blob) returns {} and the caller keeps main's registry, which is exactly
+    # today's behaviour. A preview must never 500 over a byline.
+    if not token or not repo or not sha {
+        return {};
+    }
+    try {
+        blob = requests.get(
+            f"{GH_API}/repos/{repo}/contents/{AUTHORS_PATH}",
+            headers=gh_headers(token), params={"ref": sha}, timeout=30,
+        ).json();
+        if not isinstance(blob, dict) {
+            return {};
+        }
+        text = base64.b64decode(str(blob.get("content", ""))).decode("utf-8");
+        data = yaml.safe_load(text);
+    } except Exception {
+        return {};
+    }
+    if not isinstance(data, dict) {
+        return {};
+    }
+    authors = data.get("authors", {});
+    if not isinstance(authors, dict) {
+        return {};
+    }
+    return authors;
+}
+
+
+def:priv render_submitted_markdown(
+    text: str, raw_repo: str, raw_sha: str, gh_token: str = ""
+) -> dict {
     # Draft-tolerant render of a raw post file (parse_post_file drops drafts).
     # Reuses the same pipeline GetPost uses so previews match the live look.
     meta: dict = {};
@@ -1586,6 +1626,10 @@ def:priv render_submitted_markdown(text: str, raw_repo: str, raw_sha: str) -> di
         }
     }
     registry = load_authors();
+    # The PR's copy wins for the ids it defines, so a preview shows both a
+    # brand-new author and an edit an existing author made to their own entry
+    # in the same PR. Ids the PR doesn't mention still come from main.
+    registry = {**registry, **fetch_pr_authors(gh_token, raw_repo, raw_sha)};
     author_ids = meta.get("authors", []);
     if not isinstance(author_ids, list) {
         author_ids = [author_ids];
@@ -1782,7 +1826,9 @@ walker:priv CreatePreview {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        rendered = render_submitted_markdown(str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]));
+        rendered = render_submitted_markdown(
+            str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]), gh_token
+        );
         token = uuid.uuid4().hex;
         # Previews are public (opened anonymously via /preview/<token>), so they
         # live on the shared public root, not the caller's per-user root, and are
@@ -3073,7 +3119,7 @@ walker:priv PreviewSubmission {
             report {"ok": False, "error": f"could not load PR content: {e}"};
             return;
         }
-        rendered = render_submitted_markdown(content, head_repo, head_sha);
+        rendered = render_submitted_markdown(content, head_repo, head_sha, gh_token);
         slug = str(rendered["slug"]);
 
         # Find the scheduling tracker issue (opened by post-ci-automation) for
