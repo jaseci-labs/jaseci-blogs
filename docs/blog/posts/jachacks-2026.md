@@ -39,7 +39,7 @@ By the submission deadline, 66 complete projects were delivered. Each project sh
 
 Our opening ceremony began with a GenAI lecture led by Professor Jason Mars, designed to educate participants about the direction of AI and where the market pressure points are. This lecture inspired teams to identify market gaps and build products that solve high-pressure industry challenges.
 
-<img src="../../assets/jachacks-2026/OpenCeremony.jpg" alt="Professor Jason Mars speaking at JacHacks open ceremonies" width="80%"/>
+<img src="/assets/jachacks-2026/OpenCeremony.jpg" alt="Professor Jason Mars speaking at JacHacks open ceremonies" />
 
 ## **Agentic Paradigm Presentation**
 
@@ -51,7 +51,7 @@ To check out the tutorial for yourself go to [Agentic AI tutorial GitHub repo](h
 
 Vatsul Shah, co-founder of Narrative (YC F25), shared the 'founder’s journey' of building AI-powered video tools. He pivoted from technical architecture to the realities of the startup grind, offering participants a roadmap for transitioning their hackathon prototypes into viable products. His session highlighted the importance of solving 'hair-on-fire' problems, a mindset many teams adopted for their final builds.
 
-<img src="../../assets/jachacks-2026/YC-Speaker.jpg" alt="Vatsul Shah (former co-founder) speaking at JacHacks to large crowd" width="80%"/>
+<img src="/assets/jachacks-2026/YC-Speaker.jpg" alt="Vatsul Shah (former co-founder) speaking at JacHacks to large crowd" />
 
 ## **Top 3 Projects That Stole the Spotlight**
 
