@@ -1,14 +1,13 @@
 ---
-date: 2026-07-30
+date: '2026-07-30'
 authors:
-  - jaseci-team
+- jaseci-team
 categories:
-  - Community
-  - Built with Jac
+- Community
+- Built with Jac
 slug: hijac-how-the-jachacks-winter-social-good-winners-put-autonomous-jac-agents-on-a-phone
 repost: true
-repost_url: "https://dev.to/chess10kp/my-experience-with-jachacks-winter-5g43"
-draft: true
+repost_url: https://dev.to/chess10kp/my-experience-with-jachacks-winter-5g43
 ---
 
 # Hijac: how the JacHacks Winter Social Impact Winners put Autonomous Jac Agents on a Mobile device
