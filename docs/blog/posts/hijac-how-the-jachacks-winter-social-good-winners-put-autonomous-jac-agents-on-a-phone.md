@@ -1,5 +1,5 @@
 ---
-date: 2026-07-20
+date: 2026-07-30
 authors:
   - jaseci-team
 categories:
@@ -15,7 +15,7 @@ draft: true
 
 Nitin Shankar Madhu, together with teammates Chuka Ezeoke and Meron, took first place in the Social Good track at JacHacks Winter with **Hijac**, a pipeline that compiles Jac apps straight into installable native mobile apps. Their demo: an agent that watches a phone's sensors, notices when its owner has fallen, and calls an emergency contact on its own if they don't respond within 30 seconds.
 
-<--more-->
+<!-- more -->
 
 ## From full-stack web to a phone in your pocket
 
@@ -29,4 +29,6 @@ The fall-detection agent from the demo runs on Jac's Object-Spatial Programming 
 
 To get Hijac onto a phone, the team wrapped their Jac app with Capacitor, which turns web apps into native ones, and hijacked Jac's existing Vite pipeline to feed it: Vite bundles the Jac-generated React output as usual, then `cap sync` turns that straight into a real installable app. No rewrite, no second backend, just the same Jac codebase shipping as a native mobile agent that senses, decides, and calls for help entirely on its own.
 
-Read the full write-up, with the code and the build story, [on dev.to](https://dev.to/chess10kp/my-experience-with-jachacks-winter-5g43).
+
+
+*Read the full write-up, with the code and the build story*, [on dev.to](https://dev.to/chess10kp/my-experience-with-jachacks-winter-5g43).
