@@ -11,7 +11,7 @@ repost_url: "https://dev.to/chess10kp/my-experience-with-jachacks-winter-5g43"
 draft: true
 ---
 
-# Hijac: how the JacHacks Winter Social Good winners put autonomous Jac agents on a phone
+# Hijac: how the JacHacks Winter Social Impact Winners put Autonomous Jac Agents on a Mobile device
 
 Nitin Shankar Madhu, together with teammates Chuka Ezeoke and Meron, took first place in the Social Good track at JacHacks Winter with **Hijac**, a pipeline that compiles Jac apps straight into installable native mobile apps. Their demo: an agent that watches a phone's sensors, notices when its owner has fallen, and calls an emergency contact on its own if they don't respond within 30 seconds.
 
