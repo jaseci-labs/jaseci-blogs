@@ -22,6 +22,7 @@ glob SUBMIT_CATEGORIES = [
     "Community", "Announcements",
 ];  # keep in sync with main.jac -> ALLOWED_CATEGORIES
 glob SESSION_KEY = "blog_submit_session";
+glob DRAFT_KEY = "blog_submit_draft";
 
 
 def install_submit_helpers() -> None {
@@ -118,6 +119,55 @@ def save_session(data: any) -> None {
 def clear_session() -> None {
     try {
         window.sessionStorage.removeItem(SESSION_KEY);
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
+def draft_key_for(login: str) -> str {
+    # One draft per signed-in author — the form only renders once signed in, so
+    # there is never an anonymous draft to migrate. Which post is being edited
+    # (new / submission PR / published slug) rides inside the payload rather
+    # than in the key, so a refresh restores exactly what was on screen without
+    # a second key to keep in sync.
+    return f"{DRAFT_KEY}:{login or 'anon'}";
+}
+
+
+def read_draft(key: str) -> any {
+    try {
+        raw = window.localStorage.getItem(key);
+        if raw {
+            return JSON.parse(raw);
+        }
+    } except Exception {
+        _ignore = None;
+    }
+    return None;
+}
+
+
+def save_draft(key: str, data: any) -> None {
+    # localStorage rather than sessionStorage: a draft should survive a closed
+    # tab or a browser crash, not just a refresh.
+    #
+    # Uploaded images are deliberately NOT part of the payload. They are held as
+    # base64 blobs, so one photo can exceed the ~5MB origin quota on its own —
+    # and setItem throwing QuotaExceededError would lose the whole draft, which
+    # is the opposite of the point. Only their names are kept, so the form can
+    # tell the author what needs re-attaching.
+    try {
+        window.localStorage.setItem(key, JSON.stringify(data));
+    } except Exception {
+        _ignore = None;
+    }
+}
+
+
+def clear_draft(key: str) -> None {
+    try {
+        window.localStorage.removeItem(key);
     } except Exception {
         _ignore = None;
     }
@@ -244,6 +294,12 @@ def:pub page() -> JsxElement {
     has submit_error: str = "";
     has result: any = None;
 
+    # Draft autosave. draft_ready gates the save effect so it cannot run during
+    # boot and overwrite a stored draft with the form's empty initial state.
+    has draft_ready: bool = False;
+    has draft_restored: bool = False;      # drives the "restored" notice
+    has draft_missing_images: int = 0;     # names the draft carried but blobs it could not
+
     # My submissions.
     has subs: list = [];
     has my_edits: list = [];   # the author's own open edits to published posts
@@ -305,8 +361,13 @@ def:pub page() -> JsxElement {
             profile = existing["profile"];
             is_reviewer = bool(existing["is_reviewer"]);
             signed_in = True;
+            # Pass the LOCAL profile, not the `profile` field: the assignment
+            # above is a useState setter, so the field still reads as None for
+            # the rest of this render and the draft key would resolve to 'anon'.
+            restore_draft(existing["profile"]);
         }
         booting = False;
+        draft_ready = True;
     }
 
     async def begin_signin() -> None {
@@ -475,6 +536,9 @@ def:pub page() -> JsxElement {
             if res and res.reports {
                 data = res.reports[0];
                 if data["ok"] {
+                    # The work is on a PR now, so the local draft has done its
+                    # job — keeping it would resurrect the post on the next visit.
+                    discard_draft();
                     result = {**data, "edited": edit_pr > 0, "published_edit": editing_published};
                     if editing_published {
                         # Pair the edit PR with a shareable preview link to send reviewers.
@@ -499,7 +563,117 @@ def:pub page() -> JsxElement {
         submitting = False;
     }
 
+    def current_login() -> str {
+        try {
+            return str(profile["login"]) if profile else "";
+        } except Exception {
+            return "";
+        }
+    }
+
+    def restore_draft(prof: any) -> None {
+        # Repopulate the form from the stored draft. Takes the profile as an
+        # argument because the only caller assigns the `profile` field moments
+        # earlier, where reading the field back would still give the old value.
+        login = "";
+        try {
+            login = str(prof["login"]) if prof else "";
+        } except Exception {
+            login = "";
+        }
+        d = read_draft(draft_key_for(login));
+        if not d {
+            return;
+        }
+        try {
+            title = str(d["title"]);
+            slug = str(d["slug"]);
+            slug_touched = bool(d["slug_touched"]);
+            description = str(d["description"]);
+            body = str(d["body"]);
+            bio = str(d["bio"]);
+            cats = (d["cats"] or []) as list;
+            is_repost = bool(d["is_repost"]);
+            repost_url = str(d["repost_url"]);
+            repost_source = str(d["repost_source"]);
+            as_team = bool(d["as_team"]);
+            edit_pr = int(d["edit_pr"]);
+            editing_published = bool(d["editing_published"]);
+            names = (d["image_names"] or []) as list;
+            draft_missing_images = len(names);
+            draft_restored = True;
+        } except Exception {
+            # A draft written by an older build (missing keys) is not worth
+            # failing the page over — drop it and start clean.
+            clear_draft(draft_key_for(login));
+        }
+    }
+
+    def discard_draft() -> None {
+        draft_restored = False;
+        draft_missing_images = 0;
+        clear_draft(draft_key_for(current_login()));
+    }
+
+    # Autosave. Runs after every form change once boot has finished; draft_ready
+    # gates it so the initial empty render cannot clobber a stored draft.
+    can with [
+        title, slug, slug_touched, description, body, bio, cats, images,
+        is_repost, repost_url, repost_source, as_team,
+        edit_pr, editing_published, draft_ready, signed_in
+    ] entry {
+        if draft_ready and signed_in {
+            key = draft_key_for(current_login());
+            nonempty = bool(
+                title or slug or description or body.strip() or bio
+                or len(cats) > 0 or repost_url
+            );
+            if nonempty {
+                save_draft(key, {
+                    "title": title, "slug": slug, "slug_touched": slug_touched,
+                    "description": description, "body": body, "bio": bio,
+                    "cats": cats, "is_repost": is_repost,
+                    "repost_url": repost_url, "repost_source": repost_source,
+                    "as_team": as_team, "edit_pr": edit_pr,
+                    "editing_published": editing_published,
+                    # Names only — see save_draft on why the blobs stay out.
+                    "image_names": [str(im["name"]) for im in images],
+                });
+            } else {
+                # An emptied form means the author cleared it on purpose; leaving
+                # the old draft behind would resurrect it on the next refresh.
+                clear_draft(key);
+            }
+        }
+    }
+
+    async def reset_to_original() -> None {
+        # Editing an existing post reloads it from its source of truth; a new
+        # post just empties the form. Both drop the cached draft.
+        ask = "Clear the form? Your saved draft will be discarded.";
+        if editing_published {
+            ask = "Discard your changes and reload this post as published?";
+        } elif edit_pr > 0 {
+            ask = "Discard your changes and reload this submission from its PR?";
+        }
+        if not window.confirm(ask) {
+            return;
+        }
+        if editing_published {
+            s = slug;
+            discard_draft();
+            await start_edit_published(s);
+        } elif edit_pr > 0 {
+            p = edit_pr;
+            discard_draft();
+            await start_edit(p);
+        } else {
+            reset_form();
+        }
+    }
+
     def reset_form() -> None {
+        discard_draft();
         result = None; edit_pr = 0; title = ""; slug = ""; slug_touched = False;
         description = ""; body = ""; bio = ""; cats = []; images = [];
         preview_html = ""; submit_error = "";
@@ -748,6 +922,19 @@ def:pub page() -> JsxElement {
 
         {tab == "write" and not result and (
             <div style={{"paddingTop": "1.5rem"}}>
+                {draft_restored and (
+                    <div className="muted small" style={{"marginBottom": "1rem", "padding": "0.75rem 1rem", "border": "1px solid var(--rule)", "borderRadius": "8px", "background": "var(--bg-elev)"}}>
+                        <div style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "flexWrap": "wrap"}}>
+                            <span>↻ Restored your unsaved draft from this browser.</span>
+                            <button type="button" className="runnable-copy" onClick={lambda -> None { discard_draft(); }}>Dismiss</button>
+                        </div>
+                        {(draft_missing_images > 0) and (
+                            <div style={{"marginTop": "0.6rem"}}>
+                                ⚠️ {draft_missing_images} image(s) need re-attaching — uploads are too large to keep in the browser, so only the text was saved.
+                            </div>
+                        )}
+                    </div>
+                )}
                 {edit_pr > 0 and not editing_published and (
                     <p className="muted small" style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "marginBottom": "1rem"}}>
                         ✏️ Editing submission #{edit_pr}. Saving adds a commit to the existing PR.
@@ -927,6 +1114,9 @@ def:pub page() -> JsxElement {
                 <div style={{"display": "flex", "gap": "0.75rem", "marginTop": "1.5rem", "flexWrap": "wrap"}}>
                     <button type="button" className="cta-pill" disabled={submitting} onClick={lambda -> None { do_submit(); }}>
                         {submitting and "Saving…" or (editing_published and (edit_pr > 0 and "Save to PR" or "Open edit PR") or (edit_pr > 0 and "Save changes" or "Submit for review"))}
+                    </button>
+                    <button type="button" className="tag" disabled={submitting} onClick={lambda -> None { reset_to_original(); }}>
+                        {(editing_published or edit_pr > 0) and "Reset to original" or "Clear form"}
                     </button>
                 </div>
             </div>
