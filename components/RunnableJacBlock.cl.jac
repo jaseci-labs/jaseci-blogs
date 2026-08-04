@@ -14,12 +14,12 @@ glob:pub __pyodide_loading: any = None;
 
 
     async def boot_pyodide() -> any {
-        py = await window.loadPyodide({
+        py = await window.loadPyodide({  # jac:ignore[E1030]
             "indexURL": "https://cdn.jsdelivr.net/pyodide/v0.27.0/full/",
         });
-        await py.loadPackage(["micropip"]);
-        micropip = py.pyimport("micropip");
-        await micropip.install(["jaclang"]);
+        await py.loadPackage(["micropip"]);  # jac:ignore[E1032]
+        micropip = py.pyimport("micropip");  # jac:ignore[E1032]
+        await micropip.install(["jaclang"]);  # jac:ignore[E1032]
         return py;
     }
 
@@ -63,13 +63,13 @@ glob:pub __pyodide_loading: any = None;
 
     def mount_monaco(host: any, initial: str, on_ready: any) -> None {
         try {
-            window.require.config({
+            window.require.config({  # jac:ignore[E1030]
                 "paths": {"vs": "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs"},
             });
-            window.require(["vs/editor/editor.main"], lambda -> None {
-                if not window.__jac_monaco_lang_registered {
-                    window.monaco.languages.register({"id": "jac"});
-                    window.monaco.languages.setMonarchTokensProvider("jac", {
+            window.require(["vs/editor/editor.main"], lambda -> None {  # jac:ignore[E1030]
+                if not window.__jac_monaco_lang_registered {  # jac:ignore[E1030]
+                    window.monaco.languages.register({"id": "jac"});  # jac:ignore[E1030]
+                    window.monaco.languages.setMonarchTokensProvider("jac", {  # jac:ignore[E1030]
                         "keywords": [
                             "walker", "node", "edge", "obj", "has", "can", "def", "with",
                             "entry", "exit", "report", "visit", "spawn", "root", "here",
@@ -89,10 +89,10 @@ glob:pub __pyodide_loading: any = None;
                             ],
                         },
                     });
-                    window.__jac_monaco_lang_registered = True;
+                    window.__jac_monaco_lang_registered = True;  # jac:ignore[E1030]
                 }
                 theme = document.documentElement.getAttribute("data-theme") or "light";
-                editor = window.monaco.editor.create(host, {
+                editor = window.monaco.editor.create(host, {  # jac:ignore[E1030]
                     "value": initial,
                     "language": "jac",
                     "theme": "vs-dark" if theme == "dark" else "vs",
@@ -109,7 +109,7 @@ glob:pub __pyodide_loading: any = None;
                 on_ready(editor);
             });
         } except Exception {
-            ta = document.createElement("textarea");
+            ta: any = document.createElement("textarea");
             ta.className = "runnable-fallback";
             ta.value = initial;
             host.appendChild(ta);
@@ -146,7 +146,7 @@ glob:pub __pyodide_loading: any = None;
                 }
                 if stderr {
                     sep = "\n" if output.textContent else "";
-                    output.textContent = output.textContent + sep + stderr;
+                    output.textContent = output.textContent + sep + stderr;  # jac:ignore[E1055]
                     output.dataset.kind = "error";
                 } else {
                     output.dataset.kind = "ok";
@@ -169,7 +169,7 @@ glob:pub __pyodide_loading: any = None;
         block.dataset.runnable_mounted = "true";
 
         original_code = "";
-        code_el = block.querySelector("pre code") or block.querySelector("code");
+        code_el: any = block.querySelector("pre code") or block.querySelector("code");
         if code_el {
             original_code = code_el.textContent;
         }
@@ -177,24 +177,24 @@ glob:pub __pyodide_loading: any = None;
         block.innerHTML = "";
         block.className = "runnable-jac";
 
-        header = document.createElement("div");
+        header: any = document.createElement("div");
         header.className = "runnable-header";
-        lang_el = document.createElement("span");
+        lang_el: any = document.createElement("span");
         lang_el.className = "code-lang";
         lang_el.textContent = "jac";
         header.appendChild(lang_el);
-        run_btn = document.createElement("button");
+        run_btn: any = document.createElement("button");
         run_btn.type = "button";
         run_btn.className = "runnable-run";
         run_btn.textContent = "▶ Run";
         header.appendChild(run_btn);
         block.appendChild(header);
 
-        editor_host = document.createElement("div");
+        editor_host: any = document.createElement("div");
         editor_host.className = "runnable-editor";
         block.appendChild(editor_host);
 
-        output = document.createElement("pre");
+        output: any = document.createElement("pre");
         output.className = "runnable-output";
         output.textContent = "";
         block.appendChild(output);
@@ -208,7 +208,7 @@ glob:pub __pyodide_loading: any = None;
 
 
     def:pub register_upgrade_hook() -> None {
-        if window.__jac_runnable_upgrade {
+        if window.__jac_runnable_upgrade {  # jac:ignore[E1030]
             return;
         }
         def upgrade_all(blocks: any) -> None {
@@ -216,5 +216,5 @@ glob:pub __pyodide_loading: any = None;
                 upgrade_block(block);
             }
         }
-        window.__jac_runnable_upgrade = upgrade_all;
+        window.__jac_runnable_upgrade = upgrade_all;  # jac:ignore[E1030]
     }

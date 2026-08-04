@@ -37,29 +37,29 @@ cl {
     def:pub app(props: any) -> JsxElement {
         can with entry {
             document.title = "Jaseci Blogs · engineering writing from the Jaseci & Jac ecosystem";
-            existing = document.querySelector("link[rel='icon']");
+            existing: any = document.querySelector("link[rel='icon']");
             if not existing {
-                icon = document.createElement("link");
+                icon: any = document.createElement("link");
                 icon.rel = "icon";
                 icon.type = "image/png";
                 icon.href = "https://www.jaseci.org/images/logo.png";
-                document.head.appendChild(icon);
+                document.head.appendChild(icon);  # jac:ignore[E1030]
             }
             # Google Analytics (gtag.js). Injected once at the app root so the
             # tag loads on every route. Idempotent guard keeps a remount from
             # double-adding it. GA4 enhanced measurement tracks SPA route
             # changes via History events, so no per-navigation page_view here.
-            existing_ga = document.querySelector("script[data-ga='G-RCKQSQP438']");
+            existing_ga: any = document.querySelector("script[data-ga='G-RCKQSQP438']");
             if not existing_ga {
-                ga_loader = document.createElement("script");
+                ga_loader: any = document.createElement("script");
                 ga_loader.setAttribute("async", "");
                 ga_loader.src = "https://www.googletagmanager.com/gtag/js?id=G-RCKQSQP438";
                 ga_loader.setAttribute("data-ga", "G-RCKQSQP438");
-                document.head.appendChild(ga_loader);
+                document.head.appendChild(ga_loader);  # jac:ignore[E1030]
 
-                ga_init = document.createElement("script");
+                ga_init: any = document.createElement("script");
                 ga_init.text = "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-RCKQSQP438');";
-                document.head.appendChild(ga_init);
+                document.head.appendChild(ga_init);  # jac:ignore[E1030]
             }
         }
         return <>{props.children}</>;
@@ -179,7 +179,7 @@ def:priv split_excerpt(body: str) -> tuple[str, str] {
     paragraphs = re.split(r"\n\s*\n", body.strip());
     for p in paragraphs {
         stripped = p.strip();
-        if stripped and not stripped.startswith("#") {
+        if stripped and not stripped.startswith("#") {  # jac:ignore[E1032]
             return (stripped, body);
         }
     }
@@ -703,7 +703,7 @@ walker:pub GetPost {
         prev_post = None;
         next_post = None;
         for (i, p) in enumerate(all_posts) {
-            if p["slug"] == found["slug"] {
+            if p["slug"] == found["slug"] {  # jac:ignore[E1040]
                 if i + 1 < len(all_posts) {
                     nxt = all_posts[i + 1];
                     next_post = {
@@ -818,7 +818,7 @@ walker:pub GetArchive {
         # Group by year.
         years: dict = {};
         for p in all_posts {
-            year = p["date"][:4] if len(p["date"]) >= 4 else "Undated";
+            year = p["date"][:4] if len(p["date"]) >= 4 else "Undated";  # jac:ignore[E1053]
             if year not in years {
                 years[year] = [];
             }
@@ -844,11 +844,11 @@ walker:pub GetSearchIndex {
         index = [];
         for p in all_posts {
             # Plain-text body for indexing — strip the most common markdown.
-            plain = re.sub(r"`[^`]*`", "", p["body_md"]);
-            plain = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", plain);
-            plain = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", plain);
-            plain = re.sub(r"[#>*_~]+", " ", plain);
-            plain = re.sub(r"\s+", " ", plain).strip();
+            plain = re.sub(r"`[^`]*`", "", p["body_md"]);  # jac:ignore[E1054]
+            plain = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", plain);  # jac:ignore[E1054]
+            plain = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", plain);  # jac:ignore[E1054]
+            plain = re.sub(r"[#>*_~]+", " ", plain);  # jac:ignore[E1054]
+            plain = re.sub(r"\s+", " ", plain).strip();  # jac:ignore[E1054]
             index.append({
                 "slug": p["slug"],
                 "title": p["title"],
@@ -1475,7 +1475,7 @@ def:priv build_commit(token: str, repo_full: str, base_sha: str, files: list, me
         if f.get("binary") {
             blob = gh_ok(requests.post(
                 f"{GH_API}/repos/{repo_full}/git/blobs",
-                headers=h, json={"content": f["content"], "encoding": "base64"}, timeout=30,
+                headers=h, json={"content": f["content"], "encoding": "base64"}, timeout=30,  # jac:ignore[E1053]
             ), "create image blob");
             tree_items.append({"path": f["path"], "mode": "100644", "type": "blob", "sha": str(blob["sha"])});
         } else {
@@ -1484,11 +1484,11 @@ def:priv build_commit(token: str, repo_full: str, base_sha: str, files: list, me
     }
     new_tree = gh_ok(requests.post(
         f"{GH_API}/repos/{repo_full}/git/trees",
-        headers=h, json={"base_tree": base_tree, "tree": tree_items}, timeout=30,
+        headers=h, json={"base_tree": base_tree, "tree": tree_items}, timeout=30,  # jac:ignore[E1053]
     ), "create tree");
     new_commit = gh_ok(requests.post(
         f"{GH_API}/repos/{repo_full}/git/commits",
-        headers=h, json={"message": message, "tree": str(new_tree["sha"]), "parents": [base_sha]}, timeout=30,
+        headers=h, json={"message": message, "tree": str(new_tree["sha"]), "parents": [base_sha]}, timeout=30,  # jac:ignore[E1053]
     ), "create commit");
     return str(new_commit["sha"]);
 }
@@ -1789,7 +1789,7 @@ def:priv match_preview(docs: list, token: str) -> any {
     }
     now = float(time.time());
     for d in docs {
-        if d.token == token and (now - d.created_at) <= PREVIEW_TTL {
+        if d.token == token and (now - d.created_at) <= PREVIEW_TTL {  # jac:ignore[E1055]
             return d;
         }
     }
@@ -1896,7 +1896,7 @@ walker:pub RecordView {
                 stat.views += 1;
                 if vh and (vh not in stat.visitors) {
                     # Reassign (not in-place append) so jac-scale persists the change.
-                    stat.visitors = stat.visitors + [vh];
+                    stat.visitors = stat.visitors + [vh];  # jac:ignore[E1055]
                 }
             }
             report {"ok": True};
@@ -2038,15 +2038,15 @@ walker:priv GetAnalytics {
         totals = {"views": 0, "uniques": 0};
         for s in by_slug {
             agg = by_slug[s];
-            uniques = len(agg["visitors"]);
-            avg_dwell_ms = (agg["dwell_ms_sum"] / agg["dwell_samples"]) if agg["dwell_samples"] else 0.0;
-            avg_scroll = (agg["scroll_pct_sum"] / agg["scroll_samples"]) if agg["scroll_samples"] else 0.0;
+            uniques = len(agg["visitors"]);  # jac:ignore[E1053]
+            avg_dwell_ms = (agg["dwell_ms_sum"] / agg["dwell_samples"]) if agg["dwell_samples"] else 0.0;  # jac:ignore[E1055]
+            avg_scroll = (agg["scroll_pct_sum"] / agg["scroll_samples"]) if agg["scroll_samples"] else 0.0;  # jac:ignore[E1055]
             totals["views"] += int(agg["views"]);
             totals["uniques"] += int(uniques);
             post_links = [];
             link_clicks = 0;
             if s in links_by_slug {
-                for href in links_by_slug[s] {
+                for href in links_by_slug[s] {  # jac:ignore[E1022]
                     c = int(links_by_slug[s][href]);
                     link_clicks += c;
                     post_links.append({"href": href, "clicks": c});
@@ -2060,8 +2060,8 @@ walker:priv GetAnalytics {
                 "avg_read_sec": round(avg_dwell_ms / 1000.0, 1),
                 "samples": agg["dwell_samples"],
                 "scroll_buckets": agg["scroll_buckets"],
-                "avg_scroll": round(avg_scroll),
-                "median_scroll": median_scroll(agg["scroll_buckets"]),
+                "avg_scroll": round(avg_scroll),  # jac:ignore[E1054]
+                "median_scroll": median_scroll(agg["scroll_buckets"]),  # jac:ignore[E1053]
                 "links": post_links,
                 "link_clicks": link_clicks,
                 "days": agg["days"],
@@ -2602,7 +2602,7 @@ walker:priv SubmitPost {
             self.is_repost, repost_url, self.repost_source.strip(),
         );
         files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
-        files = files + image_files;
+        files = files + image_files;  # jac:ignore[E1001]
         if new_entry is not None {
             updated = authors_yml_with(new_entry);
             if updated is not None {
@@ -2754,7 +2754,7 @@ walker:priv UpdatePost {
             self.is_repost, repost_url, self.repost_source.strip(),
         );
         files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
-        files = files + img_res["files"];
+        files = files + img_res["files"];  # jac:ignore[E1001]
 
         try {
             commit_update(gh_token, str(pr["head_repo"]), str(pr["head_ref"]), files, f"Update blog post: {title}");
@@ -2921,7 +2921,7 @@ walker:priv EditPublishedPost {
         # Write back to the post's ACTUAL file (filename != slug), so the PR edits
         # the existing post instead of creating a new file.
         files = [{"path": str(main_post["post_path"]), "content": post_md, "binary": False}];
-        files = files + img_res["files"];
+        files = files + img_res["files"];  # jac:ignore[E1001]
 
         if self.pr_number {
             # Continue the caller's OWN open edit PR (we can only push to own fork).

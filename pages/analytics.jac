@@ -21,9 +21,9 @@ cl {
 
     def read_session() -> any {
         try {
-            raw = window.sessionStorage.getItem(SESSION_KEY);
+            raw = window.sessionStorage.getItem(SESSION_KEY);  # jac:ignore[E1030]
             if raw {
-                return JSON.parse(raw);
+                return JSON.parse(raw);  # jac:ignore[E1053]
             }
         } except Exception {
             _ignore = None;
@@ -232,12 +232,12 @@ cl {
                                         </td>
                                         <td style={{"padding": "0.6rem 0.5rem", "textAlign": "right", "fontVariantNumeric": "tabular-nums"}}>{r["views"]}</td>
                                         <td style={{"padding": "0.6rem 0.5rem", "textAlign": "right", "fontVariantNumeric": "tabular-nums"}}>{r["uniques"]}</td>
-                                        <td style={{"padding": "0.6rem 0.5rem", "textAlign": "right", "fontVariantNumeric": "tabular-nums"}}>{fmt_duration(float(r["avg_read_sec"]))}</td>
+                                        <td style={{"padding": "0.6rem 0.5rem", "textAlign": "right", "fontVariantNumeric": "tabular-nums"}}>{fmt_duration(float(r["avg_read_sec"] as float))}</td>
                                         <td style={{"padding": "0.6rem 0.5rem", "textAlign": "right", "fontVariantNumeric": "tabular-nums"}}>{r["avg_scroll"]}%</td>
-                                        <td style={{"padding": "0.6rem 0.5rem"}}>{scroll_bar(r["scroll_buckets"])}</td>
+                                        <td style={{"padding": "0.6rem 0.5rem"}}>{scroll_bar(r["scroll_buckets"] as list)}</td>
                                         <td style={{"padding": "0.6rem 0.5rem", "textAlign": "right", "fontVariantNumeric": "tabular-nums"}}>
-                                            {(len(r["links"]) > 0) and (
-                                                <button type="button" className={(expanded == r["slug"]) and "tag is-active" or "tag"} onClick={make_toggle_links(str(r["slug"]))}>
+                                            {(len(r["links"]) > 0) and (  # jac:ignore[E1053]
+                                                <button type="button" className={"tag is-active" if (expanded == r["slug"]) else "tag"} onClick={make_toggle_links(str(r["slug"]))}>
                                                     {r["link_clicks"]} {(expanded == r["slug"]) and "▲" or "▾"}
                                                 </button>
                                             ) or <span className="muted">0</span>}

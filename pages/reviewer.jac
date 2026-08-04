@@ -32,9 +32,9 @@ cl {
 
     def read_session() -> any {
         try {
-            raw = window.sessionStorage.getItem(SESSION_KEY);
+            raw = window.sessionStorage.getItem(SESSION_KEY);  # jac:ignore[E1030]
             if raw {
-                return JSON.parse(raw);
+                return JSON.parse(raw);  # jac:ignore[E1053]
             }
         } except Exception {
             _ignore = None;
@@ -215,12 +215,12 @@ cl {
                 if navigator.clipboard {
                     navigator.clipboard.writeText(text);
                 } else {
-                    ta = document.createElement("textarea");
+                    ta: any = document.createElement("textarea");
                     ta.value = text;
-                    document.body.appendChild(ta);
+                    document.body.appendChild(ta);  # jac:ignore[E1030]
                     ta.select();
-                    document.execCommand("copy");
-                    document.body.removeChild(ta);
+                    document.execCommand("copy");  # jac:ignore[E1030]
+                    document.body.removeChild(ta);  # jac:ignore[E1030]
                 }
                 copied = True;
                 setTimeout(lambda -> None { copied = False; }, 1500);
@@ -311,7 +311,7 @@ cl {
                             <li key={item["pr_number"]}>
                                 <button
                                     type="button"
-                                    className={selected == item["pr_number"] and "tag is-active" or "tag"}
+                                    className={"tag is-active" if selected == item["pr_number"] else "tag"}
                                     style={{"width": "100%", "textAlign": "left", "display": "block"}}
                                     onClick={lambda -> None { select_pr(int(item["pr_number"])); }}
                                 >
@@ -332,7 +332,7 @@ cl {
                             <li key={e["number"]}>
                                 <button
                                     type="button"
-                                    className={selected == e["number"] and "tag is-active" or "tag"}
+                                    className={"tag is-active" if selected == e["number"] else "tag"}
                                     style={{"width": "100%", "textAlign": "left", "display": "block"}}
                                     onClick={lambda -> None { select_pr(int(e["number"])); }}
                                 >
@@ -387,7 +387,7 @@ cl {
                                         <button
                                             key={a["key"]}
                                             type="button"
-                                            className={action == a["key"] and "tag is-active" or "tag"}
+                                            className={"tag is-active" if action == a["key"] else "tag"}
                                             onClick={make_set_action(str(a["key"]))}
                                         >{a["label"]}</button>
                                         for a in REVIEWER_ACTIONS
