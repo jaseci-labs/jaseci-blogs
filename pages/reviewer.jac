@@ -210,6 +210,16 @@ cl {
             return (cmd + " " + notes) if notes else cmd;
         }
 
+        # Copy-edit the selected submission in the /submit editor. Full page load
+        # rather than a client route: the editor reads ?edit_pr= in its entry hook.
+        def edit_selected() -> None {
+            try {
+                window.location.href = f"/submit?edit_pr={selected}";  # jac:ignore[E1030]
+            } except Exception {
+                _ignore = None;
+            }
+        }
+
         def do_copy(text: str) -> None {
             try {
                 if navigator.clipboard {
@@ -368,6 +378,7 @@ cl {
                                 <button type="button" className="tag" disabled={preview_busy} onClick={lambda -> None { create_preview(); }}>
                                     {preview_busy and "Creating…" or "Create shareable preview →"}
                                 </button>
+                                <button type="button" className="tag" onClick={lambda -> None { edit_selected(); }}>Copy-edit ✏️</button>
                             </div>
                             {preview_link and (
                                 <div style={{"marginTop": "0.6rem", "display": "flex", "gap": "0.5rem", "alignItems": "center"}}>
