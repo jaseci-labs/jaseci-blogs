@@ -4,7 +4,7 @@ cl import from "@jac/runtime" { useParams, Link }
 
 
 cl {
-    def:pub page() -> JsxElement {
+    def:pub page() -> JsxPage {
         params = useParams();
         category = params["name"];
 

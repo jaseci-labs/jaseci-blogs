@@ -5,7 +5,7 @@ cl import from "@jac/runtime" { Outlet, Link, useLocation }
 
 
 cl {
-    def:pub layout() -> JsxElement {
+    def:pub layout() -> JsxLayout {
         has theme: str = "light";
         has menu_open: bool = False;
         has is_reviewer: bool = False;

@@ -208,7 +208,7 @@ def:pub PostBody(html: str) -> JsxElement {
         if existing {
             return;
         }
-        promise = Promise(lambda resolve, reject -> None {
+        promise = Promise(lambda(resolve: any, reject: any) -> None {
             script = document.createElement("script");
             script.src = src;
             script.onload = lambda -> None { resolve(None); };

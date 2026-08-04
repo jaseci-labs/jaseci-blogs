@@ -199,7 +199,7 @@ glob:pub __pyodide_loading: any = None;
         output.textContent = "";
         block.appendChild(output);
 
-        mount_monaco(editor_host, original_code, lambda editor: any -> None {
+        mount_monaco(editor_host, original_code, lambda(editor: any) -> None {
             block.__jac_editor = editor;
         });
 
