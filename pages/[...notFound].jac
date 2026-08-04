@@ -2,7 +2,7 @@ cl import from "@jac/runtime" { Link }
 
 
 cl {
-    def:pub page() -> JsxElement {
+    def:pub page() -> JsxPage {
         can with entry {
             document.title = "Not found · Jaseci Blogs";
         }

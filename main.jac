@@ -25,7 +25,7 @@ import from urllib.request { Request, urlopen }
 import from urllib.parse { urlparse, parse_qs }
 import markdown as md;
 import from cryptography.fernet { Fernet }
-import from jac_scale.user_manager { JacScaleUserManager }
+import from jaclang.scale.identity.user_manager { JacScaleUserManager }
 import from datetime { date as date_cls }
 import from pathlib { Path }
 
@@ -504,7 +504,7 @@ def:priv list_all_posts() -> list {
         items.append(parsed);
     }
     # Newest first.
-    items.sort(key=lambda x: dict -> str { return x["date"]; }, reverse=True);
+    items.sort(key=lambda(x: dict) -> str { return x["date"]; }, reverse=True);
     return items;
 }
 
@@ -806,7 +806,7 @@ walker:pub GetCategories {
             }
         }
         items = [{"name": k, "count": v} for (k, v) in counts.items()];
-        items.sort(key=lambda x: dict -> int { return x["count"]; }, reverse=True);
+        items.sort(key=lambda(x: dict) -> int { return x["count"]; }, reverse=True);
         report {"ok": True, "categories": items};
     }
 }
@@ -2051,7 +2051,7 @@ walker:priv GetAnalytics {
                     link_clicks += c;
                     post_links.append({"href": href, "clicks": c});
                 }
-                post_links.sort(key=lambda r: dict -> int { return int(r["clicks"]); }, reverse=True);
+                post_links.sort(key=lambda(r: dict) -> int { return int(r["clicks"]); }, reverse=True);
             }
             out.append({
                 "slug": s,
@@ -2067,7 +2067,7 @@ walker:priv GetAnalytics {
                 "days": agg["days"],
             });
         }
-        out.sort(key=lambda r: dict -> int { return int(r["views"]); }, reverse=True);
+        out.sort(key=lambda(r: dict) -> int { return int(r["views"]); }, reverse=True);
         report {"ok": True, "posts": out, "totals": totals};
     }
 }

@@ -40,21 +40,46 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Jac toolchain and project dependencies
+      - name: Install Jac toolchain
+        env:
+          # install.sh resolves the release through api.github.com, and tracking
+          # latest means it does that lookup on EVERY deploy. Unauthenticated calls
+          # are rate-limited and fail with "Could not determine latest version from
+          # GitHub Releases"; the script picks GITHUB_TOKEN up and authenticates,
+          # raising the ceiling to ~1000/hr. Do not drop this env block.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pip install --upgrade pip
-          # jaclang core ships the `jac` CLI and is pip-installable. The Jac
-          # plugins (jac-scale, jac-client) no longer carry a pyproject.toml
-          # (jaseci-labs/jaseci#6322), so they install via `jac install`, which
-          # reads [dependencies] in jac.toml into the project's .jac/venv.
-          # `jac start` adds that venv to sys.path automatically.
-          # Pin jaclang: the unpinned `pip install jaclang` pulls the latest,
-          # whose newer in-pod binary bootstrap ("[jac] Fetching latest version
-          # … Could not determine latest version from GitHub Releases") crash-
-          # loops the pod. Pinned to the last pre-breakage release. Bump in
-          # lockstep with the jac-scale/jac-client pins in jac.toml.
-          pip install jaclang==0.16.0
-          jac install
+          # One-binary jac: a single self-contained executable, no PyPI packages.
+          # `scale` and the client bundler now ship INSIDE jaclang — the jac-scale
+          # and jac-client packages no longer exist. Installing the old pinned set
+          # here (jaclang==0.16.0) would pull the 0.16-era parser, which cannot read
+          # this source since the lambda-syntax migration.
+          #
+          # UNPINNED BY CHOICE: no --version, so this tracks the latest release, and
+          # jac.toml leaves the pod's version unpinned to match. Two things follow,
+          # and they are the first places to look when a deploy breaks with no diff
+          # in this repo:
+          #   - a breaking jac release breaks the deploy without a commit here
+          #     (0.16 -> 0.32 changed lambda syntax and did exactly this);
+          #   - runner and pod resolve latest independently, so a release landing
+          #     mid-deploy can leave them on different versions.
+          # `jac --version` in the next step records what was actually resolved.
+          curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh \
+            | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve project dependencies
+        run: |
+          jac --version
+          # Resolves [dependencies] + [dependencies.npm] into .jac/. The deploy step
+          # would do this on first run anyway; doing it here fails fast and keeps
+          # dependency errors out of the deploy step's output.
+          #
+          # --scale does NOT pull every deploy-time capability the way its help text
+          # suggests. Anything jaclang's own scale runtime needs but does not declare
+          # has to be listed in [dependencies] — see the python-dotenv entry in
+          # jac.toml.
+          jac install --scale
 
       - name: Free the code PVC before syncing (scale down code-server)
         # ROOT CAUSE (jac-scale 0.2.23): the shared code PVC jaseci-blogs-code-pvc
@@ -89,7 +114,7 @@ jobs:
       - name: Deploy jaseci-blogs with jac-scale
         working-directory: .
         env:
-          # Submission-portal secrets. jac.toml's [plugins.scale.secrets]
+          # Submission-portal secrets. jac.toml's [scale.secrets]
           # interpolates these ${...} env vars at deploy time into the
           # jaseci-blogs-secrets k8s Secret. Unset values deploy as empty,
           # which gracefully disables /submit + /reviewer. Only an OAuth App is
@@ -104,11 +129,9 @@ jobs:
           JWT_SECRET: ${{ secrets.BLOG_SESSION_SECRET }}
           SUBMIT_SESSION_SECRET: ${{ secrets.BLOG_SESSION_SECRET }}
         run: |
-          # `jac install` put jaclang + jac-scale + jac-client into the project
-          # venv (.jac/venv). Run THAT venv's jac so the jac-scale plugin loads
-          # at startup and registers the `--scale` flag — the global `jac` (from
-          # `pip install jaclang`) builds its arg parser before the venv is on
-          # the path, so it does not recognize `--scale`.
+          # Plain `jac`, not `.jac/venv/bin/jac`: scale is built into the binary now,
+          # so there is no venv jac and no plugin that has to load before the arg
+          # parser is built for `--scale` to be recognised.
           #
           # The "Free the code PVC" step above detached the RWO code volume, so the
           # code-sync pod can now attach on any node and this should succeed on the
@@ -122,7 +145,7 @@ jobs:
               --ignore-not-found --force --grace-period=0 2>/dev/null || true
             kubectl wait --for=delete pod/jaseci-blogs-code-sync -n "$NS" \
               --timeout=60s 2>/dev/null || true
-            if .jac/venv/bin/jac start main.jac --scale; then
+            if jac start main.jac --scale; then
               echo "::endgroup::"
               echo "Deployed successfully on attempt ${attempt}."
               exit 0

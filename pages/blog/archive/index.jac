@@ -4,7 +4,7 @@ cl import from "@jac/runtime" { Link }
 
 
 cl {
-    def:pub page() -> JsxElement {
+    def:pub page() -> JsxPage {
         has loading: bool = True;
         has years: any = [];
         has total: int = 0;
