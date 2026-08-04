@@ -26,22 +26,22 @@ cl {
     def install_submit_helpers() -> None {
         # Promise-owning helpers injected as raw JS (Jac can't emit `new Promise`).
         # __readFileB64 -> {name, b64}; __loadScriptOnce -> resolves when loaded.
-        if window.__readFileB64 {
+        if window.__readFileB64 {  # jac:ignore[E1030]
             return;
         }
-        s = document.createElement("script");
+        s: any = document.createElement("script");
         s.textContent = "window.__readFileB64=function(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){var s=String(r.result||'');var i=s.indexOf('base64,');res({name:file.name,b64:i>=0?s.slice(i+7):''});};r.onerror=function(){rej(new Error('read failed'));};r.readAsDataURL(file);});};window.__loadScriptOnce=function(src){return new Promise(function(res,rej){var f=document.querySelector('script[data-so=\"'+src+'\"]');if(f){res();return;}var el=document.createElement('script');el.src=src;el.setAttribute('data-so',src);el.onload=function(){res();};el.onerror=function(){rej(new Error('load failed'));};document.head.appendChild(el);});};window.__b64EncodeUtf8=function(s){var b=new TextEncoder().encode(s);var bin='';for(var i=0;i<b.length;i++){bin+=String.fromCharCode(b[i]);}return btoa(bin);};";
-        document.head.appendChild(s);
+        document.head.appendChild(s);  # jac:ignore[E1030]
     }
 
 
     async def ensure_marked() -> None {
-        if window.marked {
+        if window.marked {  # jac:ignore[E1030]
             return;
         }
         install_submit_helpers();
         try {
-            await window.__loadScriptOnce("https://cdn.jsdelivr.net/npm/marked@12/marked.min.js");
+            await window.__loadScriptOnce("https://cdn.jsdelivr.net/npm/marked@12/marked.min.js");  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -94,9 +94,9 @@ cl {
 
     def read_session() -> any {
         try {
-            raw = window.sessionStorage.getItem(SESSION_KEY);
+            raw = window.sessionStorage.getItem(SESSION_KEY);  # jac:ignore[E1030]
             if raw {
-                return JSON.parse(raw);
+                return JSON.parse(raw);  # jac:ignore[E1053]
             }
         } except Exception {
             _ignore = None;
@@ -107,7 +107,7 @@ cl {
 
     def save_session(data: any) -> None {
         try {
-            window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+            window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -116,7 +116,7 @@ cl {
 
     def clear_session() -> None {
         try {
-            window.sessionStorage.removeItem(SESSION_KEY);
+            window.sessionStorage.removeItem(SESSION_KEY);  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -128,7 +128,7 @@ cl {
         # and sends it as `Authorization: Bearer` on every walker call. We mint the
         # token server-side after GitHub OAuth, so we hand it to the runtime here.
         try {
-            window.localStorage.setItem("jac_token", tok);
+            window.localStorage.setItem("jac_token", tok);  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -137,7 +137,7 @@ cl {
 
     def clear_jac_token() -> None {
         try {
-            window.localStorage.removeItem("jac_token");
+            window.localStorage.removeItem("jac_token");  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -188,12 +188,12 @@ cl {
             if navigator.clipboard {
                 navigator.clipboard.writeText(t);
             } else {
-                ta = document.createElement("textarea");
+                ta: any = document.createElement("textarea");
                 ta.value = t;
-                document.body.appendChild(ta);
+                document.body.appendChild(ta);  # jac:ignore[E1030]
                 ta.select();
-                document.execCommand("copy");
-                document.body.removeChild(ta);
+                document.execCommand("copy");  # jac:ignore[E1030]
+                document.body.removeChild(ta);  # jac:ignore[E1030]
             }
         } except Exception {
             _ignore = None;
@@ -374,8 +374,8 @@ cl {
             new_imgs = images;
             for f in files {
                 try {
-                    r = await window.__readFileB64(f);
-                    new_imgs = new_imgs + [{"name": str(r.name), "b64": str(r.b64)}];
+                    r = await window.__readFileB64(f);  # jac:ignore[E1030]
+                    new_imgs = new_imgs + [{"name": str(r.name), "b64": str(r.b64)}];  # jac:ignore[E1032]
                 } except Exception {
                     _ignore = None;
                 }
@@ -399,8 +399,8 @@ cl {
             if tab == "write" {
                 await ensure_marked();
                 try {
-                    if window.marked {
-                        preview_html = str(window.marked.parse(body or ""));
+                    if window.marked {  # jac:ignore[E1030]
+                        preview_html = str(window.marked.parse(body or ""));  # jac:ignore[E1030]
                     }
                 } except Exception {
                     _ignore = None;
@@ -439,7 +439,7 @@ cl {
             body_is_b64: bool = False;
             install_submit_helpers();
             try {
-                enc_body = str(window.__b64EncodeUtf8(body or ""));
+                enc_body = str(window.__b64EncodeUtf8(body or ""));  # jac:ignore[E1030]
                 body_is_b64 = True;
             } except Exception {
                 enc_body = body;
@@ -599,10 +599,10 @@ cl {
             editable_error = "";
             try {
                 res = root spawn ListEditablePosts(gh_enc=gh_enc);
-                if res.reports and len(res.reports) > 0 {
-                    data = res.reports[0];
+                if res.reports and len(res.reports) > 0 {  # jac:ignore[E1032,E1053]
+                    data = res.reports[0];  # jac:ignore[E1032]
                     if data["ok"] {
-                        editable = data["posts"];
+                        editable = data["posts"];  # jac:ignore[E1001]
                     } else {
                         editable_error = str(data["error"]);
                     }
@@ -617,22 +617,22 @@ cl {
             editable_busy = s;
             try {
                 res = root spawn GetPublishedPostForEdit(gh_enc=gh_enc, slug=s);
-                if res.reports and len(res.reports) > 0 {
-                    data = res.reports[0];
+                if res.reports and len(res.reports) > 0 {  # jac:ignore[E1032,E1053]
+                    data = res.reports[0];  # jac:ignore[E1032]
                     if data["ok"] {
                         reset_form();
                         editing_published = True;
                         title = str(data["title"]);
                         slug = str(data["slug"]);
                         slug_touched = True;
-                        cats = data["categories"];
+                        cats = data["categories"];  # jac:ignore[E1001]
                         description = str(data["description"]);
                         body = str(data["body_md"]);
                         is_repost = bool(data["is_repost"]);
                         repost_url = str(data["repost_url"]);
                         repost_source = str(data["repost_source"]);
                         as_team = bool(any([str(a) == "jaseci-team" for a in data["authors"]]));
-                        edit_existing_prs = data["existing_prs"];
+                        edit_existing_prs = data["existing_prs"];  # jac:ignore[E1001]
                         edit_pr = 0;
                         tab = "write";
                         window.scrollTo(0, 0);
@@ -708,17 +708,17 @@ cl {
             <div className="tag-row" style={{"marginTop": "1.5rem", "borderBottom": "1px solid var(--rule)", "paddingBottom": "0.75rem"}}>
                 <button
                     type="button"
-                    className={tab == "write" and "tag is-active" or "tag"}
+                    className={"tag is-active" if tab == "write" else "tag"}
                     onClick={lambda -> None { tab = "write"; }}
                 >Write a post</button>
                 <button
                     type="button"
-                    className={tab == "mine" and "tag is-active" or "tag"}
+                    className={"tag is-active" if tab == "mine" else "tag"}
                     onClick={lambda -> None { tab = "mine"; }}
                 >My submissions</button>
                 <button
                     type="button"
-                    className={tab == "edit" and "tag is-active" or "tag"}
+                    className={"tag is-active" if tab == "edit" else "tag"}
                     onClick={lambda -> None { tab = "edit"; }}
                 >Edit a post</button>
             </div>
@@ -796,7 +796,7 @@ cl {
                         placeholder="kebab-case-url"
                         value={slug}
                         readOnly={edit_pr > 0 or editing_published}
-                        style={(edit_pr > 0 or editing_published) and {"opacity": "0.6", "cursor": "not-allowed"} or {}}
+                        style={{"opacity": "0.6", "cursor": "not-allowed"} if (edit_pr > 0 or editing_published) else {}}
                         onChange={lambda(e: ChangeEvent) { slug_touched = True; slug = e.target.value; }}
                     />
                     <p className="muted small">
@@ -809,7 +809,7 @@ cl {
                             <button
                                 key={c}
                                 type="button"
-                                className={cat_selected(c) and "tag is-active" or "tag"}
+                                className={"tag is-active" if cat_selected(c) else "tag"}
                                 onClick={make_cat_toggle(c)}
                             >{c}</button>
                             for c in SUBMIT_CATEGORIES

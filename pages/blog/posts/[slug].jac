@@ -30,15 +30,15 @@ cl {
             _ignore = None;
         }
         try {
-            ta = document.createElement("textarea");
+            ta: any = document.createElement("textarea");
             ta.value = text;
             ta.setAttribute("readonly", "");
             ta.style.position = "fixed";
             ta.style.opacity = "0";
-            document.body.appendChild(ta);
+            document.body.appendChild(ta);  # jac:ignore[E1030]
             ta.select();
-            document.execCommand("copy");
-            document.body.removeChild(ta);
+            document.execCommand("copy");  # jac:ignore[E1030]
+            document.body.removeChild(ta);  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -49,11 +49,11 @@ cl {
         # Find or create a <meta {attr}="{key}"> and set its content.
         try {
             selector = f"meta[{attr}='{key}']";
-            el = document.querySelector(selector);
+            el: any = document.querySelector(selector);
             if not el {
-                el = document.createElement("meta");
+                el: any = document.createElement("meta");
                 el.setAttribute(attr, key);
-                document.head.appendChild(el);
+                document.head.appendChild(el);  # jac:ignore[E1030]
             }
             el.setAttribute("content", content);
         } except Exception {
@@ -86,21 +86,21 @@ cl {
         # owns the `new Promise` and returns a promise we can await from Jac.
         # Guard on the LAST-defined helper so a stale partial helper from a prior
         # HMR build (which preserves window) gets re-injected with all three.
-        if window.__loadMermaid {
+        if window.__loadMermaid {  # jac:ignore[E1030]
             return;
         }
-        s = document.createElement("script");
+        s: any = document.createElement("script");
         s.textContent = "window.__loadScript=function(src){return new Promise(function(res,rej){var f=document.querySelector('script[data-ls=\"'+src+'\"]');if(f){res();return;}var el=document.createElement('script');el.src=src;el.setAttribute('data-ls',src);el.onload=function(){res();};el.onerror=function(){rej(new Error('failed to load '+src));};document.head.appendChild(el);});};window.__loadCss=function(href){return new Promise(function(res){if(document.querySelector('link[data-lc=\"'+href+'\"]')){res();return;}var l=document.createElement('link');l.rel='stylesheet';l.href=href;l.setAttribute('data-lc',href);l.onload=function(){res();};l.onerror=function(){res();};document.head.appendChild(l);});};window.__loadMermaid=function(){if(window.mermaid){return Promise.resolve(window.mermaid);}return import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs').then(function(m){window.mermaid=m.default;return m.default;});};";
-        document.head.appendChild(s);
+        document.head.appendChild(s);  # jac:ignore[E1030]
     }
 
 
     async def ensure_codemirror() -> None {
         install_load_helper();
-        if not window.CodeMirror {
-            await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css");
-            await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css");
-            await window.__loadScript("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js");
+        if not window.CodeMirror {  # jac:ignore[E1030]
+            await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css");  # jac:ignore[E1030]
+            await window.__loadCss("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css");  # jac:ignore[E1030]
+            await window.__loadScript("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js");  # jac:ignore[E1030]
         }
         # Every code block is rendered with the Jac mode, which is defined inline
         # below (no network, no load race). Jac and Python share enough syntax —
@@ -118,13 +118,13 @@ cl {
         # base64-encoded JS (decoded with atob) to avoid escaping all the regex
         # backslashes through a Jac string literal.
         try {
-            if window.CodeMirror and window.CodeMirror.__jacDefined {
+            if window.CodeMirror and window.CodeMirror.__jacDefined {  # jac:ignore[E1030]
                 return;
             }
             b64 = "KGZ1bmN0aW9uKCl7aWYoIXdpbmRvdy5Db2RlTWlycm9yfHxDb2RlTWlycm9yLl9famFjRGVmaW5lZCl7cmV0dXJuO312YXIgS1c9e307Im5vZGUgZWRnZSB3YWxrZXIgb2JqIGNsYXNzIGVudW0gaW1wbCBzZW0gaGFzIGNhbiBkZWYgd2l0aCBlbnRyeSBleGl0IHZpc2l0IHNwYXduIHJlcG9ydCBkaXNlbmdhZ2UgaWdub3JlIGhlcmUgdmlzaXRvciByb290IHNlbGYgc3VwZXIgaW5pdCBwb3N0aW5pdCBpbXBvcnQgaW5jbHVkZSBmcm9tIGFzIGdsb2IgbGV0IGlmIGVsaWYgZWxzZSBmb3Igd2hpbGUgcmV0dXJuIGluIHRvIGJ5IHRlc3QgY2hlY2sgYXNzZXJ0IHRyeSBleGNlcHQgZmluYWxseSByYWlzZSBkZWwgYW5kIG9yIG5vdCBpcyBhc3luYyBhd2FpdCBsYW1iZGEgeWllbGQgbWF0Y2ggY2FzZSBwcmludCBjbCBzdiIuc3BsaXQoIiAiKS5mb3JFYWNoKGZ1bmN0aW9uKGspe0tXW2tdPTE7fSk7dmFyIEFUT009eyJUcnVlIjoxLCJGYWxzZSI6MSwiTm9uZSI6MX07Q29kZU1pcnJvci5kZWZpbmVNb2RlKCJqYWMiLGZ1bmN0aW9uKCl7cmV0dXJue2xpbmVDb21tZW50OiIjIix0b2tlbjpmdW5jdGlvbihzdHJlYW0pe2lmKHN0cmVhbS5lYXRTcGFjZSgpKXtyZXR1cm4gbnVsbDt9dmFyIGNoPXN0cmVhbS5wZWVrKCk7aWYoY2g9PT0iIyIpe3N0cmVhbS5za2lwVG9FbmQoKTtyZXR1cm4gImNvbW1lbnQiO31pZihjaD09PSciJ3x8Y2g9PT0iJyIpe3ZhciBxPXN0cmVhbS5uZXh0KCk7dmFyIGVzYz1mYWxzZSxjO3doaWxlKChjPXN0cmVhbS5uZXh0KCkpIT1udWxsKXtpZihjPT09cSYmIWVzYyl7YnJlYWs7fWVzYz0oIWVzYyYmYz09PSJcXCIpO31yZXR1cm4gInN0cmluZyI7fWlmKC9bMC05XS8udGVzdChjaCkpe3N0cmVhbS5tYXRjaCgvXlxkKyg/OlwuXGQrKT8vKTtyZXR1cm4gIm51bWJlciI7fWlmKC9bQS1aYS16X10vLnRlc3QoY2gpKXt2YXIgbT1zdHJlYW0ubWF0Y2goL15bQS1aYS16X11bQS1aYS16MC05X10qLyk7dmFyIHdvcmQ9bVswXTtpZihLV1t3b3JkXSl7cmV0dXJuICJrZXl3b3JkIjt9aWYoQVRPTVt3b3JkXSl7cmV0dXJuICJhdG9tIjt9aWYoL15bQS1aXS8udGVzdCh3b3JkKSl7cmV0dXJuICJ2YXJpYWJsZS0yIjt9cmV0dXJuIG51bGw7fXN0cmVhbS5uZXh0KCk7cmV0dXJuIG51bGw7fX07fSk7Q29kZU1pcnJvci5fX2phY0RlZmluZWQ9dHJ1ZTt9KSgpOwo=";
-            s = document.createElement("script");
-            s.textContent = window.atob(b64);
-            document.head.appendChild(s);
+            s: any = document.createElement("script");
+            s.textContent = window.atob(b64);  # jac:ignore[E1030]
+            document.head.appendChild(s);  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -133,7 +133,7 @@ cl {
 
     async def load_script(src: str) -> None {
         install_load_helper();
-        await window.__loadScript(src);
+        await window.__loadScript(src);  # jac:ignore[E1030]
     }
 
 
@@ -155,7 +155,7 @@ cl {
     async def enhance_code_blocks(container: any) -> None {
         # Render every static code block through CodeMirror too (read-only), so
         # colors, line numbers, and chrome match the runnable editor exactly.
-        pres = container.querySelectorAll("pre");
+        pres: any = container.querySelectorAll("pre");
         targets = [];
         for pre in pres {
             if pre.dataset.enhanced {
@@ -164,7 +164,7 @@ cl {
             if pre.closest("div.runnable-jac") or pre.closest("div.code-block") {
                 continue;
             }
-            code_el = pre.querySelector("code") or pre;
+            code_el: any = pre.querySelector("code") or pre;
             cls_str = str(code_el.className) + " " + str(pre.className);
             if "language-mermaid" in cls_str or "mermaid" in cls_str {
                 continue;
@@ -180,13 +180,13 @@ cl {
             return;
         }
         await ensure_codemirror();
-        if not window.CodeMirror {
+        if not window.CodeMirror {  # jac:ignore[E1030]
             return;
         }
 
         for pre in targets {
             pre.dataset.enhanced = "true";
-            code_el = pre.querySelector("code") or pre;
+            code_el: any = pre.querySelector("code") or pre;
             source = str(code_el.textContent).rstrip("\n");
 
             lang = "";
@@ -199,7 +199,7 @@ cl {
                 }
             }
 
-            shell = document.createElement("div");
+            shell: any = document.createElement("div");
             # Tag the shell with the language so CSS can give Jac vs Python a
             # distinct header accent (CodeMirror strips the original language-*
             # class, so we re-stamp it here).
@@ -208,39 +208,39 @@ cl {
                 shell.className = f"runnable-jac code-static lang-{lang.lower()}";
             }
 
-            header = document.createElement("div");
+            header: any = document.createElement("div");
             header.className = "runnable-header";
-            tag = document.createElement("span");
+            tag: any = document.createElement("span");
             tag.className = "code-lang";
             tag.textContent = display_lang(lang);
             header.appendChild(tag);
-            copy_btn = document.createElement("button");
+            copy_btn: any = document.createElement("button");
             copy_btn.type = "button";
             copy_btn.className = "runnable-copy";
             copy_btn.textContent = "Copy";
             header.appendChild(copy_btn);
             shell.appendChild(header);
 
-            host = document.createElement("div");
+            host: any = document.createElement("div");
             host.className = "runnable-editor-host";
             shell.appendChild(host);
 
             # Replace the whole codehilite wrapper (<div class="highlight">) if
             # present — otherwise just the <pre> — so we don't nest the editor
             # inside the wrapper's own border/background (the "double box").
-            outer = pre.closest("div.highlight") or pre;
+            outer: any = pre.closest("div.highlight") or pre;
             outer.parentNode.insertBefore(shell, outer);
             outer.parentNode.removeChild(outer);
 
             has_jac = False;
             try {
-                has_jac = bool(window.CodeMirror.modes["jac"]);
+                has_jac = bool(window.CodeMirror.modes["jac"]);  # jac:ignore[E1030]
             } except Exception {
                 _ignore = None;
             }
             # All blocks render through the always-available inline Jac mode.
             cm_mode = "jac" if has_jac else "null";
-            cm = window.CodeMirror(host, {
+            cm = window.CodeMirror(host, {  # jac:ignore[E1030]
                 "value": source,
                 "mode": cm_mode,
                 "theme": "default",
@@ -260,7 +260,7 @@ cl {
         # in the DOM; CSS reveals the one matching the active theme. This makes the
         # light/dark switch instant (no re-render, no flash) when a reader toggles
         # themes. data-processed guards re-mounts.
-        targets = container.querySelectorAll(".mermaid-block:not([data-processed])");
+        targets: any = container.querySelectorAll(".mermaid-block:not([data-processed])");
         has_any = False;
         for _t in targets {
             has_any = True;
@@ -269,15 +269,15 @@ cl {
         if not has_any {
             return;
         }
-        if not window.mermaid {
+        if not window.mermaid {  # jac:ignore[E1030]
             install_load_helper();
             try {
-                await window.__loadMermaid();
+                await window.__loadMermaid();  # jac:ignore[E1030]
             } except Exception {
                 _ignore = None;
             }
         }
-        if not window.mermaid {
+        if not window.mermaid {  # jac:ignore[E1030]
             return;
         }
         i = 0;
@@ -292,23 +292,23 @@ cl {
                 # Light pass, then dark pass. initialize() sets the palette globally,
                 # so we re-init between renders. Distinct render ids keep the two
                 # SVGs' internal element ids from colliding in the DOM.
-                window.mermaid.initialize({
+                window.mermaid.initialize({  # jac:ignore[E1030]
                     "startOnLoad": False,
                     "theme": "default",
                     "securityLevel": "loose",
                     "fontFamily": "Inter, system-ui, sans-serif",
                 });
-                light_res = await window.mermaid.render(f"mmd-l-{Date.now()}-{i}", source);
+                light_res = await window.mermaid.render(f"mmd-l-{Date.now()}-{i}", source);  # jac:ignore[E1030]
 
-                window.mermaid.initialize({
+                window.mermaid.initialize({  # jac:ignore[E1030]
                     "startOnLoad": False,
                     "theme": "dark",
                     "securityLevel": "loose",
                     "fontFamily": "Inter, system-ui, sans-serif",
                 });
-                dark_res = await window.mermaid.render(f"mmd-d-{Date.now()}-{i}", source);
+                dark_res = await window.mermaid.render(f"mmd-d-{Date.now()}-{i}", source);  # jac:ignore[E1030]
 
-                el.innerHTML = f'<div class="mermaid-variant mermaid-variant-light">{light_res.svg}</div><div class="mermaid-variant mermaid-variant-dark">{dark_res.svg}</div>';
+                el.innerHTML = f'<div class="mermaid-variant mermaid-variant-light">{light_res.svg}</div><div class="mermaid-variant mermaid-variant-dark">{dark_res.svg}</div>';  # jac:ignore[E1032]
                 el.classList.add("mermaid-rendered");
             } except Exception as e {
                 el.classList.add("mermaid-error");
@@ -321,20 +321,20 @@ cl {
     async def ensure_pyodide() -> any {
         # Main-thread Pyodide (no worker / no SharedArrayBuffer, so no COOP/COEP
         # headers needed). Cached on window so it boots once per page session.
-        if window.__pyodide {
-            return window.__pyodide;
+        if window.__pyodide {  # jac:ignore[E1030]
+            return window.__pyodide;  # jac:ignore[E1030]
         }
-        if not window.__pyodide_loading {
+        if not window.__pyodide_loading {  # jac:ignore[E1030]
             async def boot() -> any {
                 await load_script("https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js");
-                py = await window.loadPyodide({"indexURL": "https://cdn.jsdelivr.net/pyodide/v0.27.0/full/"});
-                await py.loadPackage(["micropip"]);
+                py = await window.loadPyodide({"indexURL": "https://cdn.jsdelivr.net/pyodide/v0.27.0/full/"});  # jac:ignore[E1030]
+                await py.loadPackage(["micropip"]);  # jac:ignore[E1032]
                 return py;
             }
-            window.__pyodide_loading = boot();
+            window.__pyodide_loading = boot();  # jac:ignore[E1030]
         }
-        py = await window.__pyodide_loading;
-        window.__pyodide = py;
+        py = await window.__pyodide_loading;  # jac:ignore[E1030]
+        window.__pyodide = py;  # jac:ignore[E1030]
         return py;
     }
 
@@ -344,7 +344,7 @@ cl {
         # playground: extract the prebuilt jaclang.zip onto sys.path and pull its
         # runtime deps (pluggy + sqlite3). The zip arrives via the GetRuntimeZip
         # walker as base64 (static serving can't deliver it reliably).
-        if window.__jaclang_ready {
+        if window.__jaclang_ready {  # jac:ignore[E1030]
             return;
         }
         await py.loadPackage(["micropip", "sqlite3"]);
@@ -376,7 +376,7 @@ cl {
         sys.path.insert(0, "/jaclang")
     from jaclang.cli.commands import execution
     """);
-        window.__jaclang_ready = True;
+        window.__jaclang_ready = True;  # jac:ignore[E1030]
     }
 
 
@@ -451,7 +451,7 @@ cl {
 
 
     async def mount_runnable_blocks(container: any) -> None {
-        blocks = container.querySelectorAll("div.code-block:not([data-runnable])");
+        blocks: any = container.querySelectorAll("div.code-block:not([data-runnable])");
         has_any = False;
         for _b in blocks {
             has_any = True;
@@ -461,7 +461,7 @@ cl {
             return;
         }
         await ensure_codemirror();
-        if not window.CodeMirror {
+        if not window.CodeMirror {  # jac:ignore[E1030]
             return;
         }
         for block in blocks {
@@ -476,7 +476,7 @@ cl {
             lang = block.getAttribute("data-lang") or "jac";
             # codehilite sometimes emits <pre>…code…</pre> with no <code> child, so
             # fall back through code → pre → the block itself.
-            src_el = block.querySelector("pre code") or block.querySelector("code") or block.querySelector("pre");
+            src_el: any = block.querySelector("pre code") or block.querySelector("code") or block.querySelector("pre");
             source = str(src_el.textContent) if src_el else str(block.textContent);
             source = source.rstrip("\n");
 
@@ -484,21 +484,21 @@ cl {
             block.innerHTML = "";
             block.className = "runnable-jac";
 
-            header = document.createElement("div");
+            header: any = document.createElement("div");
             header.className = "runnable-header";
-            lang_el = document.createElement("span");
+            lang_el: any = document.createElement("span");
             lang_el.className = "code-lang";
             lang_el.textContent = display_lang(str(lang));
             header.appendChild(lang_el);
 
-            actions = document.createElement("div");
+            actions: any = document.createElement("div");
             actions.className = "runnable-actions";
-            copy_btn = document.createElement("button");
+            copy_btn: any = document.createElement("button");
             copy_btn.type = "button";
             copy_btn.className = "runnable-copy";
             copy_btn.textContent = "Copy";
             actions.appendChild(copy_btn);
-            run_btn = document.createElement("button");
+            run_btn: any = document.createElement("button");
             run_btn.type = "button";
             run_btn.className = "runnable-run";
             run_btn.textContent = "▶ Run";
@@ -506,7 +506,7 @@ cl {
             header.appendChild(actions);
             block.appendChild(header);
 
-            host = document.createElement("div");
+            host: any = document.createElement("div");
             host.className = "runnable-editor-host";
             block.appendChild(host);
 
@@ -514,12 +514,12 @@ cl {
             # show even if the jac mode failed to register.
             has_jac = False;
             try {
-                has_jac = bool(window.CodeMirror.modes["jac"]);
+                has_jac = bool(window.CodeMirror.modes["jac"]);  # jac:ignore[E1030]
             } except Exception {
                 _ignore = None;
             }
             cm_mode = "jac" if has_jac else "null";
-            cm = window.CodeMirror(host, {
+            cm = window.CodeMirror(host, {  # jac:ignore[E1030]
                 "value": source,
                 "mode": cm_mode,
                 "theme": "default",
@@ -531,7 +531,7 @@ cl {
             # before layout settles, that text leaks. A refresh after paint fixes it.
             setTimeout(lambda -> None { cm.refresh(); }, 60);
 
-            output = document.createElement("pre");
+            output: any = document.createElement("pre");
             output.className = "runnable-output";
             block.appendChild(output);
 
@@ -581,10 +581,10 @@ cl {
         # Collect h2/h3 headings (the markdown `toc` extension already gave them ids
         # + a .headerlink anchor) into a flat list the sidebar renders as jump links.
         items = [];
-        heads = container.querySelectorAll("h2[id], h3[id]");
+        heads: any = container.querySelectorAll("h2[id], h3[id]");
         for h in heads {
             raw = str(h.textContent or "");
-            link_el = h.querySelector(".headerlink");
+            link_el: any = h.querySelector(".headerlink");
             if link_el {
                 # Drop the trailing ¶ permalink glyph from the visible label.
                 raw = raw.replace(str(link_el.textContent or ""), "");
@@ -605,17 +605,17 @@ cl {
         # DOM (not React state) so scrolling never triggers re-renders, and keep a
         # single handler on window so SPA re-navigations don't stack listeners. The
         # handler queries .post-toc live, so it's a harmless no-op on non-post pages.
-        if window.__tocScroll {
-            window.removeEventListener("scroll", window.__tocScroll);
+        if window.__tocScroll {  # jac:ignore[E1030]
+            window.removeEventListener("scroll", window.__tocScroll);  # jac:ignore[E1030]
         }
         def on_scroll() -> None {
-            toc_el = document.querySelector(".post-toc");
+            toc_el: any = document.querySelector(".post-toc");
             if not toc_el {
                 return;
             }
             # Hide the TOC once the article body has scrolled out of view, so it
             # doesn't overlay the related-posts grid / prev-next nav / footer.
-            prose_el = document.querySelector(".post-shell .prose");
+            prose_el: any = document.querySelector(".post-shell .prose");
             if prose_el {
                 rect = prose_el.getBoundingClientRect();
                 past_article = rect.bottom < 160;
@@ -625,10 +625,10 @@ cl {
                     toc_el.classList.remove("post-toc-hidden");
                 }
             }
-            links = toc_el.querySelectorAll("a[data-toc-id]");
+            links: any = toc_el.querySelectorAll("a[data-toc-id]");
             current = "";
             for ln in links {
-                target = document.getElementById(str(ln.getAttribute("data-toc-id")));
+                target: any = document.getElementById(str(ln.getAttribute("data-toc-id")));
                 if target and target.getBoundingClientRect().top <= 140 {
                     current = str(ln.getAttribute("data-toc-id"));
                 }
@@ -641,7 +641,7 @@ cl {
                 }
             }
         }
-        window.__tocScroll = on_scroll;
+        window.__tocScroll = on_scroll;  # jac:ignore[E1030]
         window.addEventListener("scroll", on_scroll, {"passive": True});
         # Run once after the nav has painted so the first section highlights on load.
         setTimeout(on_scroll, 60);
@@ -663,7 +663,7 @@ cl {
         # Parse via an anchor element: Jac emits a plain `URL(...)` call, but the
         # browser's URL is a constructor and throws without `new`. Setting an
         # anchor's href resolves relative links and exposes the parsed parts.
-        parser = document.createElement("a") as any;
+        parser: any = document.createElement("a") as any;
         parser.href = href;
         proto = str(parser.protocol or "");
         if (proto != "http:") and (proto != "https:") {
@@ -694,7 +694,7 @@ cl {
         out = [];
         # Anchors AND embedded iframes (e.g. a YouTube <iframe> dropped into the
         # post), walked in document order.
-        els = container.querySelectorAll("a[href], iframe[src]") as any;
+        els: any = container.querySelectorAll("a[href], iframe[src]") as any;
         seen = {};
         i = 0;
         for el in els {
@@ -745,17 +745,17 @@ cl {
         # Mirror of the TOC scrollspy: toggle classes directly (no re-render). The
         # link whose anchor sits just above the 40% line is "active"; it and its two
         # neighbours expand into full cards (max 3), the rest collapse to dots.
-        if window.__linkRailScroll {
-            window.removeEventListener("scroll", window.__linkRailScroll);
+        if window.__linkRailScroll {  # jac:ignore[E1030]
+            window.removeEventListener("scroll", window.__linkRailScroll);  # jac:ignore[E1030]
         }
         def on_scroll() -> None {
-            rail = document.querySelector(".link-rail") as any;
+            rail: any = document.querySelector(".link-rail") as any;
             if not rail {
                 return;
             }
             # Hide the rail once the article body has scrolled out of view, so it
             # doesn't hang over the related-posts / footer area (mirrors the TOC).
-            prose_el = document.querySelector(".post-shell .prose") as any;
+            prose_el: any = document.querySelector(".post-shell .prose") as any;
             if prose_el {
                 if prose_el.getBoundingClientRect().bottom < 160 {
                     rail.classList.add("link-rail-hidden");
@@ -763,14 +763,14 @@ cl {
                     rail.classList.remove("link-rail-hidden");
                 }
             }
-            nodes = rail.querySelectorAll(".link-node") as any;
+            nodes: any = rail.querySelectorAll(".link-node") as any;
             line = window.innerHeight * 0.4;
             active = -1;
             best = -1000000.0;
             idx = 0;
             for el in nodes {
                 ref = str(el.getAttribute("data-link-id") or "");
-                target = document.getElementById(ref);
+                target: any = document.getElementById(ref);
                 if target {
                     top = target.getBoundingClientRect().top;
                     if (top <= line) and (top > best) {
@@ -798,7 +798,7 @@ cl {
                 idx2 = idx2 + 1;
             }
         }
-        window.__linkRailScroll = on_scroll;
+        window.__linkRailScroll = on_scroll;  # jac:ignore[E1030]
         window.addEventListener("scroll", on_scroll, {"passive": True});
         setTimeout(on_scroll, 80);
     }
@@ -865,7 +865,7 @@ cl {
             # link_meta drops the host when the og fetch fails (e.g. 404). Recover
             # it from the URL via an anchor element (URL() needs `new`, which the
             # Jac→JS compiler doesn't emit) so the card always shows a source.
-            parser = document.createElement("a") as any;
+            parser: any = document.createElement("a") as any;
             parser.href = url;
             host = str(parser.hostname or "").lower();
             if host.startswith("www.") {
@@ -912,17 +912,17 @@ cl {
         # raw form (the server only ever stores a one-way hash of it). "" if storage
         # is blocked (private mode) — the open still counts toward the total.
         try {
-            existing = window.localStorage.getItem("jaseci-blog-vid");
+            existing = window.localStorage.getItem("jaseci-blog-vid");  # jac:ignore[E1030]
             if existing {
                 return str(existing);
             }
             fresh = "";
             try {
-                fresh = str(window.crypto.randomUUID());
+                fresh = str(window.crypto.randomUUID());  # jac:ignore[E1030]
             } except Exception {
                 fresh = "v-" + str(int(Date.now()));
             }
-            window.localStorage.setItem("jaseci-blog-vid", fresh);
+            window.localStorage.setItem("jaseci-blog-vid", fresh);  # jac:ignore[E1030]
             return fresh;
         } except Exception {
             return "";
@@ -951,13 +951,13 @@ cl {
     async def flush_engagement() -> None {
         # Send the current visit's reading sample exactly once.
         try {
-            st = window.__blogTrack;
+            st = window.__blogTrack;  # jac:ignore[E1030]
             if not st or st["sent"] or not st["slug"] {
                 return;
             }
             now = int(Date.now());
             if st["resume"] > 0 {
-                st["active"] = st["active"] + (now - st["resume"]);
+                st["active"] = st["active"] + (now - st["resume"]);  # jac:ignore[E1055]
                 st["resume"] = 0;
             }
             # Skip non-reads. This filters genuine sub-second bounces AND, crucially,
@@ -972,7 +972,7 @@ cl {
             st["sent"] = True;
             root spawn RecordEngagement(
                 slug=str(st["slug"]),
-                dwell_ms=float(st["active"]),
+                dwell_ms=float(st["active"]),  # jac:ignore[E1053]
                 scroll_pct=int(st["maxScroll"]),
             );
         } except Exception {
@@ -1013,7 +1013,7 @@ cl {
         # zero-time sample (the bug that pinned every median scroll to the lowest
         # bucket). Only re-init when this is genuinely a different post.
         try {
-            prev = window.__blogTrack;
+            prev = window.__blogTrack;  # jac:ignore[E1030]
             if prev and (prev["slug"] == slug) and (not prev["sent"]) {
                 return;
             }
@@ -1026,11 +1026,11 @@ cl {
 
         visible = True;
         try {
-            visible = (document.visibilityState != "hidden");
+            visible = (document.visibilityState != "hidden");  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
-        window.__blogTrack = {
+        window.__blogTrack = {  # jac:ignore[E1030]
             "slug": slug,
             "active": 0,                              # accumulated active ms
             "resume": int(Date.now()) if visible else 0,  # ts the current visible segment began (0 = paused)
@@ -1040,14 +1040,14 @@ cl {
 
         # Scroll depth (replace any prior listener, same idiom as the TOC scrollspy).
         try {
-            if window.__blogScrollTrack {
-                window.removeEventListener("scroll", window.__blogScrollTrack);
+            if window.__blogScrollTrack {  # jac:ignore[E1030]
+                window.removeEventListener("scroll", window.__blogScrollTrack);  # jac:ignore[E1030]
             }
         } except Exception {
             _ignore = None;
         }
         def on_scroll() -> None {
-            st = window.__blogTrack;
+            st = window.__blogTrack;  # jac:ignore[E1030]
             if not st {
                 return;
             }
@@ -1056,40 +1056,40 @@ cl {
                 st["maxScroll"] = p;
             }
         }
-        window.__blogScrollTrack = on_scroll;
+        window.__blogScrollTrack = on_scroll;  # jac:ignore[E1030]
         window.addEventListener("scroll", on_scroll, {"passive": True});
         setTimeout(on_scroll, 60);
 
         # Pause/resume active time on tab visibility changes (don't count background time).
         try {
-            if window.__blogVisTrack {
-                document.removeEventListener("visibilitychange", window.__blogVisTrack);
+            if window.__blogVisTrack {  # jac:ignore[E1030]
+                document.removeEventListener("visibilitychange", window.__blogVisTrack);  # jac:ignore[E1030]
             }
         } except Exception {
             _ignore = None;
         }
         def on_vis() -> None {
-            st = window.__blogTrack;
+            st = window.__blogTrack;  # jac:ignore[E1030]
             if not st {
                 return;
             }
             now = int(Date.now());
-            if document.visibilityState == "hidden" {
+            if document.visibilityState == "hidden" {  # jac:ignore[E1030]
                 if st["resume"] > 0 {
-                    st["active"] = st["active"] + (now - st["resume"]);
+                    st["active"] = st["active"] + (now - st["resume"]);  # jac:ignore[E1055]
                     st["resume"] = 0;
                 }
             } elif st["resume"] == 0 {
                 st["resume"] = now;
             }
         }
-        window.__blogVisTrack = on_vis;
+        window.__blogVisTrack = on_vis;  # jac:ignore[E1030]
         document.addEventListener("visibilitychange", on_vis);
 
         # Final flush on tab close / hard navigation (best-effort).
         try {
-            if window.__blogHideTrack {
-                window.removeEventListener("pagehide", window.__blogHideTrack);
+            if window.__blogHideTrack {  # jac:ignore[E1030]
+                window.removeEventListener("pagehide", window.__blogHideTrack);  # jac:ignore[E1030]
             }
         } except Exception {
             _ignore = None;
@@ -1097,7 +1097,7 @@ cl {
         def on_hide() -> None {
             flush_engagement();
         }
-        window.__blogHideTrack = on_hide;
+        window.__blogHideTrack = on_hide;  # jac:ignore[E1030]
         window.addEventListener("pagehide", on_hide);
 
         # Delegated click tracking for links inside the article body. Bound to the
@@ -1184,7 +1184,7 @@ cl {
                     resp = root spawn FetchLinkMeta(urls=urls);
                     if resp.reports and (len(resp.reports) > 0) {
                         rep = resp.reports[0];
-                        metas = rep["meta"] if ("meta" in rep) else [];
+                        metas = rep["meta"] if ("meta" in rep) else [];  # jac:ignore[E1111]
                         mp = {};
                         for m in metas {
                             mp[str(m["url"])] = m;
@@ -1339,7 +1339,7 @@ cl {
             }
             min_ms: int = 750;
             try {
-                min_ms = int(window.__BLOG_CONFIG["minLoadingMs"]);
+                min_ms = int(window.__BLOG_CONFIG["minLoadingMs"]);  # jac:ignore[E1030]
             } except Exception {
                 _ignore = None;
             }

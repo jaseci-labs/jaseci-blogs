@@ -98,7 +98,7 @@ cl {
             }
             min_ms: int = 750;
             try {
-                min_ms = int(window.__BLOG_CONFIG["minLoadingMs"]);
+                min_ms = int(window.__BLOG_CONFIG["minLoadingMs"]);  # jac:ignore[E1030]
             } except Exception {
                 _ignore = None;
             }

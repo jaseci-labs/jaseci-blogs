@@ -19,9 +19,9 @@ cl {
         # reviewer-gated walker re-verifies write access server-side.
         can with [loc["pathname"]] entry {
             try {
-                raw = window.sessionStorage.getItem("blog_submit_session");
+                raw = window.sessionStorage.getItem("blog_submit_session");  # jac:ignore[E1030]
                 if raw {
-                    sess = JSON.parse(raw);
+                    sess = JSON.parse(raw);  # jac:ignore[E1053]
                     is_reviewer = bool(sess["is_reviewer"]);
                 } else {
                     is_reviewer = False;
@@ -35,7 +35,7 @@ cl {
 
             # Site-wide runtime config. Pages read from here so we have one
             # source of truth for tunables like the skeleton-show floor.
-            window.__BLOG_CONFIG = {
+            window.__BLOG_CONFIG = {  # jac:ignore[E1030]
                 "minLoadingMs": 800,
             };
 
@@ -44,7 +44,7 @@ cl {
             # honored, so readers only get dark if they explicitly toggle it.
             resolved: str = "light";
             try {
-                saved = window.localStorage.getItem("jaseci-blog-theme");
+                saved = window.localStorage.getItem("jaseci-blog-theme");  # jac:ignore[E1030]
                 if saved == "dark" or saved == "light" {
                     resolved = str(saved);
                 }
@@ -99,7 +99,7 @@ cl {
                                 next_theme = "dark" if theme == "light" else "light";
                                 try {
                                     document.documentElement.setAttribute("data-theme", next_theme);
-                                    window.localStorage.setItem("jaseci-blog-theme", next_theme);
+                                    window.localStorage.setItem("jaseci-blog-theme", next_theme);  # jac:ignore[E1030]
                                 } except Exception {
                                     _ignore = None;
                                 }
