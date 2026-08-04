@@ -55,17 +55,24 @@ jobs:
           # here (jaclang==0.16.0) would pull the 0.16-era parser, which cannot read
           # this source since the lambda-syntax migration.
           #
-          # UNPINNED BY CHOICE: no --version, so this tracks the latest release, and
-          # jac.toml leaves the pod's version unpinned to match. Two things follow,
-          # and they are the first places to look when a deploy breaks with no diff
-          # in this repo:
-          #   - a breaking jac release breaks the deploy without a commit here
-          #     (0.16 -> 0.32 changed lambda syntax and did exactly this);
-          #   - runner and pod resolve latest independently, so a release landing
-          #     mid-deploy can leave them on different versions.
-          # `jac --version` in the next step records what was actually resolved.
+          # PINNED. Tracking latest broke the deploy with no diff in this repo, and
+          # the reason is a trap worth spelling out: jac publishes TWO release lines
+          # concurrently, and install.sh resolves "latest" by SEMVER, not by date.
+          #
+          #   v0.34.10  published 2026-08-04   <- newest, and the line this source targets
+          #   v0.35.1   published 2026-07-31   <- older, but higher semver, so it wins
+          #
+          # 0.35.x is a different syntax line: it does not parse `cl { }` blocks, so
+          # every module failed with error[E0005] "Unexpected token '{'" and the seal
+          # produced no JIR. That surfaces only as the downstream
+          # "Seal incomplete: 17 sealable module(s) have no JIR", with no parse errors
+          # printed, which is why it does not look like a version problem.
+          #
+          # Verified: 0.35.1 fails the seal on this source, 0.34.10 seals it cleanly.
+          # Bump this deliberately, and re-run `jac build` locally on the new version
+          # before you do — "newest tag" is not the same as "highest version here".
           curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh \
-            | bash
+            | bash -s -- --version 0.34.10
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Resolve project dependencies
@@ -138,6 +145,17 @@ jobs:
           # first try. The short retry is belt-and-suspenders for transient EBS
           # detach latency; it force-deletes any wedged code-sync pod between tries.
           # Permanent fix (RWX/EFS): .github/CODE_SYNC_RWO_FIX.md.
+          # Ship the runner's own (pinned) binary to the pods instead of letting the
+          # deploy download the 'stable' channel. Without this, the pod runtime is
+          # resolved independently of the version installed above — the same
+          # semver-vs-date resolution that picked 0.35.1 — so pinning the runner
+          # alone can still leave the seal and the pod on different compilers.
+          # Setting it switches the binary injector to channel 'local' (logs
+          # "Shipping the local jac binary at …"), making runner, seal and pod one
+          # version by construction. Resolved from PATH so it follows the pin.
+          export JAC_SCALE_BINARY_PATH="$(command -v jac)"
+          echo "Shipping jac binary: $JAC_SCALE_BINARY_PATH ($(jac --version))"
+
           NS=jaseci-blogs
           for attempt in 1 2 3; do
             echo "::group::Deploy attempt ${attempt}/3"
