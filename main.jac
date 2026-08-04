@@ -1522,6 +1522,131 @@ def:priv commit_update(token: str, repo_full: str, branch: str, files: list, mes
 }
 
 
+def:priv suggestion_fence(content: str) -> str {
+    # A ```suggestion block has to out-fence everything inside it, and blog posts
+    # are full of ```jac / ```mermaid fences. Find the longest backtick run in the
+    # content and go one longer.
+    longest = 0;
+    run = 0;
+    for ch in content {
+        if ch == "`" {
+            run = run + 1;
+            longest = run if run > longest else longest;
+        } else {
+            run = 0;
+        }
+    }
+    return "`" * (longest + 1 if longest >= 3 else 3);
+}
+
+
+def:priv suggest_whole_file(
+    token: str, pr_number: int, path: str, commit_id: str,
+    new_content: str, line_count: int, note: str
+) -> str {
+    # Post an edit as a multi-line ```suggestion covering the file's entire
+    # right-hand side, so the author applies it with one click. Legal only when
+    # every line is in the PR diff (an ADDED file) — GitHub 422s a comment on a
+    # line outside the diff. Returns the comment's html_url.
+    fence = suggestion_fence(new_content);
+    body = f"{note}\n\n{fence}suggestion\n{new_content.rstrip()}\n{fence}\n";
+    payload = {
+        "body": body,
+        "commit_id": commit_id,
+        "path": path,
+        "line": line_count,
+        "side": "RIGHT",
+    };
+    # start_line must be strictly less than line; a 1-line file is a single-line
+    # comment instead.
+    if line_count > 1 {
+        payload["start_line"] = 1;
+        payload["start_side"] = "RIGHT";
+    }
+    res = gh_ok(requests.post(
+        f"{GH_API}/repos/{gh_repo()}/pulls/{pr_number}/comments",
+        headers=gh_headers(token), json=payload, timeout=30,  # jac:ignore[E1053]
+    ), "post suggestion");
+    return str(res.get("html_url", ""));
+}
+
+
+def:priv comment_on_pr(token: str, pr_number: int, body: str) -> str {
+    # Plain PR comment — the last-resort delivery route. Needs nothing beyond
+    # read access to the repo, so it always works.
+    res = gh_ok(requests.post(
+        f"{GH_API}/repos/{gh_repo()}/issues/{pr_number}/comments",
+        headers=gh_headers(token), json={"body": body}, timeout=30,
+    ), "post comment");
+    return str(res.get("html_url", ""));
+}
+
+
+def:priv deliver_edit(
+    token: str, pr: dict, files: list, message: str, post_md: str, editor: str
+) -> dict {
+    # Deliver a REVIEWER's edit to someone else's submission by the strongest
+    # route GitHub allows, degrading in order:
+    #
+    #   1. commit     — push straight onto the PR's branch on the author's fork.
+    #      Needs "Allow edits by maintainers" AND that grant to extend to the Git
+    #      Data API. GitHub documents the grant as push access to the branch and
+    #      tightened REST authorization for maintainer fork collaborators in 2021
+    #      without saying which endpoints survived, so blob/tree creation on the
+    #      fork may 403. We attempt it rather than predict it.
+    #   2. suggestion — a whole-file ```suggestion the author applies in one
+    #      click. Needs the post file to be ADDED by the PR (every submission is).
+    #   3. comment    — the proposed markdown as a plain PR comment.
+    #
+    # Only the commit route can carry images; the other two are markdown-only, so
+    # they say so rather than silently dropping the uploads.
+    n = int(pr["pr_number"]);
+    why = "";
+    if bool(pr["maintainer_can_modify"]) {
+        try {
+            commit_update(token, str(pr["head_repo"]), str(pr["head_ref"]), files, message);
+            return {"mode": "commit", "url": str(pr["pr_url"]), "note": ""};
+        } except Exception as e {
+            why = f"pushing to the fork branch was refused (`{e}`)";
+        }
+    } else {
+        why = "**Allow edits by maintainers** is off for this pull request";
+    }
+
+    extra = len(files) - 1;
+    img_note = f"\n\n> ⚠️ {extra} image upload(s) could not be included — only the post markdown can travel this way. Re-upload them yourself, or turn on **Allow edits by maintainers**." if extra > 0 else "";
+    note = (
+        f"**Editorial revision from @{editor}.** Applying this replaces the post "
+        f"with the reviewed version.\n\n"
+        f"_Delivered as a suggestion because {why}._" + img_note
+    );
+
+    if str(pr["post_status"]) == "added" {
+        try {
+            url = suggest_whole_file(
+                token, n, str(pr["post_path"]), str(pr["head_sha"]),
+                post_md, len(post_md.rstrip().splitlines()), note,
+            );
+            return {"mode": "suggestion", "url": url, "note": why};
+        } except Exception as e {
+            why = f"{why}, and the suggestion was rejected (`{e}`)";
+        }
+    } else {
+        why = f"{why}, and the post file is modified rather than added by this PR so a whole-file suggestion is not applicable";
+    }
+
+    fence = suggestion_fence(post_md);
+    body = (
+        f"**Editorial revision from @{editor}.**\n\n"
+        f"_Posted as a comment because {why}._{img_note}\n\n"
+        f"Copy this over `{pr['post_path']}` to apply it:\n\n"
+        f"{fence}markdown\n{post_md.rstrip()}\n{fence}\n"
+    );
+    url = comment_on_pr(token, n, body);
+    return {"mode": "comment", "url": url, "note": why};
+}
+
+
 def:priv submit_via_fork(
     token: str, login: str, branch: str, files: list, message: str,
     pr_title: str, pr_body: str
@@ -1545,9 +1670,13 @@ def:priv submit_via_fork(
     pr = gh_ok(requests.post(
         f"{GH_API}/repos/{gh_repo()}/pulls",
         headers=gh_headers(token),
-        json={
+        json={  # jac:ignore[E1053]
             "title": pr_title, "head": f"{login}:{branch}", "base": base_branch,
             "body": pr_body,
+            # Explicit rather than relying on the API default: this is what lets a
+            # reviewer commit a copy-edit straight onto the submission. The author
+            # can still turn it off on the PR page.
+            "maintainer_can_modify": True,
         },
         timeout=30,
     ), "open pull request");
@@ -1714,6 +1843,7 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
             return None;
         }
         post_path = "";
+        post_status = "";
         for f in files {
             if not isinstance(f, dict) {
                 continue;
@@ -1721,6 +1851,9 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
             fn = str(f.get("filename", ""));
             if fn.startswith("docs/blog/posts/") and fn.endswith(".md") {
                 post_path = fn;
+                # "added" (a new submission) means every line of the file is in
+                # the diff, which is what makes a whole-file ```suggestion legal.
+                post_status = str(f.get("status", ""));
                 break;
             }
         }
@@ -1741,6 +1874,8 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
     return {
         "content": content,
         "post_path": post_path,
+        "post_status": post_status,
+        "pr_number": pr_number,
         "head_repo": head_repo,
         "head_ref": str(head.get("ref", "")),
         "head_owner": head_owner,
@@ -1750,6 +1885,10 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
         "pr_url": str(pr.get("html_url", "")),
         "mergeable": pr.get("mergeable"),
         "mergeable_state": str(pr.get("mergeable_state", "")),
+        # The author's "Allow edits by maintainers" checkbox. Only settable on
+        # PRs from user-owned forks, and revocable at any time — so reviewers'
+        # edit routing reads it live per request, never from cache.
+        "maintainer_can_modify": bool(pr.get("maintainer_can_modify")),
     };
 }
 
@@ -2657,7 +2796,11 @@ walker:priv GetSubmissionForEdit {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        if str(pr["head_owner"]).lower() != str(gh_user(gh_token).get("login", "")).lower() {
+        # Authors edit their own submission; reviewers (repo write) may also open
+        # anyone's, to copy-edit it. How that edit gets DELIVERED depends on the
+        # PR — see deliver_edit — so tell the client up front which route it'll take.
+        is_own = str(pr["head_owner"]).lower() == str(gh_user(gh_token).get("login", "")).lower();
+        if not is_own and not has_write_access(gh_token) {
             report {"ok": False, "error": "you can only edit your own submissions"};
             return;
         }
@@ -2666,7 +2809,18 @@ walker:priv GetSubmissionForEdit {
             return;
         }
         fields = parse_post_for_edit(str(pr["content"]));
-        report {"ok": True, "pr_number": self.pr_number, "branch": str(pr["head_ref"]), **fields};
+        report {
+            "ok": True,
+            "pr_number": self.pr_number,
+            "branch": str(pr["head_ref"]),
+            "is_own": is_own,
+            "author": str(pr["head_owner"]),
+            # Best case only — the commit can still be refused at push time, which
+            # is why deliver_edit falls back instead of trusting this.
+            "can_commit": is_own or bool(pr["maintainer_can_modify"]),
+            "can_suggest": str(pr["post_status"]) == "added",
+            **fields,
+        };
     }
 }
 
@@ -2707,7 +2861,10 @@ walker:priv UpdatePost {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        if str(pr["head_owner"]).lower() != str(profile["login"]).lower() {
+        login = str(profile["login"]);
+        is_own = str(pr["head_owner"]).lower() == login.lower();
+        is_reviewer = has_write_access(gh_token);
+        if not is_own and not is_reviewer {
             report {"ok": False, "error": "you can only edit your own submissions"};
             return;
         }
@@ -2743,26 +2900,62 @@ walker:priv UpdatePost {
             return;
         }
 
-        # Resolve the author's id (reuses their existing .authors.yml entry);
-        # don't re-touch .authors.yml on edit — the entry already exists.
-        (author_id, _new) = resolve_author_id(profile, "");
-        if self.as_team and has_write_access(gh_token) {
-            author_id = TEAM_AUTHOR_ID;
+        post_md: str = "";
+        if is_own {
+            # Resolve the author's id (reuses their existing .authors.yml entry);
+            # don't re-touch .authors.yml on edit — the entry already exists.
+            (author_id, _new) = resolve_author_id(profile, "");
+            if self.as_team and is_reviewer {
+                author_id = TEAM_AUTHOR_ID;
+            }
+            post_md = build_post_markdown(
+                title, slug, cats, self.description.strip(), author_id, body,
+                self.is_repost, repost_url, self.repost_source.strip(),
+            );
+        } else {
+            # A reviewer copy-editing someone ELSE's submission must not become its
+            # author: rebuild from the PR's own frontmatter so the contributor's
+            # byline, date and `draft: true` survive untouched.
+            post_md = build_edited_markdown(
+                str(pr["content"]), title, cats, self.description.strip(), body,
+                self.is_repost, repost_url, self.repost_source.strip(),
+                TEAM_AUTHOR_ID if self.as_team else "",
+            );
         }
-        post_md = build_post_markdown(
-            title, slug, cats, self.description.strip(), author_id, body,
-            self.is_repost, repost_url, self.repost_source.strip(),
-        );
-        files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
+        # Write back to the PR's ACTUAL file — a PR opened directly on GitHub can
+        # use a filename that isn't the slug, and writing to `<slug>.md` would add
+        # a second post rather than edit the one under review.
+        files = [{"path": str(pr["post_path"]), "content": post_md, "binary": False}];
         files = files + img_res["files"];  # jac:ignore[E1001]
 
-        try {
-            commit_update(gh_token, str(pr["head_repo"]), str(pr["head_ref"]), files, f"Update blog post: {title}");
-        } except Exception as e {
-            report {"ok": False, "error": f"could not save changes: {e}"};
+        if is_own {
+            try {
+                commit_update(gh_token, str(pr["head_repo"]), str(pr["head_ref"]), files, f"Update blog post: {title}");
+            } except Exception as e {
+                report {"ok": False, "error": f"could not save changes: {e}"};
+                return;
+            }
+            report {"ok": True, "mode": "commit", "pr_number": self.pr_number, "pr_url": str(pr["pr_url"]), "url": str(pr["pr_url"]), "slug": slug};
             return;
         }
-        report {"ok": True, "pr_number": self.pr_number, "pr_url": str(pr["pr_url"]), "slug": slug};
+
+        try {
+            outcome = deliver_edit(
+                gh_token, pr, files, f"Editorial revision: {title}", post_md, login,
+            );
+        } except Exception as e {
+            report {"ok": False, "error": f"could not deliver the edit: {e}"};
+            return;
+        }
+        report {
+            "ok": True,
+            "mode": str(outcome["mode"]),
+            "pr_number": self.pr_number,
+            "pr_url": str(pr["pr_url"]),
+            "url": str(outcome["url"]),
+            "slug": slug,
+            "fallback_reason": str(outcome["note"]),
+        };
     }
 }
 

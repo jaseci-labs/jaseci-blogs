@@ -10,7 +10,7 @@ Live preview renders markdown client-side via marked (loaded from CDN) — good
 enough for authoring; the real article render happens on the post page.
 """
 
-sv import from .main { GithubOAuthConfig, GithubOAuthExchange, SubmitPost, MySubmissions, CreatePreview, GetSubmissionForEdit, UpdatePost }
+sv import from .main { GithubOAuthConfig, GithubOAuthExchange, SubmitPost, MySubmissions, CreatePreview, GetSubmissionForEdit, UpdatePost, ListEditablePosts, GetPublishedPostForEdit, EditPublishedPost }
 
 cl import from "@jac/runtime" { Link }
 
@@ -234,6 +234,12 @@ cl {
         has images: list = [];
         has preview_html: str = "";
         has edit_pr: int = 0;  # 0 = new submission; >0 = editing that PR
+        # Reviewer copy-editing someone else's open submission. How the edit reaches
+        # the PR depends on the author's "allow edits by maintainers" setting, so the
+        # form says which route it will take before you hit save.
+        has edit_is_own: bool = True;
+        has edit_author: str = "";
+        has edit_can_commit: bool = True;
         has is_repost: bool = False;
         has repost_url: str = "";
         has repost_source: str = "";
@@ -306,6 +312,24 @@ cl {
                 signed_in = True;
             }
             booting = False;
+            # 3) deep link from the reviewer dashboard: /submit?edit_pr=123 opens that
+            # submission straight in the editor. Strip the param first so a refresh
+            # doesn't silently reload the PR over unsaved edits.
+            if existing {
+                want = query_param("edit_pr");
+                if want {
+                    try {
+                        window.history.replaceState({}, "", "/submit");
+                    } except Exception {
+                        _ignore = None;
+                    }
+                    try {
+                        await load_edit(int(want), str(existing["gh_enc"]));
+                    } except Exception as e {
+                        subs_error = f"Could not open PR #{want} for editing: {e}";
+                    }
+                }
+            }
         }
 
         async def begin_signin() -> None {
@@ -446,33 +470,39 @@ cl {
                 body_is_b64 = False;
             }
             try {
-                # Declared here so both branches assign the SAME binding — assigning
-                # only inside the if/else block-scopes `res` and it's undefined below.
-                res: any = None;
+                # Declared here so all three branches assign the SAME binding —
+                # assigning only inside the if/else block-scopes it and it's undefined
+                # below. Collect `.reports` per branch rather than the walker object:
+                # the three walkers are distinct types, so a shared binding gets
+                # narrowed to whichever one is assigned first.
+                reports: list = [];
                 if editing_published {
-                    res = root spawn EditPublishedPost(
+                    ep = root spawn EditPublishedPost(
                         gh_enc=gh_enc, slug=slug, title=title, categories=cats,
                         description=description, body_md=enc_body, body_b64=body_is_b64, images=images, pr_number=edit_pr,
                         is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                         as_team=as_team,
                     );
+                    reports = ep.reports;
                 } elif edit_pr > 0 {
-                    res = root spawn UpdatePost(
+                    up = root spawn UpdatePost(
                         gh_enc=gh_enc, pr_number=edit_pr, title=title, slug=slug,
                         categories=cats, description=description, body_md=enc_body, body_b64=body_is_b64, images=images,
                         is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                         as_team=as_team,
                     );
+                    reports = up.reports;
                 } else {
-                    res = root spawn SubmitPost(
+                    sp = root spawn SubmitPost(
                         gh_enc=gh_enc, title=title, slug=slug, categories=cats,
                         description=description, body_md=enc_body, body_b64=body_is_b64, author_bio=bio, images=images,
                         is_repost=is_repost, repost_url=repost_url, repost_source=repost_source,
                         as_team=as_team,
                     );
+                    reports = sp.reports;
                 }
-                if res and res.reports {
-                    data = res.reports[0];
+                if reports and len(reports) > 0 {
+                    data = reports[0];
                     if data["ok"] {
                         result = {**data, "edited": edit_pr > 0, "published_edit": editing_published};
                         if editing_published {
@@ -505,17 +535,24 @@ cl {
             is_repost = False; repost_url = ""; repost_source = "";
             as_team = False;
             editing_published = False; edit_existing_prs = [];
+            edit_is_own = True; edit_author = ""; edit_can_commit = True;
         }
 
-        async def start_edit(pr: int) -> None {
+        # `tok` is passed explicitly rather than read from gh_enc: the boot hook calls
+        # this in the same tick it signs in, and a `has` field compiles to useState, so
+        # gh_enc still reads as "" until the next render.
+        async def load_edit(pr: int, tok: str) -> None {
             subs_busy = f"edit-{pr}";
             try {
-                res = root spawn GetSubmissionForEdit(gh_enc=gh_enc, pr_number=pr);
+                res = root spawn GetSubmissionForEdit(gh_enc=tok, pr_number=pr);
                 if res.reports and len(res.reports) > 0 {
                     data = res.reports[0];
                     if data["ok"] {
                         reset_form();
                         edit_pr = pr;
+                        edit_is_own = bool(data["is_own"]);
+                        edit_author = str(data["author"]);
+                        edit_can_commit = bool(data["can_commit"]);
                         title = str(data["title"]);
                         slug = str(data["slug"]);
                         slug_touched = True;
@@ -558,6 +595,73 @@ cl {
                 subs_error = f"Could not create preview: {e}";
             }
             subs_busy = "";
+        }
+
+        def start_edit(pr: int) -> None {
+            load_edit(pr, gh_enc);
+        }
+
+        # A reviewer's edit to someone else's submission lands by one of three routes
+        # (commit / suggestion / comment) picked by the server at save time, so the
+        # confirmation panel reads the route back rather than assuming a commit.
+        def result_mode() -> str {
+            return str(result.get("mode", "")) if result else "";
+        }
+
+        def save_label() -> str {
+            if editing_published {
+                return "Save to PR" if edit_pr > 0 else "Open edit PR";
+            }
+            if edit_pr > 0 and not edit_is_own {
+                return "Send edit to the author" if not edit_can_commit else "Save to their PR";
+            }
+            return "Save changes" if edit_pr > 0 else "Submit for review";
+        }
+
+        def result_eyebrow() -> str {
+            m = result_mode();
+            if m == "suggestion" {
+                return "Suggested ✓";
+            }
+            if m == "comment" {
+                return "Posted ✓";
+            }
+            if result and result["published_edit"] {
+                return "Edit ready ✓";
+            }
+            return "Saved ✓" if result and result["edited"] else "Submitted ✓";
+        }
+
+        def result_headline() -> str {
+            m = result_mode();
+            if m == "suggestion" {
+                return "Your edit is waiting as a suggestion";
+            }
+            if m == "comment" {
+                return "Your edit is posted on the pull request";
+            }
+            if result and result["published_edit"] {
+                return "Your edit is ready for review";
+            }
+            return "Your changes were saved" if result and result["edited"] else "Your post is in review";
+        }
+
+        def result_deck() -> str {
+            m = result_mode();
+            why = str(result.get("fallback_reason", "")) if result else "";
+            if m == "suggestion" {
+                return f"The author applies it in one click to accept your revision. Delivered this way because {why}.";
+            }
+            if m == "comment" {
+                return f"The author copies it over the post file to accept your revision. Delivered this way because {why}.";
+            }
+            if result and result["published_edit"] {
+                return "The live post is unchanged until this PR merges. Share the preview link with a reviewer; merging publishes the edit.";
+            }
+            if result and result["edited"] {
+                return "The pull request was updated with your changes.";
+            }
+            return "A draft pull request was opened. A reviewer will review and schedule it.";
         }
 
         def make_edit(pr: int) -> any {
@@ -725,15 +829,14 @@ cl {
 
             {tab == "write" and result and (
                 <div style={{"padding": "2rem 0"}}>
-                    <p className="eyebrow">{result["published_edit"] and "Edit ready ✓" or (result["edited"] and "Saved ✓" or "Submitted ✓")}</p>
-                    <h2 className="display" style={{"fontSize": "1.8rem"}}>
-                        {result["published_edit"] and "Your edit is ready for review" or (result["edited"] and "Your changes were saved" or "Your post is in review")}
-                    </h2>
-                    <p className="post-deck">
-                        {result["published_edit"] and "The live post is unchanged until this PR merges. Share the preview link with a reviewer; merging publishes the edit." or (result["edited"] and "The pull request was updated with your changes." or "A draft pull request was opened. A reviewer will review and schedule it.")}
-                    </p>
+                    <p className="eyebrow">{result_eyebrow()}</p>
+                    <h2 className="display" style={{"fontSize": "1.8rem"}}>{result_headline()}</h2>
+                    <p className="post-deck">{result_deck()}</p>
                     <p style={{"marginTop": "1.5rem", "display": "flex", "gap": "0.75rem", "flexWrap": "wrap"}}>
                         <a className="cta-pill" href={result["pr_url"]} target="_blank" rel="noopener">View pull request →</a>
+                        {(result_mode() == "suggestion" or result_mode() == "comment") and result.get("url") and (
+                            <a className="cta-pill" href={result["url"]} target="_blank" rel="noopener">Open the comment ↗</a>
+                        )}
                         {result.get("preview_url") and (
                             <a className="cta-pill" href={result["preview_url"]} target="_blank" rel="noopener">Open preview ↗</a>
                         )}
@@ -747,11 +850,22 @@ cl {
 
             {tab == "write" and not result and (
                 <div style={{"paddingTop": "1.5rem"}}>
-                    {edit_pr > 0 and not editing_published and (
+                    {edit_pr > 0 and not editing_published and edit_is_own and (
                         <p className="muted small" style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "marginBottom": "1rem"}}>
                             ✏️ Editing submission #{edit_pr}. Saving adds a commit to the existing PR.
                             <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Cancel edit</button>
                         </p>
+                    )}
+                    {edit_pr > 0 and not editing_published and not edit_is_own and (
+                        <div className="muted small" style={{"marginBottom": "1rem", "padding": "0.75rem 1rem", "border": "1px solid var(--rule)", "borderRadius": "8px", "background": "var(--bg-elev)"}}>
+                            <div style={{"display": "flex", "gap": "0.75rem", "alignItems": "center", "flexWrap": "wrap"}}>
+                                <span>✏️ Copy-editing <strong>@{edit_author}</strong>&rsquo;s submission #{edit_pr}. Their byline, date and draft state are preserved.</span>
+                                <button type="button" className="runnable-copy" onClick={lambda -> None { reset_form(); }}>Cancel</button>
+                            </div>
+                            <div style={{"marginTop": "0.6rem"}}>
+                                {edit_can_commit and "This PR allows maintainer edits, so saving commits straight onto it. If GitHub refuses the push, your version is posted as a one-click suggestion instead." or "⚠️ This PR does not allow maintainer edits, so saving posts your version as a one-click suggestion for the author to apply. Image uploads can’t travel that way — only the markdown."}
+                            </div>
+                        </div>
                     )}
                     {editing_published and (
                         <div className="muted small" style={{"marginBottom": "1rem", "padding": "0.75rem 1rem", "border": "1px solid var(--rule)", "borderRadius": "8px", "background": "var(--bg-elev)"}}>
@@ -925,7 +1039,7 @@ cl {
 
                     <div style={{"display": "flex", "gap": "0.75rem", "marginTop": "1.5rem", "flexWrap": "wrap"}}>
                         <button type="button" className="cta-pill" disabled={submitting} onClick={lambda -> None { do_submit(); }}>
-                            {submitting and "Saving…" or (editing_published and (edit_pr > 0 and "Save to PR" or "Open edit PR") or (edit_pr > 0 and "Save changes" or "Submit for review"))}
+                            {submitting and "Saving…" or save_label()}
                         </button>
                     </div>
                 </div>
