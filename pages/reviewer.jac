@@ -376,7 +376,7 @@ cl {
                                     <a className="tag" href={preview["issue_url"]} target="_blank" rel="noopener">Tracker issue ↗</a>
                                 )}
                                 <button type="button" className="tag" disabled={preview_busy} onClick={lambda -> None { create_preview(); }}>
-                                    {preview_busy and "Creating…" or "Create shareable preview →"}
+                                    {preview_busy and "Fetching…" or "Preview link →"}
                                 </button>
                                 <button type="button" className="tag" onClick={lambda -> None { edit_selected(); }}>Copy-edit ✏️</button>
                             </div>
