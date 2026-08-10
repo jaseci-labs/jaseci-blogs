@@ -11,7 +11,7 @@ draft: true
 
 # JacHacks Spring 2026: 300+ Builders, 81 Projects, One Weekend of Jac
 
-[**JacHacks Spring**](https://jachacks.org/spring/) ran from May 15 to May 19, 2026, bringing together **300+ builders from around the world** for a global online hackathon. Over four days, teams shipped **81 projects**, most of them built with Jac and the Jaseci stack, competing across four tracks: Agentic AI, Consumer Healthcare, Fintech, and Social Impact. Sponsors Featherless.AI and Lovable also handed out special awards for the best use of their tools.
+[**JacHacks Spring**](https://jachacks.org/spring/) ran May 15 to 19, 2026. **300+ builders** joined the global online hackathon and shipped **81 projects**, most built with Jac and the Jaseci stack. Teams competed in four tracks: Agentic AI, Consumer Healthcare, Fintech, and Social Impact. Sponsors Featherless.AI and Lovable gave out special awards too.
 
 [![JacHacks Spring 2026: 300+ participants, 81 projects, 4 days, 13 winners](../../assets/jachacks-spring-2026-hero.jpg)](https://jachacks.org/spring/)
 
@@ -19,7 +19,7 @@ draft: true
 
 ## The Kickoff
 
-Jac creator Jason Mars opened the weekend with the kickoff keynote. If you missed it live, the recording below picks up right where the keynote starts:
+Jac creator Jason Mars opened the weekend. The recording below starts right at the keynote:
 
 <div style="position: relative; width: 100%; padding-bottom: 56.25%; margin: 1.5em 0;">
   <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/JHBLmoU7zVk?start=310" title="Opening Ceremony and Keynote Speech | JacHacks Spring" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -27,19 +27,19 @@ Jac creator Jason Mars opened the weekend with the kickoff keynote. If you misse
 
 ## Real Problems, Real Agents
  
-The theme across almost every winning project was the same: builders weren't making chatbots, they were making agents that go out and *do* things. Teams shipped systems that triage medical cases, investigate fraud, negotiate with insurance companies, and coordinate food deliveries, all running autonomously once pointed at a problem.
+Almost every winning project had the same theme: not chatbots, but agents that *do* things. Teams shipped systems that triage medical cases, investigate fraud, fight insurance denials, and coordinate food deliveries, all running on their own.
  
-What stood out most this time, though, is how many teams talked about *how fast* they got there, and almost all of them said Jac was a big part of why.
+The other standout was speed. Teams kept saying how fast they got there, and most credited Jac.
  
 ## Why Jac Made These Projects Easier to Build
  
-Building a full agentic AI application, complete with a frontend, a backend, a database, and a prompt-engineering layer, is a lot to pull off in one weekend, let alone make it good enough to compete. Jac let teams skip most of that glue code and get straight to the idea.
+A full agentic AI app needs a frontend, a backend, a database, and a prompt layer. That is a lot for one weekend. Jac cuts most of that glue code.
  
-Much of that comes down to Jac treating graphs and language models as built-in parts of the language instead of things you bolt on. Agents can be written directly as Jac walkers that move across a graph, so there's no separate agent framework to wire in. On the AI side, meaning-typed programming lets you describe what a function should do through its type signature and a short description, and the compiler builds the prompt from there, no folder of prompt files required. And since Jac compiles down to both backend and frontend, teams could build the whole app in one place instead of hand-coding the plumbing between layers.
+Graphs and language models are built into the language. Agents are just Jac walkers moving over a graph, so there is no agent framework to wire in. Meaning-typed programming turns a type signature and a short description into the prompt, so there are no prompt files to manage. And one Jac codebase compiles to both backend and frontend.
  
-Put together, that's a lot of the usual hackathon setup tax gone, which is a big part of why 81 projects came out of a single weekend.
+That removes most of the usual setup tax. It is a big reason 81 projects shipped in one weekend.
 
-Participants didn't have to figure all of that out on their own, either. The Agentic AI workshop from the event walks through building an agentic application with Jac end to end, and the recording works just as well as a self-paced on-ramp today:
+The event's Agentic AI workshop walks through building one of these apps end to end. It still works as a self-paced tutorial:
 
 <div style="position: relative; width: 100%; padding-bottom: 56.25%; margin: 1.5em 0;">
   <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/V4MVTPspMVs" title="Agentic AI workshop | JacHacks Spring" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -47,7 +47,7 @@ Participants didn't have to figure all of that out on their own, either. The Age
 
 ## What Builders Told Us
 
-We didn't just want to guess how the weekend went, so we asked. In the post-event survey, one number frames everything else: **83% of respondents had never touched Jac before the hackathon**, and yet not a single one said they felt *less* productive than in their usual stack.
+From the post-event survey: **83% of respondents had never touched Jac before the hackathon**. Yet none of them felt less productive than in their usual stack.
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 1.5em 0;">
   <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">83%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">were brand new to Jac</span></div>
@@ -56,7 +56,7 @@ We didn't just want to guess how the weekend went, so we asked. In the post-even
   <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">100%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">want to join the Jac community</span></div>
 </div>
 
-When we asked what the best part of the stack was, the two ideas at the heart of the language came out on top: graph-based programming, and writing the whole app, front to back, in one language.
+The favorite parts of the stack were the two core ideas of the language: graph-based programming, and one language for the whole app.
 
 **What builders liked most about the Jaseci stack**
 
@@ -91,7 +91,7 @@ When we asked what the best part of the stack was, the two ideas at the heart of
 
 <em style="font-size: 0.8em; opacity: 0.7;">Post-event survey: "Which is the best part of the Jaseci stack that you liked?" Multiple selections allowed.</em>
 
-The productivity question tells the same story from another angle. On a 1–5 scale from "much less productive" to "much more productive" than their usual stack, nobody landed below the midpoint, in a language most of them had met four days earlier:
+Productivity vs. their usual stack, on a 1–5 scale: nobody rated below the midpoint, in a language most had met four days earlier.
 
 **Compared to their usual stack, how productive did builders feel?**
 
@@ -125,31 +125,37 @@ The productivity question tells the same story from another angle. On a 1–5 sc
 
 <em style="font-size: 0.8em; opacity: 0.7;">Post-event survey: "Compared to your usual programming stack, how productive did you feel?"</em>
 
-A couple of answers from the free-text responses sum up the vibe better than the numbers do:
+Two answers from the free-text responses:
 
 > "My first time working with a new language in a hackathon environment. As a full-time quantum-control software engineer and part-time AI engineer, I loved this."
 
 > "I didn't expect much when I first heard about it, but once I started using it in the project it shocked me how easy it is to implement. Going to use this language for future projects and hackathons."
 
-The feedback wasn't all roses, and that's the useful part: documentation and examples (58%) and CLI error messages (42%) topped the list of things builders want improved. Consider that heard.
+The top improvement requests: documentation and examples (58%) and CLI error messages (42%). Noted.
 
 ## Track Winners
  
-**Agentic AI Track** went to [*CivicMesh*](https://devpost.com/software/civicmesh-0ctxl5) by Anbuchelvan Ganesan, a multi-agent navigator that routes people in crisis, like single mothers, undocumented families, or elderly tenants, to the housing, food, healthcare, and legal aid they qualify for, in multiple languages, with every decision showing its full reasoning. Runner-up [*MediGraph*](https://devpost.com/software/medigraph) by Soujanya Chatti used agents that reason through drug interactions biochemically instead of just looking them up, flagging dangerous combinations and suggesting safer alternatives.
+**Agentic AI** went to [*CivicMesh*](https://devpost.com/software/civicmesh-0ctxl5) by Anbuchelvan Ganesan: a multi-agent navigator that routes people in crisis to the housing, food, healthcare, and legal aid they qualify for, in multiple languages, with every decision showing its reasoning. Runner-up [*MediGraph*](https://devpost.com/software/medigraph) by Soujanya Chatti reasons through drug interactions biochemically instead of just looking them up, and flags dangerous combinations.
  
-**Consumer Healthcare Track** was won by [*CONSILIUM*](https://devpost.com/software/consilium-mqu6w3) from Tony Y, a diagnostic system where seven AI specialist agents debate a case and cross-examine the evidence before narrowing it down to the three most likely diagnoses. Second place [*Persist*](https://devpost.com/software/persist-yindp5) by Patrick Wang went a step further than most insurance tools: it doesn't just file prior-authorization claims, it fights back when they're denied, generating ERISA-compliant appeal letters on its own.
+**Consumer Healthcare** went to [*CONSILIUM*](https://devpost.com/software/consilium-mqu6w3) by Tony Y: seven AI specialist agents debate a case and cross-examine the evidence, then settle on the three most likely diagnoses. Second place [*Persist*](https://devpost.com/software/persist-yindp5) by Patrick Wang files prior-authorization claims, and when they are denied, writes ERISA-compliant appeal letters on its own.
  
-**Fintech Track** went to [*Sentinel*](https://devpost.com/software/sentinel-multi-agent-fraud-investigation-system) by Yash Patil, where five Jac walkers traverse a Medicare claims knowledge graph together and turn scattered fraud signals into fully cited investigations with 98% precision, flagging an estimated $50.6M in fraud exposure across 200 providers. Runner-up [*Killbill*](https://devpost.com/software/killbill-wam45d) by Ibrahim Pima keeps an eye on your subscriptions, figures out which ones you're not actually using, and drafts the cancellation email for you.
+**Fintech** went to [*Sentinel*](https://devpost.com/software/sentinel-multi-agent-fraud-investigation-system) by Yash Patil: five Jac walkers traverse a Medicare claims knowledge graph and turn scattered fraud signals into fully cited investigations, flagging an estimated $50.6M in exposure across 200 providers at 98% precision. Runner-up [*Killbill*](https://devpost.com/software/killbill-wam45d) by Ibrahim Pima finds the subscriptions you never use and drafts the cancellation email.
  
-**Social Impact Track** was won by [*Nourish*](https://devpost.com/software/demo-wrtjkc) from Viktor Nedev, which matches surplus food in real time with shelters and volunteer drivers so it gets where it's needed before it goes to waste. Second place [*Orion & Diana*](https://devpost.com/software/orion-eua8x9) by Pranav Rajesh Krishnan spots marine oil spills in satellite imagery faster than a human reviewer could, using trained ML models to classify oil slicks as they happen.
+**Social Impact** went to [*Nourish*](https://devpost.com/software/demo-wrtjkc) by Viktor Nedev: it matches surplus food with shelters and volunteer drivers in real time, before the food goes to waste. Second place [*Orion & Diana*](https://devpost.com/software/orion-eua8x9) by Pranav Rajesh Krishnan spots marine oil spills in satellite imagery using trained ML models, as they happen.
  
 ## Special & Sponsor Awards
  
-Five more teams picked up special recognition. [*Ori*](https://devpost.com/software/ori-4mscde) by Ahmed Hammad took home both **Best Use of Jac** and **Best Use of Featherless.AI** for a full-stack Jac template that lets vehicles talk to each other for safer, more fuel-efficient driving. [*FutureOS*](https://devpost.com/software/futureos-f03dgs) by Kshitij Kumrawat also won **Best Use of Jac**, for a graph-native "life OS" where six agents turn long-term goals into daily missions and coaching, with all its data persisted directly in Jac's graph store instead of a separate database. [*PairUp*](https://devpost.com/software/pairup-qmjrke) by Harshith Nair and Anjika Singh won **Best Demo** with a swipe-based way to find technical co-founders and teammates. [*DepGraph*](https://devpost.com/software/depgraph) by Shailesh Hawale won **Best LinkedIn Post** for a security agent that traces dependency graphs, flags CVEs, and writes up remediation plans, using six of Jac's built-in agent primitives to let an LLM decide which package to investigate next without any hardcoded logic. And [*Drowzie*](https://devpost.com/software/drowzie) by Shashank Shekhar won **Best Use of Lovable** for a sleep-tracking app that finds the habits actually correlated with your sleep quality and nudges you to fix them.
+Five more teams picked up special awards:
+
+- [*Ori*](https://devpost.com/software/ori-4mscde) by Ahmed Hammad: **Best Use of Jac** and **Best Use of Featherless.AI**. A full-stack Jac template that lets vehicles talk to each other for safer, more efficient driving.
+- [*FutureOS*](https://devpost.com/software/futureos-f03dgs) by Kshitij Kumrawat: **Best Use of Jac**. A graph-native "life OS" where six agents turn long-term goals into daily missions, with all data stored in Jac's graph store.
+- [*PairUp*](https://devpost.com/software/pairup-qmjrke) by Harshith Nair and Anjika Singh: **Best Demo**. A swipe-based way to find technical co-founders and teammates.
+- [*DepGraph*](https://devpost.com/software/depgraph) by Shailesh Hawale: **Best LinkedIn Post**. A security agent that traces dependency graphs, flags CVEs, and writes remediation plans, with an LLM picking which package to investigate next.
+- [*Drowzie*](https://devpost.com/software/drowzie) by Shashank Shekhar: **Best Use of Lovable**. A sleep tracker that finds the habits linked to your sleep quality and nudges you to fix them.
 
 ## Beyond the Weekend Project
 
-A hackathon project doesn't have to end when the weekend does. Between build sessions, Vatsal Shah sat down to share his journey through Y Combinator and the startup world. It's well worth a watch if one of these 81 projects (or yours) is secretly a company:
+Between build sessions, Vatsal Shah shared his journey through Y Combinator and the startup world. Worth a watch if your project could be a company:
 
 <div style="position: relative; width: 100%; padding-bottom: 56.25%; margin: 1.5em 0;">
   <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/E7KaxOKLcWQ" title="My journey through YC and startups" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -157,4 +163,4 @@ A hackathon project doesn't have to end when the weekend does. Between build ses
 
 ## What's Next
  
-Huge congrats to every team that shipped, and a big thanks to Featherless.AI and Lovable for sponsoring. You can browse all the winners, and every project that was submitted, over on the [JacHacks Spring winners page](https://jachacks.org/spring/). If reading about what these teams pulled off in a weekend made you want to try it yourself, the [Jac docs](https://docs.jaseci.org/) are the best place to start, and keep an eye on [jachacks.org](https://jachacks.org/) for the next hackathon.
+Congrats to every team that shipped, and thanks to Featherless.AI and Lovable for sponsoring. Browse all 81 projects on the [JacHacks Spring winners page](https://jachacks.org/spring/). To build your own, start with the [Jac docs](https://docs.jaseci.org/), and watch [jachacks.org](https://jachacks.org/) for the next hackathon.
