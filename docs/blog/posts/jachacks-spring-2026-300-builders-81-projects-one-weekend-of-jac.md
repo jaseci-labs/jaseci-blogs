@@ -27,17 +27,11 @@ Jac creator Jason Mars opened the weekend. The recording below starts right at t
 
 ## Real Problems, Real Agents
  
-Almost every winning project had the same theme: not chatbots, but agents that *do* things. Teams shipped systems that triage medical cases, investigate fraud, fight insurance denials, and coordinate food deliveries, all running on their own.
- 
-The other standout was speed. Teams kept saying how fast they got there, and most credited Jac.
+Almost every winning project had the same theme: not chatbots, but agents that *do* things. Teams shipped systems that triage medical cases, investigate fraud, fight insurance denials, and coordinate food deliveries, all running on their own. The other standout was speed: teams kept saying how fast they got there, and most credited Jac.
  
 ## Why Jac Made These Projects Easier to Build
  
-A full agentic AI app needs a frontend, a backend, a database, and a prompt layer. That is a lot for one weekend. Jac cuts most of that glue code.
- 
-Graphs and language models are built into the language. Agents are just Jac walkers moving over a graph, so there is no agent framework to wire in. Meaning-typed programming turns a type signature and a short description into the prompt, so there are no prompt files to manage. And one Jac codebase compiles to both backend and frontend.
- 
-That removes most of the usual setup tax. It is a big reason 81 projects shipped in one weekend.
+A full agentic AI app needs a frontend, a backend, a database, and a prompt layer. That is a lot for one weekend, and Jac cuts most of it: graphs and language models are built into the language, agents are just Jac walkers moving over a graph, meaning-typed programming turns a type signature and a short description into the prompt, and one codebase compiles to both backend and frontend. That removes most of the setup tax, and it is a big reason 81 projects shipped in one weekend.
 
 The event's Agentic AI workshop walks through building one of these apps end to end. It still works as a self-paced tutorial:
 
