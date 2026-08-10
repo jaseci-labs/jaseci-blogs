@@ -24,6 +24,10 @@ on:
         required: false
         type: boolean
         default: false
+      deployment:
+        description: "Deployment to read logs from (e.g. jaseci-blogs, main-deployment, gateway-deployment)"
+        required: false
+        default: "jaseci-blogs"
 
 permissions:
   id-token: write
@@ -53,9 +57,10 @@ jobs:
           SINCE: ${{ github.event.inputs.since }}
           GREP: ${{ github.event.inputs.grep }}
           PREVIOUS: ${{ github.event.inputs.previous }}
+          DEPLOYMENT: ${{ github.event.inputs.deployment }}
         run: |
           NS=jaseci-blogs
-          DEPLOY=deployment/jaseci-blogs
+          DEPLOY=deployment/${DEPLOYMENT:-jaseci-blogs}
           # tee everything to BOTH the step log (CLI-readable) and the job summary.
           {
             echo "## jaseci-blogs pod diagnostics"
