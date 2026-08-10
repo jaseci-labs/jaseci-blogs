@@ -90,3 +90,16 @@ jobs:
             kubectl describe pods -n "$NS" -l app=jaseci-blogs 2>&1 | tail -60 || true
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Deployment spec (read-only)
+        if: ${{ github.event.inputs.deployment != '' && github.event.inputs.deployment != 'jaseci-blogs' }}
+        env:
+          DEPLOYMENT: ${{ github.event.inputs.deployment }}
+        run: |
+          NS=jaseci-blogs
+          {
+            echo "### Deployment spec ($DEPLOYMENT)"
+            echo '```'
+            kubectl get deployment -n "$NS" "$DEPLOYMENT" -o yaml 2>&1 | grep -vE "kubectl.kubernetes.io/last-applied" | head -200
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
