@@ -1979,11 +1979,13 @@ walker:priv CreatePreview {
             # live on the shared public root, not the caller's per-user root, and are
             # granted ReadPerm so anonymous readers can see them.
             shared_root = root.shared;  # jac:ignore[E1030] runtime attr, no static stub
+            # ++> mirrors its right-hand side: a single-node connect returns the
+            # node itself, not a list — the old [0] unwrap raises TypeError.
             fresh = shared_root ++> PreviewDoc(
                 token=token, slug=str(rendered["slug"]),
                 data=preview_payload(rendered), created_at=float(time.time()),
             );
-            grant(fresh[0], level=ReadPerm);
+            grant(fresh, level=ReadPerm);
         } except Exception as e {
             report {"ok": False, "error": f"could not create preview: {e}"};
             return;
@@ -2040,7 +2042,7 @@ walker:pub RecordView {
                     slug=self.slug, day=day, views=1,
                     visitors=([vh] if vh else []),
                 );
-                grant(made[0], level=WritePerm);
+                grant(made, level=WritePerm);
             } else {
                 stat.views += 1;
                 if vh and (vh not in stat.visitors) {
@@ -2082,8 +2084,8 @@ walker:pub RecordEngagement {
             stat = match_day_stat([shared_root -->][?:PostStat], self.slug, day);
             if stat is None {
                 made = shared_root ++> PostStat(slug=self.slug, day=day);
-                grant(made[0], level=WritePerm);
-                stat = made[0];
+                grant(made, level=WritePerm);
+                stat = made;
             }
             if self.dwell_ms > 0 {
                 stat.dwell_ms_sum += self.dwell_ms;
@@ -2120,7 +2122,7 @@ walker:pub RecordLinkClick {
             lc = match_link_click([shared_root -->][?:LinkClick], self.slug, self.href, day);
             if lc is None {
                 made = shared_root ++> LinkClick(slug=self.slug, href=self.href, day=day, clicks=1);
-                grant(made[0], level=WritePerm);
+                grant(made, level=WritePerm);
             } else {
                 lc.clicks += 1;
             }
