@@ -13,7 +13,7 @@ draft: true
 
 [**JacHacks Spring**](https://jachacks.org/spring/) ran from May 15 to May 19, 2026, bringing together **300+ builders from around the world** for a global online hackathon. Over four days, teams shipped **81 projects**, most of them built with Jac and the Jaseci stack, competing across four tracks: Agentic AI, Consumer Healthcare, Fintech, and Social Impact. Sponsors Featherless.AI and Lovable also handed out special awards for the best use of their tools.
 
-[![JacHacks Spring 2026 — where the series went global: 300+ participants, 81 projects, 4 days, 13 winners](../../assets/jachacks-spring-2026-hero.jpg)](https://jachacks.org/spring/)
+[![JacHacks Spring 2026: 300+ participants, 81 projects, 4 days, 13 winners](../../assets/jachacks-spring-2026-hero.jpg)](https://jachacks.org/spring/)
 
 <!-- more -->
 
@@ -47,7 +47,7 @@ Participants didn't have to figure all of that out on their own, either. The Age
 
 ## What Builders Told Us
 
-We didn't just want to guess how the weekend went, so we asked. In the post-event survey, one number frames everything else: **83% of respondents had never touched Jac before the hackathon** — and yet not a single one said they felt *less* productive than in their usual stack.
+We didn't just want to guess how the weekend went, so we asked. In the post-event survey, one number frames everything else: **83% of respondents had never touched Jac before the hackathon**, and yet not a single one said they felt *less* productive than in their usual stack.
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 1.5em 0;">
   <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">83%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">were brand new to Jac</span></div>
@@ -56,7 +56,7 @@ We didn't just want to guess how the weekend went, so we asked. In the post-even
   <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">100%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">want to join the Jac community</span></div>
 </div>
 
-When we asked what the best part of the stack was, the two ideas at the heart of the language came out on top — graph-based programming and writing the whole app, front to back, in one language:
+When we asked what the best part of the stack was, the two ideas at the heart of the language came out on top: graph-based programming, and writing the whole app, front to back, in one language.
 
 **What builders liked most about the Jaseci stack**
 
@@ -89,9 +89,9 @@ When we asked what the best part of the stack was, the two ideas at the heart of
   <line x1="214.5" y1="6" x2="214.5" y2="236" stroke="currentColor" stroke-opacity="0.3" stroke-width="1"/>
 </svg>
 
-<em style="font-size: 0.8em; opacity: 0.7;">"Which is the best part of the Jaseci stack that you liked?" — post-event survey, multiple selections allowed.</em>
+<em style="font-size: 0.8em; opacity: 0.7;">Post-event survey: "Which is the best part of the Jaseci stack that you liked?" Multiple selections allowed.</em>
 
-The productivity question tells the same story from another angle. On a 1–5 scale from "much less productive" to "much more productive" than their usual stack, nobody landed below the midpoint — in a language most of them had met four days earlier:
+The productivity question tells the same story from another angle. On a 1–5 scale from "much less productive" to "much more productive" than their usual stack, nobody landed below the midpoint, in a language most of them had met four days earlier:
 
 **Compared to their usual stack, how productive did builders feel?**
 
@@ -123,7 +123,7 @@ The productivity question tells the same story from another angle. On a 1–5 sc
   </g>
 </svg>
 
-<em style="font-size: 0.8em; opacity: 0.7;">"Compared to your usual programming stack, how productive did you feel?" — post-event survey.</em>
+<em style="font-size: 0.8em; opacity: 0.7;">Post-event survey: "Compared to your usual programming stack, how productive did you feel?"</em>
 
 A couple of answers from the free-text responses sum up the vibe better than the numbers do:
 
@@ -149,7 +149,7 @@ Five more teams picked up special recognition. [*Ori*](https://devpost.com/softw
 
 ## Beyond the Weekend Project
 
-A hackathon project doesn't have to end when the weekend does. Between build sessions, Vatsal Shah sat down to share his journey through Y Combinator and the startup world — well worth a watch if one of these 81 projects (or yours) is secretly a company:
+A hackathon project doesn't have to end when the weekend does. Between build sessions, Vatsal Shah sat down to share his journey through Y Combinator and the startup world. It's well worth a watch if one of these 81 projects (or yours) is secretly a company:
 
 <div style="position: relative; width: 100%; padding-bottom: 56.25%; margin: 1.5em 0;">
   <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/E7KaxOKLcWQ" title="My journey through YC and startups" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
