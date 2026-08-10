@@ -24,6 +24,10 @@ on:
         required: false
         type: boolean
         default: false
+      deployment:
+        description: "Deployment to read logs from (e.g. jaseci-blogs, main-deployment, gateway-deployment)"
+        required: false
+        default: "jaseci-blogs"
 
 permissions:
   id-token: write
@@ -53,9 +57,10 @@ jobs:
           SINCE: ${{ github.event.inputs.since }}
           GREP: ${{ github.event.inputs.grep }}
           PREVIOUS: ${{ github.event.inputs.previous }}
+          DEPLOYMENT: ${{ github.event.inputs.deployment }}
         run: |
           NS=jaseci-blogs
-          DEPLOY=deployment/jaseci-blogs
+          DEPLOY=deployment/${DEPLOYMENT:-jaseci-blogs}
           # tee everything to BOTH the step log (CLI-readable) and the job summary.
           {
             echo "## jaseci-blogs pod diagnostics"
@@ -83,5 +88,18 @@ jobs:
             echo "### describe (events / restarts)"
             echo '```'
             kubectl describe pods -n "$NS" -l app=jaseci-blogs 2>&1 | tail -60 || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Deployment spec (read-only)
+        if: ${{ github.event.inputs.deployment != '' && github.event.inputs.deployment != 'jaseci-blogs' }}
+        env:
+          DEPLOYMENT: ${{ github.event.inputs.deployment }}
+        run: |
+          NS=jaseci-blogs
+          {
+            echo "### Deployment spec ($DEPLOYMENT)"
+            echo '```'
+            kubectl get deployment -n "$NS" "$DEPLOYMENT" -o yaml 2>&1 | grep -vE "kubectl.kubernetes.io/last-applied" | head -200
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"

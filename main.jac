@@ -1965,19 +1965,29 @@ walker:priv CreatePreview {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        rendered = render_submitted_markdown(
-            str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]), gh_token
-        );
-        token = uuid.uuid4().hex;
-        # Previews are public (opened anonymously via /preview/<token>), so they
-        # live on the shared public root, not the caller's per-user root, and are
-        # granted ReadPerm so anonymous readers can see them.
-        shared_root = root.shared;  # jac:ignore[E1030] runtime attr, no static stub
-        fresh = shared_root ++> PreviewDoc(
-            token=token, slug=str(rendered["slug"]),
-            data=preview_payload(rendered), created_at=float(time.time()),
-        );
-        grant(fresh[0], level=ReadPerm);
+        # Render + persist are wrapped so an infra failure (e.g. the shared-root
+        # write layer dying because the pod's redis client is missing, Aug 2026)
+        # surfaces to the reviewer as a message with the real exception instead
+        # of an opaque 500 — RecordView/RecordEngagement swallow the same class
+        # of error, so this walker is the canary for shared-root writes.
+        try {
+            rendered = render_submitted_markdown(
+                str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]), gh_token
+            );
+            token = uuid.uuid4().hex;
+            # Previews are public (opened anonymously via /preview/<token>), so they
+            # live on the shared public root, not the caller's per-user root, and are
+            # granted ReadPerm so anonymous readers can see them.
+            shared_root = root.shared;  # jac:ignore[E1030] runtime attr, no static stub
+            fresh = shared_root ++> PreviewDoc(
+                token=token, slug=str(rendered["slug"]),
+                data=preview_payload(rendered), created_at=float(time.time()),
+            );
+            grant(fresh[0], level=ReadPerm);
+        } except Exception as e {
+            report {"ok": False, "error": f"could not create preview: {e}"};
+            return;
+        }
         base = self.origin.rstrip("/") if self.origin else public_site_url();
         report {"ok": True, "token": token, "slug": str(rendered["slug"]), "url": f"{base}/preview/{token}"};
     }
