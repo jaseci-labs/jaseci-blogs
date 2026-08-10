@@ -639,14 +639,20 @@ walker:pub GetPost {
             return;
         }
 
-        # Shareable draft preview: a valid token returns the stored snapshot even
-        # though the post is still draft:true, so the page renders it in full.
+        # Shareable draft preview: a valid token serves the PR's post even though
+        # it is still draft:true. The doc re-pulls the PR head's current content
+        # on view (refresh_preview_doc; usually already fresh from the
+        # GetPreview redirect seconds earlier), so a persistent link tracks the
+        # branch instead of freezing at creation time.
         if self.preview {
             shared_root = root.shared;  # jac:ignore[E1030] runtime attr, no static stub
             doc = match_preview([shared_root -->][?:PreviewDoc], self.preview);
-            if doc is not None and doc.slug == self.slug {
-                report doc.data;
-                return;
+            if doc is not None {
+                refresh_preview_doc(doc);
+                if doc.slug == self.slug {
+                    report doc.data;
+                    return;
+                }
             }
         }
 
@@ -925,19 +931,31 @@ glob SUBMISSION_TAG = "blog-submission";
 # so open edit PRs for a given slug are findable with one search (collision check).
 glob EDIT_TAG = "blog-edit";
 glob GH_API = "https://api.github.com";
-glob PREVIEW_TTL = 60 * 60 * 24 * 30;  # shareable draft previews live 1 month
+glob PREVIEW_TTL = 60 * 60 * 24 * 30;  # a preview link expires 1 month after its last view
+glob PREVIEW_REFRESH_WINDOW = 30.0;  # seconds a refreshed snapshot is served without re-pulling the PR
 
 
 node PreviewDoc {
-    # A persisted, public draft-preview snapshot. Hung off the shared public root
-    # (root.shared) and granted ReadPerm, so anyone with the random token can read
-    # it regardless of sign-in state. Holds the fully-rendered GetPost-shaped
-    # payload so the real post page renders it with runnable code blocks, mermaid,
-    # etc. Expires after PREVIEW_TTL.
+    # A persisted, public draft-preview snapshot — ONE per PR, reused across
+    # CreatePreview calls so the link a reviewer shares stays stable. Hung off
+    # the shared public root (root.shared) and granted WritePerm (the PostStat
+    # pattern) so an anonymous view can refresh the snapshot in place: each view
+    # re-pulls the PR head's current post file (copy-edits included) and falls
+    # back to the stored snapshot when the branch is gone. Holds the
+    # fully-rendered GetPost-shaped payload so the real post page renders it
+    # with runnable code blocks, mermaid, etc. Expires PREVIEW_TTL after the
+    # last successful refresh (sliding, so an active PR's link never dies).
     has token: str = "";
     has slug: str = "";
     has data: dict = {};
     has created_at: float = 0.0;
+    # Where to re-pull the live content from. Empty on docs created before this
+    # feature — those keep serving their frozen snapshot untouched.
+    has pr_number: int = 0;
+    has head_repo: str = "";
+    has head_ref: str = "";
+    has post_path: str = "";
+    has refreshed_at: float = 0.0;
 }
 
 
@@ -1920,6 +1938,42 @@ def:priv preview_payload(rendered: dict) -> dict {
 }
 
 
+def:priv refresh_preview_doc(doc: PreviewDoc) -> None {
+    # Re-pull the PR head's current post file so a persistent preview link
+    # always shows the branch's latest content, copy-edits included. Reads the
+    # file from raw.githubusercontent.com — public forks need no token, which
+    # matters because previews are opened anonymously. Best-effort by design:
+    # any failure (branch deleted, PR merged, network, render error) leaves the
+    # stored snapshot serving — stale beats broken. The refreshed_at window
+    # keeps the GetPreview-redirect → GetPost pair from fetching twice per view.
+    if not doc.head_repo or not doc.post_path {
+        return;  # pre-feature doc: frozen snapshot, nothing to refresh from
+    }
+    now = float(time.time());
+    if (now - doc.refreshed_at) < PREVIEW_REFRESH_WINDOW {
+        return;
+    }
+    try {
+        ref = doc.head_ref or "HEAD";
+        resp = requests.get(
+            f"https://raw.githubusercontent.com/{doc.head_repo}/{ref}/{doc.post_path}",
+            timeout=10,
+        );
+        if resp.status_code != 200 {
+            return;
+        }
+        rendered = render_submitted_markdown(resp.text, doc.head_repo, ref, "");
+        # Reassign (not mutate) so jac-scale persists the change.
+        doc.data = preview_payload(rendered);
+        doc.slug = str(rendered["slug"]);
+        doc.refreshed_at = now;
+        doc.created_at = now;  # sliding TTL: an actively-viewed link never expires
+    } except Exception {
+        return;
+    }
+}
+
+
 def:priv match_preview(docs: list, token: str) -> any {
     # Pick a non-expired PreviewDoc matching token from a pre-collected list
     # (the edge traversal happens in the walker ability where it's valid).
@@ -1974,18 +2028,46 @@ walker:priv CreatePreview {
             rendered = render_submitted_markdown(
                 str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]), gh_token
             );
-            token = uuid.uuid4().hex;
-            # Previews are public (opened anonymously via /preview/<token>), so they
-            # live on the shared public root, not the caller's per-user root, and are
-            # granted ReadPerm so anonymous readers can see them.
+            now = float(time.time());
             shared_root = root.shared;  # jac:ignore[E1030] runtime attr, no static stub
-            # ++> mirrors its right-hand side: a single-node connect returns the
-            # node itself, not a list — the old [0] unwrap raises TypeError.
-            fresh = shared_root ++> PreviewDoc(
-                token=token, slug=str(rendered["slug"]),
-                data=preview_payload(rendered), created_at=float(time.time()),
-            );
-            grant(fresh, level=ReadPerm);
+            # One persistent link per PR: reuse the existing doc (same token, so
+            # the URL a reviewer already shared keeps working) and just bring its
+            # snapshot + refresh coordinates current. Docs created before the
+            # per-PR feature have pr_number=0 and never match a real PR.
+            existing = None;
+            for d in [shared_root -->][?:PreviewDoc] {
+                if d.pr_number == self.pr_number {
+                    existing = d;
+                    break;
+                }
+            }
+            if existing is not None {
+                existing.slug = str(rendered["slug"]);
+                existing.data = preview_payload(rendered);
+                existing.head_repo = str(pr["head_repo"]);
+                existing.head_ref = str(pr["head_ref"]);
+                existing.post_path = str(pr["post_path"]);
+                existing.refreshed_at = now;
+                existing.created_at = now;
+                token = existing.token;
+            } else {
+                token = uuid.uuid4().hex;
+                # Previews are public (opened anonymously via /preview/<token>), so
+                # they live on the shared public root, not the caller's per-user
+                # root. WritePerm (not ReadPerm) is the PostStat pattern: it lets an
+                # anonymous view run refresh_preview_doc in place — the written
+                # content only ever comes from the PR's file, never from the caller.
+                # ++> mirrors its right-hand side: a single-node connect returns the
+                # node itself, not a list — the old [0] unwrap raises TypeError.
+                fresh = shared_root ++> PreviewDoc(
+                    token=token, slug=str(rendered["slug"]),
+                    data=preview_payload(rendered), created_at=now,
+                    pr_number=self.pr_number, head_repo=str(pr["head_repo"]),
+                    head_ref=str(pr["head_ref"]), post_path=str(pr["post_path"]),
+                    refreshed_at=now,
+                );
+                grant(fresh, level=WritePerm);
+            }
         } except Exception as e {
             report {"ok": False, "error": f"could not create preview: {e}"};
             return;
@@ -2008,6 +2090,9 @@ walker:pub GetPreview {
             report {"ok": False, "error": "This preview link is invalid or has expired."};
             return;
         }
+        # Refresh before resolving the slug so a mid-PR slug rename still
+        # redirects to the right post URL through the same persistent link.
+        refresh_preview_doc(doc);
         report {"ok": True, "slug": doc.slug};
     }
 }
@@ -3518,3 +3603,4 @@ walker:pub FetchLinkMeta {
         report {"ok": True, "meta": out};
     }
 }
+
