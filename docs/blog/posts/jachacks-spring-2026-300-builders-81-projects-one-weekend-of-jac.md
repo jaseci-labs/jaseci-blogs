@@ -47,20 +47,20 @@ Participants didn't have to figure all of that out on their own, either. The Age
 
 ## What Builders Told Us
 
-We didn't just want to guess how the weekend went, so we asked. In the post-event survey (12 responses), one number frames everything else: **10 of the 12 respondents had never touched Jac before the hackathon** — and yet not a single one said they felt *less* productive than in their usual stack.
+We didn't just want to guess how the weekend went, so we asked. In the post-event survey, one number frames everything else: **83% of respondents had never touched Jac before the hackathon** — and yet not a single one said they felt *less* productive than in their usual stack.
 
-<div style="display: flex; flex-wrap: wrap; gap: 12px; margin: 1.5em 0;">
-  <div style="flex: 1 1 150px; box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">10 of 12</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">were brand new to Jac</span></div>
-  <div style="flex: 1 1 150px; box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">8 of 12</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">felt more productive than in their usual stack</span></div>
-  <div style="flex: 1 1 150px; box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">8.2 / 10</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">average likelihood to keep using Jac</span></div>
-  <div style="flex: 1 1 150px; box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">12 of 12</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">want to join the Jac community</span></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 1.5em 0;">
+  <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">83%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">were brand new to Jac</span></div>
+  <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">67%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">felt more productive than in their usual stack</span></div>
+  <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">8.2 / 10</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">average likelihood to keep using Jac</span></div>
+  <div style="box-sizing: border-box; border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 14px 18px;"><span style="display: block; font-size: 1.8em; font-weight: 600; line-height: 1.15;">100%</span><span style="display: block; font-size: 0.82em; opacity: 0.75; margin-top: 4px;">want to join the Jac community</span></div>
 </div>
 
 When we asked what the best part of the stack was, the two ideas at the heart of the language came out on top — graph-based programming and writing the whole app, front to back, in one language:
 
 **What builders liked most about the Jaseci stack**
 
-<svg viewBox="0 0 680 252" width="100%" style="max-width: 680px; display: block; margin: 0.5em 0;" role="img" aria-label="Horizontal bar chart: graph-based programming 9, one language for the full stack 8, byLLM for AI features 6, simpler database operations 3, Jac-builder 2, authentication 1">
+<svg viewBox="0 0 680 252" width="100%" style="display: block; margin: 0.5em 0;" role="img" aria-label="Horizontal bar chart: graph-based programming 75%, one language for the full stack 67%, byLLM for AI features 50%, simpler database operations 25%, Jac-builder 17%, authentication 8%">
   <title>What builders liked most about the Jaseci stack</title>
   <g font-size="13.5" fill="currentColor" text-anchor="end">
     <text x="205" y="25">Graph-based programming</text>
@@ -79,51 +79,51 @@ When we asked what the best part of the stack was, the two ideas at the heart of
     <path d="M215,210 h38 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-38 z"/>
   </g>
   <g font-size="13" font-weight="600" fill="currentColor">
-    <text x="602" y="25">9</text>
-    <text x="560" y="65">8</text>
-    <text x="476" y="105">6</text>
-    <text x="350" y="145">3</text>
-    <text x="308" y="185">2</text>
-    <text x="266" y="225">1</text>
+    <text x="598" y="25">75%</text>
+    <text x="556" y="65">67%</text>
+    <text x="472" y="105">50%</text>
+    <text x="346" y="145">25%</text>
+    <text x="304" y="185">17%</text>
+    <text x="262" y="225">8%</text>
   </g>
   <line x1="214.5" y1="6" x2="214.5" y2="236" stroke="currentColor" stroke-opacity="0.3" stroke-width="1"/>
 </svg>
 
-<em style="font-size: 0.8em; opacity: 0.7;">"Which is the best part of the Jaseci stack that you liked?" — post-event survey, 12 respondents, multiple selections allowed.</em>
+<em style="font-size: 0.8em; opacity: 0.7;">"Which is the best part of the Jaseci stack that you liked?" — post-event survey, multiple selections allowed.</em>
 
-The productivity question tells the same story from another angle. On a 1–5 scale from "much less productive" to "much more productive" than their usual stack, nobody landed below the midpoint — in a language 10 of them had met four days earlier:
+The productivity question tells the same story from another angle. On a 1–5 scale from "much less productive" to "much more productive" than their usual stack, nobody landed below the midpoint — in a language most of them had met four days earlier:
 
 **Compared to their usual stack, how productive did builders feel?**
 
-<svg viewBox="0 0 460 212" width="100%" style="max-width: 460px; display: block; margin: 0.5em 0;" role="img" aria-label="Column chart of productivity ratings on a 1 to 5 scale: no responses at 1 or 2, four responses at 3, five at 4, three at 5">
+<svg viewBox="0 0 680 212" width="100%" style="display: block; margin: 0.5em 0;" role="img" aria-label="Column chart of productivity ratings on a 1 to 5 scale: 0% at 1 and 2, 33% at 3, 42% at 4, 25% at 5">
   <title>Compared to their usual stack, how productive did builders feel?</title>
   <g fill="#e8622c">
-    <path d="M218,168 v-100 a4,4 0 0 1 4,-4 h16 a4,4 0 0 1 4,4 v100 z"/>
-    <path d="M303,168 v-126 a4,4 0 0 1 4,-4 h16 a4,4 0 0 1 4,4 v126 z"/>
-    <path d="M388,168 v-74 a4,4 0 0 1 4,-4 h16 a4,4 0 0 1 4,4 v74 z"/>
+    <path d="M328,168 v-100 a4,4 0 0 1 4,-4 h16 a4,4 0 0 1 4,4 v100 z"/>
+    <path d="M448,168 v-126 a4,4 0 0 1 4,-4 h16 a4,4 0 0 1 4,4 v126 z"/>
+    <path d="M568,168 v-74 a4,4 0 0 1 4,-4 h16 a4,4 0 0 1 4,4 v74 z"/>
   </g>
   <g font-size="13" font-weight="600" fill="currentColor" text-anchor="middle">
-    <text x="60" y="160" opacity="0.55" font-weight="400">0</text>
-    <text x="145" y="160" opacity="0.55" font-weight="400">0</text>
-    <text x="230" y="56">4</text>
-    <text x="315" y="30">5</text>
-    <text x="400" y="82">3</text>
+    <text x="100" y="160" opacity="0.55" font-weight="400">0%</text>
+    <text x="220" y="160" opacity="0.55" font-weight="400">0%</text>
+    <text x="340" y="56">33%</text>
+    <text x="460" y="30">42%</text>
+    <text x="580" y="82">25%</text>
   </g>
-  <line x1="30" y1="168.5" x2="430" y2="168.5" stroke="currentColor" stroke-opacity="0.3" stroke-width="1"/>
+  <line x1="40" y1="168.5" x2="640" y2="168.5" stroke="currentColor" stroke-opacity="0.3" stroke-width="1"/>
   <g font-size="12.5" fill="currentColor" opacity="0.65" text-anchor="middle">
-    <text x="60" y="188">1</text>
-    <text x="145" y="188">2</text>
-    <text x="230" y="188">3</text>
-    <text x="315" y="188">4</text>
-    <text x="400" y="188">5</text>
+    <text x="100" y="188">1</text>
+    <text x="220" y="188">2</text>
+    <text x="340" y="188">3</text>
+    <text x="460" y="188">4</text>
+    <text x="580" y="188">5</text>
   </g>
   <g font-size="11" fill="currentColor" opacity="0.55" text-anchor="middle">
-    <text x="70" y="206">much less productive</text>
-    <text x="390" y="206">much more productive</text>
+    <text x="110" y="206">much less productive</text>
+    <text x="570" y="206">much more productive</text>
   </g>
 </svg>
 
-<em style="font-size: 0.8em; opacity: 0.7;">"Compared to your usual programming stack, how productive did you feel?" — post-event survey, 12 respondents.</em>
+<em style="font-size: 0.8em; opacity: 0.7;">"Compared to your usual programming stack, how productive did you feel?" — post-event survey.</em>
 
 A couple of answers from the free-text responses sum up the vibe better than the numbers do:
 
@@ -131,7 +131,7 @@ A couple of answers from the free-text responses sum up the vibe better than the
 
 > "I didn't expect much when I first heard about it, but once I started using it in the project it shocked me how easy it is to implement. Going to use this language for future projects and hackathons."
 
-The feedback wasn't all roses, and that's the useful part: documentation and examples (7 of 12) and CLI error messages (5 of 12) topped the list of things builders want improved. Consider that heard.
+The feedback wasn't all roses, and that's the useful part: documentation and examples (58%) and CLI error messages (42%) topped the list of things builders want improved. Consider that heard.
 
 ## Track Winners
  
