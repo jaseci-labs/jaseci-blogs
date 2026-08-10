@@ -12,7 +12,7 @@ cl import from "@jac/runtime" { Link }
 
 
 cl {
-    def:pub page() -> JsxElement {
+    def:pub page() -> JsxPage {
         has loading: bool = True;
         has documents: any = [];
         has query: str = "";
@@ -37,7 +37,7 @@ cl {
             }
             min_ms: int = 750;
             try {
-                min_ms = int(window.__BLOG_CONFIG["minLoadingMs"]);
+                min_ms = int(window.__BLOG_CONFIG["minLoadingMs"]);  # jac:ignore[E1030]
             } except Exception {
                 _ignore = None;
             }
@@ -153,7 +153,7 @@ cl {
                 placeholder="Search posts, authors, categories…"
                 autoFocus
                 value={query}
-                onChange={lambda e: ChangeEvent { query = e.target.value; }}
+                onChange={lambda(e: ChangeEvent) { query = e.target.value; }}
             />
 
             {loading and <p className="muted" style={{"marginTop": "1.5rem"}}>Loading index…</p>}

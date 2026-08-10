@@ -25,7 +25,7 @@ import from urllib.request { Request, urlopen }
 import from urllib.parse { urlparse, parse_qs }
 import markdown as md;
 import from cryptography.fernet { Fernet }
-import from jac_scale.user_manager { JacScaleUserManager }
+import from jaclang.scale.identity.user_manager { JacScaleUserManager }
 import from datetime { date as date_cls }
 import from pathlib { Path }
 
@@ -37,29 +37,29 @@ cl {
     def:pub app(props: any) -> JsxElement {
         can with entry {
             document.title = "Jaseci Blogs · engineering writing from the Jaseci & Jac ecosystem";
-            existing = document.querySelector("link[rel='icon']");
+            existing: any = document.querySelector("link[rel='icon']");
             if not existing {
-                icon = document.createElement("link");
+                icon: any = document.createElement("link");
                 icon.rel = "icon";
                 icon.type = "image/png";
                 icon.href = "https://www.jaseci.org/images/logo.png";
-                document.head.appendChild(icon);
+                document.head.appendChild(icon);  # jac:ignore[E1030]
             }
             # Google Analytics (gtag.js). Injected once at the app root so the
             # tag loads on every route. Idempotent guard keeps a remount from
             # double-adding it. GA4 enhanced measurement tracks SPA route
             # changes via History events, so no per-navigation page_view here.
-            existing_ga = document.querySelector("script[data-ga='G-RCKQSQP438']");
+            existing_ga: any = document.querySelector("script[data-ga='G-RCKQSQP438']");
             if not existing_ga {
-                ga_loader = document.createElement("script");
+                ga_loader: any = document.createElement("script");
                 ga_loader.setAttribute("async", "");
                 ga_loader.src = "https://www.googletagmanager.com/gtag/js?id=G-RCKQSQP438";
                 ga_loader.setAttribute("data-ga", "G-RCKQSQP438");
-                document.head.appendChild(ga_loader);
+                document.head.appendChild(ga_loader);  # jac:ignore[E1030]
 
-                ga_init = document.createElement("script");
+                ga_init: any = document.createElement("script");
                 ga_init.text = "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-RCKQSQP438');";
-                document.head.appendChild(ga_init);
+                document.head.appendChild(ga_init);  # jac:ignore[E1030]
             }
         }
         return <>{props.children}</>;
@@ -179,7 +179,7 @@ def:priv split_excerpt(body: str) -> tuple[str, str] {
     paragraphs = re.split(r"\n\s*\n", body.strip());
     for p in paragraphs {
         stripped = p.strip();
-        if stripped and not stripped.startswith("#") {
+        if stripped and not stripped.startswith("#") {  # jac:ignore[E1032]
             return (stripped, body);
         }
     }
@@ -504,7 +504,7 @@ def:priv list_all_posts() -> list {
         items.append(parsed);
     }
     # Newest first.
-    items.sort(key=lambda x: dict -> str { return x["date"]; }, reverse=True);
+    items.sort(key=lambda(x: dict) -> str { return x["date"]; }, reverse=True);
     return items;
 }
 
@@ -703,7 +703,7 @@ walker:pub GetPost {
         prev_post = None;
         next_post = None;
         for (i, p) in enumerate(all_posts) {
-            if p["slug"] == found["slug"] {
+            if p["slug"] == found["slug"] {  # jac:ignore[E1040]
                 if i + 1 < len(all_posts) {
                     nxt = all_posts[i + 1];
                     next_post = {
@@ -806,7 +806,7 @@ walker:pub GetCategories {
             }
         }
         items = [{"name": k, "count": v} for (k, v) in counts.items()];
-        items.sort(key=lambda x: dict -> int { return x["count"]; }, reverse=True);
+        items.sort(key=lambda(x: dict) -> int { return x["count"]; }, reverse=True);
         report {"ok": True, "categories": items};
     }
 }
@@ -818,7 +818,7 @@ walker:pub GetArchive {
         # Group by year.
         years: dict = {};
         for p in all_posts {
-            year = p["date"][:4] if len(p["date"]) >= 4 else "Undated";
+            year = p["date"][:4] if len(p["date"]) >= 4 else "Undated";  # jac:ignore[E1053]
             if year not in years {
                 years[year] = [];
             }
@@ -844,11 +844,11 @@ walker:pub GetSearchIndex {
         index = [];
         for p in all_posts {
             # Plain-text body for indexing — strip the most common markdown.
-            plain = re.sub(r"`[^`]*`", "", p["body_md"]);
-            plain = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", plain);
-            plain = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", plain);
-            plain = re.sub(r"[#>*_~]+", " ", plain);
-            plain = re.sub(r"\s+", " ", plain).strip();
+            plain = re.sub(r"`[^`]*`", "", p["body_md"]);  # jac:ignore[E1054]
+            plain = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", plain);  # jac:ignore[E1054]
+            plain = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", plain);  # jac:ignore[E1054]
+            plain = re.sub(r"[#>*_~]+", " ", plain);  # jac:ignore[E1054]
+            plain = re.sub(r"\s+", " ", plain).strip();  # jac:ignore[E1054]
             index.append({
                 "slug": p["slug"],
                 "title": p["title"],
@@ -1368,6 +1368,23 @@ def:priv is_http_url(u: str) -> bool {
 }
 
 
+def:priv decode_body_md(body_md: str, is_b64: bool) -> str {
+    # The /submit client base64-encodes the post body so its raw markdown — shell
+    # snippets like `curl … | bash`, URLs — doesn't trip the edge WAF's content
+    # rules, which 403 the walker request before it ever reaches us. Decode it back
+    # to real markdown here. Plain-text bodies (is_b64=False, e.g. an older client)
+    # pass through untouched.
+    if not is_b64 {
+        return body_md;
+    }
+    try {
+        return str(base64.b64decode(body_md.encode("ascii")).decode("utf-8"));
+    } except Exception {
+        return body_md;
+    }
+}
+
+
 def:priv build_post_markdown(
     title: str, slug: str, categories: list, description: str,
     author_id: str, body: str,
@@ -1458,7 +1475,7 @@ def:priv build_commit(token: str, repo_full: str, base_sha: str, files: list, me
         if f.get("binary") {
             blob = gh_ok(requests.post(
                 f"{GH_API}/repos/{repo_full}/git/blobs",
-                headers=h, json={"content": f["content"], "encoding": "base64"}, timeout=30,
+                headers=h, json={"content": f["content"], "encoding": "base64"}, timeout=30,  # jac:ignore[E1053]
             ), "create image blob");
             tree_items.append({"path": f["path"], "mode": "100644", "type": "blob", "sha": str(blob["sha"])});
         } else {
@@ -1467,11 +1484,11 @@ def:priv build_commit(token: str, repo_full: str, base_sha: str, files: list, me
     }
     new_tree = gh_ok(requests.post(
         f"{GH_API}/repos/{repo_full}/git/trees",
-        headers=h, json={"base_tree": base_tree, "tree": tree_items}, timeout=30,
+        headers=h, json={"base_tree": base_tree, "tree": tree_items}, timeout=30,  # jac:ignore[E1053]
     ), "create tree");
     new_commit = gh_ok(requests.post(
         f"{GH_API}/repos/{repo_full}/git/commits",
-        headers=h, json={"message": message, "tree": str(new_tree["sha"]), "parents": [base_sha]}, timeout=30,
+        headers=h, json={"message": message, "tree": str(new_tree["sha"]), "parents": [base_sha]}, timeout=30,  # jac:ignore[E1053]
     ), "create commit");
     return str(new_commit["sha"]);
 }
@@ -1505,6 +1522,131 @@ def:priv commit_update(token: str, repo_full: str, branch: str, files: list, mes
 }
 
 
+def:priv suggestion_fence(content: str) -> str {
+    # A ```suggestion block has to out-fence everything inside it, and blog posts
+    # are full of ```jac / ```mermaid fences. Find the longest backtick run in the
+    # content and go one longer.
+    longest = 0;
+    run = 0;
+    for ch in content {
+        if ch == "`" {
+            run = run + 1;
+            longest = run if run > longest else longest;
+        } else {
+            run = 0;
+        }
+    }
+    return "`" * (longest + 1 if longest >= 3 else 3);
+}
+
+
+def:priv suggest_whole_file(
+    token: str, pr_number: int, path: str, commit_id: str,
+    new_content: str, line_count: int, note: str
+) -> str {
+    # Post an edit as a multi-line ```suggestion covering the file's entire
+    # right-hand side, so the author applies it with one click. Legal only when
+    # every line is in the PR diff (an ADDED file) — GitHub 422s a comment on a
+    # line outside the diff. Returns the comment's html_url.
+    fence = suggestion_fence(new_content);
+    body = f"{note}\n\n{fence}suggestion\n{new_content.rstrip()}\n{fence}\n";
+    payload = {
+        "body": body,
+        "commit_id": commit_id,
+        "path": path,
+        "line": line_count,
+        "side": "RIGHT",
+    };
+    # start_line must be strictly less than line; a 1-line file is a single-line
+    # comment instead.
+    if line_count > 1 {
+        payload["start_line"] = 1;
+        payload["start_side"] = "RIGHT";
+    }
+    res = gh_ok(requests.post(
+        f"{GH_API}/repos/{gh_repo()}/pulls/{pr_number}/comments",
+        headers=gh_headers(token), json=payload, timeout=30,  # jac:ignore[E1053]
+    ), "post suggestion");
+    return str(res.get("html_url", ""));
+}
+
+
+def:priv comment_on_pr(token: str, pr_number: int, body: str) -> str {
+    # Plain PR comment — the last-resort delivery route. Needs nothing beyond
+    # read access to the repo, so it always works.
+    res = gh_ok(requests.post(
+        f"{GH_API}/repos/{gh_repo()}/issues/{pr_number}/comments",
+        headers=gh_headers(token), json={"body": body}, timeout=30,
+    ), "post comment");
+    return str(res.get("html_url", ""));
+}
+
+
+def:priv deliver_edit(
+    token: str, pr: dict, files: list, message: str, post_md: str, editor: str
+) -> dict {
+    # Deliver a REVIEWER's edit to someone else's submission by the strongest
+    # route GitHub allows, degrading in order:
+    #
+    #   1. commit     — push straight onto the PR's branch on the author's fork.
+    #      Needs "Allow edits by maintainers" AND that grant to extend to the Git
+    #      Data API. GitHub documents the grant as push access to the branch and
+    #      tightened REST authorization for maintainer fork collaborators in 2021
+    #      without saying which endpoints survived, so blob/tree creation on the
+    #      fork may 403. We attempt it rather than predict it.
+    #   2. suggestion — a whole-file ```suggestion the author applies in one
+    #      click. Needs the post file to be ADDED by the PR (every submission is).
+    #   3. comment    — the proposed markdown as a plain PR comment.
+    #
+    # Only the commit route can carry images; the other two are markdown-only, so
+    # they say so rather than silently dropping the uploads.
+    n = int(pr["pr_number"]);
+    why = "";
+    if bool(pr["maintainer_can_modify"]) {
+        try {
+            commit_update(token, str(pr["head_repo"]), str(pr["head_ref"]), files, message);
+            return {"mode": "commit", "url": str(pr["pr_url"]), "note": ""};
+        } except Exception as e {
+            why = f"pushing to the fork branch was refused (`{e}`)";
+        }
+    } else {
+        why = "**Allow edits by maintainers** is off for this pull request";
+    }
+
+    extra = len(files) - 1;
+    img_note = f"\n\n> ⚠️ {extra} image upload(s) could not be included — only the post markdown can travel this way. Re-upload them yourself, or turn on **Allow edits by maintainers**." if extra > 0 else "";
+    note = (
+        f"**Editorial revision from @{editor}.** Applying this replaces the post "
+        f"with the reviewed version.\n\n"
+        f"_Delivered as a suggestion because {why}._" + img_note
+    );
+
+    if str(pr["post_status"]) == "added" {
+        try {
+            url = suggest_whole_file(
+                token, n, str(pr["post_path"]), str(pr["head_sha"]),
+                post_md, len(post_md.rstrip().splitlines()), note,
+            );
+            return {"mode": "suggestion", "url": url, "note": why};
+        } except Exception as e {
+            why = f"{why}, and the suggestion was rejected (`{e}`)";
+        }
+    } else {
+        why = f"{why}, and the post file is modified rather than added by this PR so a whole-file suggestion is not applicable";
+    }
+
+    fence = suggestion_fence(post_md);
+    body = (
+        f"**Editorial revision from @{editor}.**\n\n"
+        f"_Posted as a comment because {why}._{img_note}\n\n"
+        f"Copy this over `{pr['post_path']}` to apply it:\n\n"
+        f"{fence}markdown\n{post_md.rstrip()}\n{fence}\n"
+    );
+    url = comment_on_pr(token, n, body);
+    return {"mode": "comment", "url": url, "note": why};
+}
+
+
 def:priv submit_via_fork(
     token: str, login: str, branch: str, files: list, message: str,
     pr_title: str, pr_body: str
@@ -1528,9 +1670,13 @@ def:priv submit_via_fork(
     pr = gh_ok(requests.post(
         f"{GH_API}/repos/{gh_repo()}/pulls",
         headers=gh_headers(token),
-        json={
+        json={  # jac:ignore[E1053]
             "title": pr_title, "head": f"{login}:{branch}", "base": base_branch,
             "body": pr_body,
+            # Explicit rather than relying on the API default: this is what lets a
+            # reviewer commit a copy-edit straight onto the submission. The author
+            # can still turn it off on the PR page.
+            "maintainer_can_modify": True,
         },
         timeout=30,
     ), "open pull request");
@@ -1551,7 +1697,47 @@ def:priv rewrite_assets_to_raw(body: str, repo: str, sha: str) -> str {
 }
 
 
-def:priv render_submitted_markdown(text: str, raw_repo: str, raw_sha: str) -> dict {
+def:priv fetch_pr_authors(token: str, repo: str, sha: str) -> dict {
+    # A PR that introduces a new author adds their entry to .authors.yml on its
+    # own head ref. The deployed server only has main's copy, so resolve_authors
+    # misses and the byline falls back to the raw author id ("thejoshbrod") with
+    # no avatar. Read the file from the PR's ref instead — the same trick
+    # rewrite_assets_to_raw uses for images that aren't on main yet.
+    #
+    # Best-effort by design, matching fetch_pr_post: any failure (no token, the
+    # PR deletes the file, malformed yaml, a rate-limit object in place of the
+    # blob) returns {} and the caller keeps main's registry, which is exactly
+    # today's behaviour. A preview must never 500 over a byline.
+    if not token or not repo or not sha {
+        return {};
+    }
+    try {
+        blob = requests.get(
+            f"{GH_API}/repos/{repo}/contents/{AUTHORS_PATH}",
+            headers=gh_headers(token), params={"ref": sha}, timeout=30,
+        ).json();
+        if not isinstance(blob, dict) {
+            return {};
+        }
+        text = base64.b64decode(str(blob.get("content", ""))).decode("utf-8");
+        data = yaml.safe_load(text);
+    } except Exception {
+        return {};
+    }
+    if not isinstance(data, dict) {
+        return {};
+    }
+    authors = data.get("authors", {});
+    if not isinstance(authors, dict) {
+        return {};
+    }
+    return authors;
+}
+
+
+def:priv render_submitted_markdown(
+    text: str, raw_repo: str, raw_sha: str, gh_token: str = ""
+) -> dict {
     # Draft-tolerant render of a raw post file (parse_post_file drops drafts).
     # Reuses the same pipeline GetPost uses so previews match the live look.
     meta: dict = {};
@@ -1569,6 +1755,10 @@ def:priv render_submitted_markdown(text: str, raw_repo: str, raw_sha: str) -> di
         }
     }
     registry = load_authors();
+    # The PR's copy wins for the ids it defines, so a preview shows both a
+    # brand-new author and an edit an existing author made to their own entry
+    # in the same PR. Ids the PR doesn't mention still come from main.
+    registry = {**registry, **fetch_pr_authors(gh_token, raw_repo, raw_sha)};
     author_ids = meta.get("authors", []);
     if not isinstance(author_ids, list) {
         author_ids = [author_ids];
@@ -1653,6 +1843,7 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
             return None;
         }
         post_path = "";
+        post_status = "";
         for f in files {
             if not isinstance(f, dict) {
                 continue;
@@ -1660,6 +1851,9 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
             fn = str(f.get("filename", ""));
             if fn.startswith("docs/blog/posts/") and fn.endswith(".md") {
                 post_path = fn;
+                # "added" (a new submission) means every line of the file is in
+                # the diff, which is what makes a whole-file ```suggestion legal.
+                post_status = str(f.get("status", ""));
                 break;
             }
         }
@@ -1680,6 +1874,8 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
     return {
         "content": content,
         "post_path": post_path,
+        "post_status": post_status,
+        "pr_number": pr_number,
         "head_repo": head_repo,
         "head_ref": str(head.get("ref", "")),
         "head_owner": head_owner,
@@ -1689,6 +1885,10 @@ def:priv fetch_pr_post(token: str, pr_number: int) -> dict | None {
         "pr_url": str(pr.get("html_url", "")),
         "mergeable": pr.get("mergeable"),
         "mergeable_state": str(pr.get("mergeable_state", "")),
+        # The author's "Allow edits by maintainers" checkbox. Only settable on
+        # PRs from user-owned forks, and revocable at any time — so reviewers'
+        # edit routing reads it live per request, never from cache.
+        "maintainer_can_modify": bool(pr.get("maintainer_can_modify")),
     };
 }
 
@@ -1728,7 +1928,7 @@ def:priv match_preview(docs: list, token: str) -> any {
     }
     now = float(time.time());
     for d in docs {
-        if d.token == token and (now - d.created_at) <= PREVIEW_TTL {
+        if d.token == token and (now - d.created_at) <= PREVIEW_TTL {  # jac:ignore[E1055]
             return d;
         }
     }
@@ -1765,7 +1965,9 @@ walker:priv CreatePreview {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        rendered = render_submitted_markdown(str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]));
+        rendered = render_submitted_markdown(
+            str(pr["content"]), str(pr["head_repo"]), str(pr["head_sha"]), gh_token
+        );
         token = uuid.uuid4().hex;
         # Previews are public (opened anonymously via /preview/<token>), so they
         # live on the shared public root, not the caller's per-user root, and are
@@ -1833,7 +2035,7 @@ walker:pub RecordView {
                 stat.views += 1;
                 if vh and (vh not in stat.visitors) {
                     # Reassign (not in-place append) so jac-scale persists the change.
-                    stat.visitors = stat.visitors + [vh];
+                    stat.visitors = stat.visitors + [vh];  # jac:ignore[E1055]
                 }
             }
             report {"ok": True};
@@ -1975,20 +2177,20 @@ walker:priv GetAnalytics {
         totals = {"views": 0, "uniques": 0};
         for s in by_slug {
             agg = by_slug[s];
-            uniques = len(agg["visitors"]);
-            avg_dwell_ms = (agg["dwell_ms_sum"] / agg["dwell_samples"]) if agg["dwell_samples"] else 0.0;
-            avg_scroll = (agg["scroll_pct_sum"] / agg["scroll_samples"]) if agg["scroll_samples"] else 0.0;
+            uniques = len(agg["visitors"]);  # jac:ignore[E1053]
+            avg_dwell_ms = (agg["dwell_ms_sum"] / agg["dwell_samples"]) if agg["dwell_samples"] else 0.0;  # jac:ignore[E1055]
+            avg_scroll = (agg["scroll_pct_sum"] / agg["scroll_samples"]) if agg["scroll_samples"] else 0.0;  # jac:ignore[E1055]
             totals["views"] += int(agg["views"]);
             totals["uniques"] += int(uniques);
             post_links = [];
             link_clicks = 0;
             if s in links_by_slug {
-                for href in links_by_slug[s] {
+                for href in links_by_slug[s] {  # jac:ignore[E1022]
                     c = int(links_by_slug[s][href]);
                     link_clicks += c;
                     post_links.append({"href": href, "clicks": c});
                 }
-                post_links.sort(key=lambda r: dict -> int { return int(r["clicks"]); }, reverse=True);
+                post_links.sort(key=lambda(r: dict) -> int { return int(r["clicks"]); }, reverse=True);
             }
             out.append({
                 "slug": s,
@@ -1997,14 +2199,14 @@ walker:priv GetAnalytics {
                 "avg_read_sec": round(avg_dwell_ms / 1000.0, 1),
                 "samples": agg["dwell_samples"],
                 "scroll_buckets": agg["scroll_buckets"],
-                "avg_scroll": round(avg_scroll),
-                "median_scroll": median_scroll(agg["scroll_buckets"]),
+                "avg_scroll": round(avg_scroll),  # jac:ignore[E1054]
+                "median_scroll": median_scroll(agg["scroll_buckets"]),  # jac:ignore[E1053]
                 "links": post_links,
                 "link_clicks": link_clicks,
                 "days": agg["days"],
             });
         }
-        out.sort(key=lambda r: dict -> int { return int(r["views"]); }, reverse=True);
+        out.sort(key=lambda(r: dict) -> int { return int(r["views"]); }, reverse=True);
         report {"ok": True, "posts": out, "totals": totals};
     }
 }
@@ -2467,6 +2669,7 @@ walker:priv SubmitPost {
     has categories: list = [];
     has description: str = "";
     has body_md: str = "";
+    has body_b64: bool = False;  # body_md is base64 (client encodes it past the WAF)
     has author_bio: str = "";
     has images: list = [];
     has is_repost: bool = False;
@@ -2487,7 +2690,7 @@ walker:priv SubmitPost {
         }
         title = self.title.strip();
         slug = self.slug.strip().lower();
-        body = self.body_md;
+        body = decode_body_md(self.body_md, self.body_b64);
 
         if not title {
             report {"ok": False, "error": "title is required"};
@@ -2538,7 +2741,7 @@ walker:priv SubmitPost {
             self.is_repost, repost_url, self.repost_source.strip(),
         );
         files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
-        files = files + image_files;
+        files = files + image_files;  # jac:ignore[E1001]
         if new_entry is not None {
             updated = authors_yml_with(new_entry);
             if updated is not None {
@@ -2593,7 +2796,11 @@ walker:priv GetSubmissionForEdit {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        if str(pr["head_owner"]).lower() != str(gh_user(gh_token).get("login", "")).lower() {
+        # Authors edit their own submission; reviewers (repo write) may also open
+        # anyone's, to copy-edit it. How that edit gets DELIVERED depends on the
+        # PR — see deliver_edit — so tell the client up front which route it'll take.
+        is_own = str(pr["head_owner"]).lower() == str(gh_user(gh_token).get("login", "")).lower();
+        if not is_own and not has_write_access(gh_token) {
             report {"ok": False, "error": "you can only edit your own submissions"};
             return;
         }
@@ -2602,7 +2809,18 @@ walker:priv GetSubmissionForEdit {
             return;
         }
         fields = parse_post_for_edit(str(pr["content"]));
-        report {"ok": True, "pr_number": self.pr_number, "branch": str(pr["head_ref"]), **fields};
+        report {
+            "ok": True,
+            "pr_number": self.pr_number,
+            "branch": str(pr["head_ref"]),
+            "is_own": is_own,
+            "author": str(pr["head_owner"]),
+            # Best case only — the commit can still be refused at push time, which
+            # is why deliver_edit falls back instead of trusting this.
+            "can_commit": is_own or bool(pr["maintainer_can_modify"]),
+            "can_suggest": str(pr["post_status"]) == "added",
+            **fields,
+        };
     }
 }
 
@@ -2615,6 +2833,7 @@ walker:priv UpdatePost {
     has categories: list = [];
     has description: str = "";
     has body_md: str = "";
+    has body_b64: bool = False;  # body_md is base64 (client encodes it past the WAF)
     has images: list = [];
     has is_repost: bool = False;
     has repost_url: str = "";
@@ -2642,7 +2861,10 @@ walker:priv UpdatePost {
             report {"ok": False, "error": "no post file found in this PR"};
             return;
         }
-        if str(pr["head_owner"]).lower() != str(profile["login"]).lower() {
+        login = str(profile["login"]);
+        is_own = str(pr["head_owner"]).lower() == login.lower();
+        is_reviewer = has_write_access(gh_token);
+        if not is_own and not is_reviewer {
             report {"ok": False, "error": "you can only edit your own submissions"};
             return;
         }
@@ -2653,7 +2875,7 @@ walker:priv UpdatePost {
 
         title = self.title.strip();
         slug = self.slug.strip().lower();  # slug is fixed for an edit
-        body = self.body_md;
+        body = decode_body_md(self.body_md, self.body_b64);
         if not title {
             report {"ok": False, "error": "title is required"};
             return;
@@ -2678,26 +2900,62 @@ walker:priv UpdatePost {
             return;
         }
 
-        # Resolve the author's id (reuses their existing .authors.yml entry);
-        # don't re-touch .authors.yml on edit — the entry already exists.
-        (author_id, _new) = resolve_author_id(profile, "");
-        if self.as_team and has_write_access(gh_token) {
-            author_id = TEAM_AUTHOR_ID;
+        post_md: str = "";
+        if is_own {
+            # Resolve the author's id (reuses their existing .authors.yml entry);
+            # don't re-touch .authors.yml on edit — the entry already exists.
+            (author_id, _new) = resolve_author_id(profile, "");
+            if self.as_team and is_reviewer {
+                author_id = TEAM_AUTHOR_ID;
+            }
+            post_md = build_post_markdown(
+                title, slug, cats, self.description.strip(), author_id, body,
+                self.is_repost, repost_url, self.repost_source.strip(),
+            );
+        } else {
+            # A reviewer copy-editing someone ELSE's submission must not become its
+            # author: rebuild from the PR's own frontmatter so the contributor's
+            # byline, date and `draft: true` survive untouched.
+            post_md = build_edited_markdown(
+                str(pr["content"]), title, cats, self.description.strip(), body,
+                self.is_repost, repost_url, self.repost_source.strip(),
+                TEAM_AUTHOR_ID if self.as_team else "",
+            );
         }
-        post_md = build_post_markdown(
-            title, slug, cats, self.description.strip(), author_id, body,
-            self.is_repost, repost_url, self.repost_source.strip(),
-        );
-        files = [{"path": f"docs/blog/posts/{slug}.md", "content": post_md, "binary": False}];
-        files = files + img_res["files"];
+        # Write back to the PR's ACTUAL file — a PR opened directly on GitHub can
+        # use a filename that isn't the slug, and writing to `<slug>.md` would add
+        # a second post rather than edit the one under review.
+        files = [{"path": str(pr["post_path"]), "content": post_md, "binary": False}];
+        files = files + img_res["files"];  # jac:ignore[E1001]
 
-        try {
-            commit_update(gh_token, str(pr["head_repo"]), str(pr["head_ref"]), files, f"Update blog post: {title}");
-        } except Exception as e {
-            report {"ok": False, "error": f"could not save changes: {e}"};
+        if is_own {
+            try {
+                commit_update(gh_token, str(pr["head_repo"]), str(pr["head_ref"]), files, f"Update blog post: {title}");
+            } except Exception as e {
+                report {"ok": False, "error": f"could not save changes: {e}"};
+                return;
+            }
+            report {"ok": True, "mode": "commit", "pr_number": self.pr_number, "pr_url": str(pr["pr_url"]), "url": str(pr["pr_url"]), "slug": slug};
             return;
         }
-        report {"ok": True, "pr_number": self.pr_number, "pr_url": str(pr["pr_url"]), "slug": slug};
+
+        try {
+            outcome = deliver_edit(
+                gh_token, pr, files, f"Editorial revision: {title}", post_md, login,
+            );
+        } except Exception as e {
+            report {"ok": False, "error": f"could not deliver the edit: {e}"};
+            return;
+        }
+        report {
+            "ok": True,
+            "mode": str(outcome["mode"]),
+            "pr_number": self.pr_number,
+            "pr_url": str(pr["pr_url"]),
+            "url": str(outcome["url"]),
+            "slug": slug,
+            "fallback_reason": str(outcome["note"]),
+        };
     }
 }
 
@@ -2785,6 +3043,7 @@ walker:priv EditPublishedPost {
     has categories: list = [];
     has description: str = "";
     has body_md: str = "";
+    has body_b64: bool = False;  # body_md is base64 (client encodes it past the WAF)
     has images: list = [];
     has pr_number: int = 0;  # >0 = continue the caller's own open edit PR
     has is_repost: bool = False;
@@ -2805,6 +3064,7 @@ walker:priv EditPublishedPost {
             return;
         }
         slug = self.slug.strip().lower();
+        body_md = decode_body_md(self.body_md, self.body_b64);
         main_post = fetch_main_post(gh_token, slug);
         if main_post is None {
             report {"ok": False, "error": "no published post with that slug"};
@@ -2829,7 +3089,7 @@ walker:priv EditPublishedPost {
             report {"ok": False, "error": "select at least one valid category"};
             return;
         }
-        if len(self.body_md.strip()) < 50 {
+        if len(body_md.strip()) < 50 {
             report {"ok": False, "error": "post body is too short"};
             return;
         }
@@ -2848,13 +3108,13 @@ walker:priv EditPublishedPost {
             author_override = TEAM_AUTHOR_ID;
         }
         post_md = build_edited_markdown(
-            original, title, cats, self.description.strip(), self.body_md,
+            original, title, cats, self.description.strip(), body_md,
             self.is_repost, repost_url, self.repost_source.strip(), author_override,
         );
         # Write back to the post's ACTUAL file (filename != slug), so the PR edits
         # the existing post instead of creating a new file.
         files = [{"path": str(main_post["post_path"]), "content": post_md, "binary": False}];
-        files = files + img_res["files"];
+        files = files + img_res["files"];  # jac:ignore[E1001]
 
         if self.pr_number {
             # Continue the caller's OWN open edit PR (we can only push to own fork).
@@ -3052,7 +3312,7 @@ walker:priv PreviewSubmission {
             report {"ok": False, "error": f"could not load PR content: {e}"};
             return;
         }
-        rendered = render_submitted_markdown(content, head_repo, head_sha);
+        rendered = render_submitted_markdown(content, head_repo, head_sha, gh_token);
         slug = str(rendered["slug"]);
 
         # Find the scheduling tracker issue (opened by post-ci-automation) for

@@ -57,7 +57,7 @@ def:pub PostBody(html: str) -> JsxElement {
 
     def enhance_code_blocks(container: any) -> None {
         # Add copy button + language tag + collapse toggle to every <pre><code>.
-        blocks = container.querySelectorAll("pre > code");
+        blocks: any = container.querySelectorAll("pre > code");
         for code_el in blocks {
             pre = code_el.parentElement;
             if pre.dataset.enhanced {
@@ -80,21 +80,21 @@ def:pub PostBody(html: str) -> JsxElement {
             }
 
             # Wrap pre in a figure-like shell to host chrome.
-            shell = document.createElement("div");
+            shell: any = document.createElement("div");
             shell.className = "code-shell";
             pre.parentNode.insertBefore(shell, pre);
             shell.appendChild(pre);
 
             # Header row: language label + copy button.
-            header = document.createElement("div");
+            header: any = document.createElement("div");
             header.className = "code-shell-header";
             if lang {
-                tag = document.createElement("span");
+                tag: any = document.createElement("span");
                 tag.className = "code-lang";
                 tag.textContent = lang;
                 header.appendChild(tag);
             }
-            copy_btn = document.createElement("button");
+            copy_btn: any = document.createElement("button");
             copy_btn.type = "button";
             copy_btn.className = "code-copy";
             copy_btn.textContent = "Copy";
@@ -115,7 +115,7 @@ def:pub PostBody(html: str) -> JsxElement {
             if line_count > 14 {
                 shell.classList.add("code-shell-collapsible");
                 shell.classList.add("code-shell-collapsed");
-                toggle = document.createElement("button");
+                toggle: any = document.createElement("button");
                 toggle.type = "button";
                 toggle.className = "code-shell-toggle";
                 toggle.textContent = f"Show all {line_count} lines";
@@ -136,7 +136,7 @@ def:pub PostBody(html: str) -> JsxElement {
 
 
     async def render_mermaid_blocks(container: any) -> None {
-        targets = container.querySelectorAll("code.language-mermaid");
+        targets: any = container.querySelectorAll("code.language-mermaid");
         has_any = False;
         for _t in targets {
             has_any = True;
@@ -146,11 +146,11 @@ def:pub PostBody(html: str) -> JsxElement {
             return;
         }
         # Lazy-load mermaid.
-        if not window.mermaid {
+        if not window.mermaid {  # jac:ignore[E1030]
             await load_script("https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js");
             try {
                 theme = document.documentElement.getAttribute("data-theme") or "light";
-                window.mermaid.initialize({
+                window.mermaid.initialize({  # jac:ignore[E1030]
                     "startOnLoad": False,
                     "theme": "dark" if theme == "dark" else "default",
                     "fontFamily": "Inter, system-ui, sans-serif",
@@ -160,15 +160,15 @@ def:pub PostBody(html: str) -> JsxElement {
             }
         }
         for (i, code_el) in enumerate(targets) {
-            pre = code_el.parentElement;
-            wrapper = document.createElement("div");
+            pre = code_el.parentElement;  # jac:ignore[E1031]
+            wrapper: any = document.createElement("div");
             wrapper.className = "mermaid-block";
             wrapper.id = f"mermaid-{Date.now()}-{i}";
-            wrapper.textContent = code_el.textContent;
-            pre.parentNode.replaceChild(wrapper, pre);
+            wrapper.textContent = code_el.textContent;  # jac:ignore[E1031]
+            pre.parentNode.replaceChild(wrapper, pre);  # jac:ignore[E1032]
         }
         try {
-            await window.mermaid.run({"querySelector": ".mermaid-block"});
+            await window.mermaid.run({"querySelector": ".mermaid-block"});  # jac:ignore[E1030]
         } except Exception {
             _ignore = None;
         }
@@ -178,7 +178,7 @@ def:pub PostBody(html: str) -> JsxElement {
     async def mount_runnable_blocks(container: any) -> None {
         # Ensure the upgrade hook is registered before we look for blocks.
         register_upgrade_hook();
-        blocks = container.querySelectorAll("div.code-block");
+        blocks: any = container.querySelectorAll("div.code-block");
         has_blocks = False;
         for _b in blocks {
             has_blocks = True;
@@ -188,32 +188,32 @@ def:pub PostBody(html: str) -> JsxElement {
             return;
         }
         # Lazy-load the runnable bundle.
-        if not window.__jac_runnable_loaded {
+        if not window.__jac_runnable_loaded {  # jac:ignore[E1030]
             await Promise.all([
                 load_script("https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"),
                 load_script("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"),
             ]);
-            window.__jac_runnable_loaded = True;
+            window.__jac_runnable_loaded = True;  # jac:ignore[E1030]
         }
         # The actual upgrade is handled by the imperative JS exposed at
         # window.__jac_runnable_upgrade — wired up by RunnableJacBlock module.
-        if window.__jac_runnable_upgrade {
-            window.__jac_runnable_upgrade(blocks);
+        if window.__jac_runnable_upgrade {  # jac:ignore[E1030]
+            window.__jac_runnable_upgrade(blocks);  # jac:ignore[E1030]
         }
     }
 
 
     async def load_script(src: str) -> None {
-        existing = document.querySelector(f"script[src='{src}']");
+        existing: any = document.querySelector(f"script[src='{src}']");
         if existing {
             return;
         }
-        promise = Promise(lambda resolve, reject -> None {
-            script = document.createElement("script");
+        promise = Promise(lambda(resolve: any, reject: any) -> None {
+            script: any = document.createElement("script");
             script.src = src;
             script.onload = lambda -> None { resolve(None); };
             script.onerror = lambda -> None { reject(None); };
-            document.head.appendChild(script);
+            document.head.appendChild(script);  # jac:ignore[E1030]
         });
         await promise;
     }

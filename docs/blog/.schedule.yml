@@ -115,3 +115,18 @@ schedule:
   published_at: '2026-07-01T17:52:00Z'
   published_by: Jayanaka-98
   first_publish: true
+- slug: one-binary-build-anything
+  status: published
+  published_at: '2026-07-09T14:39:29Z'
+  published_by: Jayanaka-98
+  first_publish: true
+- slug: ghostwatch-how-one-of-the-jachacks-winter-winners-built-an-autonomous-code-guardian-in-jac
+  status: published
+  published_at: '2026-07-12T22:40:12Z'
+  published_by: Jayanaka-98
+  first_publish: true
+- slug: hijac-how-the-jachacks-winter-social-good-winners-put-autonomous-jac-agents-on-a-phone
+  status: published
+  published_at: '2026-07-30T02:56:10Z'
+  published_by: Jayanaka-98
+  first_publish: true
