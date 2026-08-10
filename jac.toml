@@ -138,6 +138,18 @@ cryptography = ">=42.0"
 # .jac/venv, which is on the import path for the deploy. Drop this once jaclang
 # declares its own scale dependency.
 python-dotenv = ">=1.0"
+# WORKAROUND, same class as python-dotenv above: the migrated main-deployment
+# pod serves with a redis handle of None ("Redis connection failed: 'NoneType'
+# object has no attribute 'from_url'" on every healthz probe) because redis-py
+# never reaches the serving env, despite [scale.redis] being enabled and
+# REDIS_URL being set. Every shared-root WRITE then throws: CreatePreview 500s
+# (the visible symptom) and RecordView/RecordEngagement swallow the same error
+# and report ok:false, so analytics have been silently dead since the
+# migration. Shared-root READS (Mongo) still work, which is why old preview
+# links resolve. Declaring redis here lands it in the same env that already
+# provides requests/cryptography at runtime. Drop once `jac install` actually
+# resolves it from [scale.*].
+redis = ">=5.0"
 
 [dependencies.npm]
 react = "^18.2.0"
