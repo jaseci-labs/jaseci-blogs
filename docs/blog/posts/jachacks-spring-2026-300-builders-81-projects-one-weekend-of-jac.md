@@ -1,12 +1,11 @@
 ---
-date: 2026-07-12
+date: '2026-08-14'
 authors:
-  - jaseci-team
+- jaseci-team
 categories:
-  - Community
-  - Built with Jac
+- Community
+- Built with Jac
 slug: jachacks-spring-2026-300-builders-81-projects-one-weekend-of-jac
-draft: true
 ---
 
 # JacHacks Spring 2026: 300+ Builders, 81 Projects, One Weekend of Jac
