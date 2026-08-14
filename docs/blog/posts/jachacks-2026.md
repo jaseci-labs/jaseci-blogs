@@ -1,13 +1,12 @@
 ---
-date: 2026-04-14
+date: '2026-08-14'
 authors:
-  - thejoshbrod
+- thejoshbrod
 categories:
-  - Developers
-  - AI
-  - Hackathon
+- Developers
+- AI
+- Hackathon
 slug: jachacks-2026
-draft: true
 ---
 
 # **JacHacks: The premier AI hackathon at the University of Michigan**
