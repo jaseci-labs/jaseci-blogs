@@ -1,15 +1,14 @@
 ---
-date: 2026-08-17
+date: '2026-08-17'
 authors:
-  - jaseci-team
+- jaseci-team
 categories:
-  - Built with Jac
-  - Community
+- Built with Jac
+- Community
 slug: agents-reads-skill-md-files-not-learn-them
 repost: true
-repost_url: "https://sigilagent.com/blog/agent-skills-should-be-compiled.html"
-repost_source: "Agent skills should be compiled, not just read"
-draft: true
+repost_url: https://sigilagent.com/blog/agent-skills-should-be-compiled.html
+repost_source: Agent skills should be compiled, not just read
 ---
 
 # Agents Reads SKILL.md files, not learn them

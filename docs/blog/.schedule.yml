@@ -140,3 +140,8 @@ schedule:
   published_at: '2026-08-14T17:36:13Z'
   published_by: Jayanaka-98
   first_publish: true
+- slug: agents-reads-skill-md-files-not-learn-them
+  status: published
+  published_at: '2026-08-17T13:03:48Z'
+  published_by: Jayanaka-98
+  first_publish: true
