@@ -17,6 +17,12 @@ draft: true
 
 <!-- more -->
 
+The whole day, start to finish:
+
+<div style="position: relative; width: 100%; padding-bottom: 56.25%; margin: 1.5em 0;">
+  <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/FFrfgdOFL6Y" title="JacHacks SF Recap | 200+ Builders, 77 Projects in One Day" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
 ## One Day, Start to Finish
 
 JacHacks started at the University of Michigan, went global and online with JacHacks Spring, and landed in San Francisco for the third event in the series. SF was the first one built around a single day: doors at 8 AM, keynote at 10, and one hard deadline at the end of it.
