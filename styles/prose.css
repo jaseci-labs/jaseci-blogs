@@ -130,6 +130,20 @@
 .prose figure {
     margin: 2em 0;
 }
+/* A standalone image is wrapped in its own <p> by the markdown renderer. Left
+   inline it sits on a text baseline, so the line box adds descender space beneath
+   it and its 2em bottom margin cannot collapse with the next heading's 2.5em top
+   margin (that margin is inside the <p>). The result was ~130px under an image
+   where every other block sits 82px off a heading. Going block-level removes the
+   baseline gap and lets the margins collapse normally; the 2em rhythm from
+   .prose img above is inherited unchanged, so spacing above the image is untouched.
+   Scoped to direct children of .prose so images inside <figure> (.phone, .phone-row)
+   and other wrappers keep their own layout rules. */
+.prose > p > img:only-child,
+.prose > p > a:only-child > img {
+    display: block;
+    margin-inline: auto;
+}
 .prose figure img {
     border-radius: 6px;
 }
