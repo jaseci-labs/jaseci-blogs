@@ -280,6 +280,16 @@ cl {
         if not window.mermaid {  # jac:ignore[E1030]
             return;
         }
+        # Mermaid measures label text to size each node box. If it runs before
+        # the webfonts land it measures in the fallback face, and the real
+        # (wider) Inter glyphs then overflow the box it computed — labels render
+        # visibly clipped ("FinancialAgen"). Waiting for the font set first makes
+        # the measurement match what is painted.
+        try {
+            await document.fonts.ready;  # jac:ignore[E1030]
+        } except Exception {
+            _ignore = None;
+        }
         i = 0;
         for el in targets {
             if el.getAttribute("data-processed") {
