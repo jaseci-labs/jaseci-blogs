@@ -150,3 +150,8 @@ schedule:
   published_at: '2026-08-19T19:44:20Z'
   published_by: Jayanaka-98
   first_publish: true
+- slug: pocketnest-birdie-case-study
+  status: published
+  published_at: '2026-08-19T19:46:31Z'
+  published_by: Jayanaka-98
+  first_publish: true

@@ -1,12 +1,11 @@
 ---
-date: 2026-08-18
+date: '2026-08-19'
 authors:
-  - savini
+- savini
 categories:
-  - Built with Jac
-  - Community
+- Built with Jac
+- Community
 slug: pocketnest-birdie-case-study
-draft: true
 ---
 
 # How Pocketnest Built a Personalized AI Financial Assistant on Jac in 3 Months
