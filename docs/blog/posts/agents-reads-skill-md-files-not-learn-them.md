@@ -4,7 +4,6 @@ authors:
 - jaseci-team
 categories:
 - Built with Jac
-- Community
 slug: agents-reads-skill-md-files-not-learn-them
 repost: true
 repost_url: https://sigilagent.com/blog/agent-skills-should-be-compiled.html
