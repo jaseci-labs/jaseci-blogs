@@ -1,7 +1,7 @@
 ---
 date: '2026-08-19'
 authors:
-- savini
+- jaseci-team
 categories:
 - Built with Jac
 - Community
