@@ -1,12 +1,11 @@
 ---
-date: 2026-08-02
+date: '2026-08-19'
 authors:
 - jaseci-team
 categories:
 - Community
 - Hackathon
 slug: jachacks-sf-2026-77-projects-in-one-day
-draft: true
 ---
 
 # JacHacks SF: 77 Projects in One Day at Founders Inc
