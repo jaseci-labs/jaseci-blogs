@@ -6,7 +6,8 @@ directory and serve them as JSON to the editorial frontend.
 Content layout (read-only from this app's perspective):
   content/posts/*.md       — published + draft posts (draft: true is filtered)
   content/authors.yml      — author profiles
-  docs/assets/             — images, referenced as /assets/<file>
+  docs/assets/             — images; posts reference them relatively and the
+                             renderer rewrites onto asset_base_url() (GitHub raw)
 
 Posts identify by the `slug:` frontmatter field, not filename. Files starting
 with `_` are skipped (templates).
@@ -140,10 +141,15 @@ def:priv convert_mermaid_fences(body: str) -> str {
 
 def:priv rewrite_asset_paths(body: str) -> str {
     # Posts authored against the mkdocs layout use relative links like
-    # ../../assets/foo.png (from docs/blog/posts/) or ../assets/foo.png.
-    # The Jac app serves static files from /assets/ instead.
-    body = re.sub(r"(!\[[^\]]*\]\()(?:\.\./)+assets/", r"\1/assets/", body);
-    body = re.sub(r"(<img[^>]+src=[\"'])(?:\.\./)+assets/", r"\1/assets/", body);
+    # ../../assets/foo.png (from docs/blog/posts/) or ../assets/foo.png; some
+    # posts instead hardcode the root-relative /assets/foo.png. Both forms are
+    # normalised onto asset_base_url() so a post renders the same either way.
+    base = asset_base_url() + "/";
+    body = re.sub(r"(!\[[^\]]*\]\()(?:\.\./)+assets/", r"\1" + base, body);
+    body = re.sub(r"(<img[^>]+src=[\"'])(?:\.\./)+assets/", r"\1" + base, body);
+    body = body.replace("](/assets/", f"]({base}");
+    body = body.replace('src="/assets/', f'src="{base}');
+    body = body.replace("src='/assets/", f"src='{base}");
     return body;
 }
 
@@ -345,8 +351,8 @@ def:priv load_authors() -> dict {
 
 def:priv normalize_avatar(avatar: str) -> str {
     # Absolute URLs and root-relative paths pass through. Bare "assets/..."
-    # (or "./assets/...") from .authors.yml gets rooted to /assets/ so it
-    # resolves regardless of the current page path.
+    # (or "./assets/...") from .authors.yml is resolved against asset_base_url()
+    # so it works regardless of the current page path.
     if not avatar {
         return "";
     }
@@ -358,9 +364,9 @@ def:priv normalize_avatar(avatar: str) -> str {
         cleaned = cleaned.split("/", 1)[1];
     }
     if cleaned.startswith("assets/") {
-        return "/" + cleaned;
+        cleaned = cleaned.split("/", 1)[1];
     }
-    return "/assets/" + cleaned;
+    return asset_base_url() + "/" + cleaned;
 }
 
 
@@ -1085,6 +1091,26 @@ def:priv gh_base_branch() -> str {
 
 def:priv public_site_url() -> str {
     return env_str("PUBLIC_SITE_URL", "https://blogs.jaseci.org").rstrip("/");
+}
+
+
+def:priv asset_base_url() -> str {
+    # Where a PUBLISHED post's images are served from. Default: the repo itself on
+    # GitHub raw, NOT the pod's own public/ mount.
+    #
+    # The pod never holds a durable copy of the repo — it pulls code through
+    # code-sync -> RWO PVC -> tar -> HTTP -> emptyDir (.github/CODE_SYNC_RWO_FIX.md).
+    # When that chain drops public/, EVERY image on the site 404s at once while the
+    # posts themselves still render: posts are read from docs/, and images were the
+    # only thing sitting behind the public/assets symlink. Serving images from the
+    # repo takes the pod filesystem out of the path entirely, so a torn code sync
+    # can no longer blank the site's images.
+    #
+    # Set ASSET_BASE_URL to override — notably ASSET_BASE_URL=/assets restores
+    # local-disk serving, which is what you want when iterating on an image that is
+    # not merged to the base branch yet.
+    default = f"https://raw.githubusercontent.com/{gh_repo()}/{gh_base_branch()}/docs/assets";
+    return env_str("ASSET_BASE_URL", default).rstrip("/");
 }
 
 
