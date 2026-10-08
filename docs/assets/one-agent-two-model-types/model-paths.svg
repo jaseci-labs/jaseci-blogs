@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="856" viewBox="0 0 1100 856" role="img" aria-labelledby="title desc">
+  <title id="title">One Jac contract, two model execution paths</title>
+  <desc id="desc">The Navigator describes a Boolean decision and selection among current neighbors. byLLM uses meanings, input state and allowed answers. A chat backend generates a response that is decoded into a typed value; a System One backend returns probabilities that are mapped to a typed value. The same walker resumes with the result.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#637287" stroke-width="1.5"/></marker>
+    <style>
+      text { font-family: Inter, Arial, sans-serif; fill: #182c43; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 1.6px; }
+      .heading { font-size: 22px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #4c5e73; }
+      .code { font-family: 'DejaVu Sans Mono', monospace; font-size: 16px; }
+      .line { fill: none; stroke: #637287; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1100" height="856" rx="20" fill="#f7f9fc"/>
+  <text x="550" y="40" text-anchor="middle" class="eyebrow" fill="#52657c">ONE AGENT · TWO MODEL TYPES</text>
+
+  <rect x="150" y="64" width="800" height="123" rx="14" fill="#fff" stroke="#bfccdb"/>
+  <text x="550" y="99" text-anchor="middle" class="heading">The Jac program describes the decision</text>
+  <text x="550" y="133" text-anchor="middle" class="code">answers_here(...) → bool</text>
+  <text x="550" y="162" text-anchor="middle" class="code">visit [--&gt;] by self._brain(select=1)</text>
+  <path d="M550 187 V219" class="line"/>
+
+  <rect x="150" y="229" width="800" height="99" rx="14" fill="#eaf0f8" stroke="#bfccdb"/>
+  <text x="550" y="265" text-anchor="middle" class="heading">byLLM reads the same contract and context</text>
+  <text x="550" y="297" text-anchor="middle" class="body">Meaning + input state + return type or current candidates</text>
+  <path d="M550 328 V351 H286 V378" class="line"/>
+  <path d="M550 351 H814 V378" class="line"/>
+
+  <rect x="46" y="388" width="480" height="242" rx="14" fill="#fff8ec" stroke="#d9b36f"/>
+  <rect x="574" y="388" width="480" height="242" rx="14" fill="#eaf9f5" stroke="#81bdad"/>
+  <text x="74" y="423" class="eyebrow" fill="#85590e">CHAT MODEL</text>
+  <text x="602" y="423" class="eyebrow" fill="#176a55">SYSTEM ONE MODEL</text>
+  <text x="74" y="458" class="heading">Generate a response</text>
+  <text x="602" y="458" class="heading">Score defined answers</text>
+
+  <text x="74" y="497" class="body">Messages + expected output structure</text>
+  <text x="602" y="497" class="body">State + questions + allowed answers</text>
+  <path d="M82 514 V540" class="line"/>
+  <path d="M610 514 V540" class="line"/>
+  <text x="104" y="537" class="small">Claude Haiku in the demo</text>
+  <text x="632" y="537" class="small">TypeSafe Jev in the demo</text>
+  <text x="74" y="575" class="body">Response → decode and validate</text>
+  <text x="602" y="575" class="body">Probabilities → select and map</text>
+  <text x="74" y="606" class="small">Reconstruct the expected Jac value</text>
+  <text x="602" y="606" class="small">Reconstruct the expected Jac value</text>
+
+  <path d="M286 630 V665 H550 V697" class="line"/>
+  <path d="M814 630 V665 H550" fill="none" stroke="#637287" stroke-width="2"/>
+  <rect x="150" y="707" width="800" height="102" rx="14" fill="#182c43"/>
+  <text x="550" y="744" text-anchor="middle" class="heading" style="fill:#fff">The same walker continues</text>
+  <text x="550" y="777" text-anchor="middle" class="body" style="fill:#dae5f1">Boolean → stop or continue · Selected neighbor → visit that node</text>
+  <text x="550" y="836" text-anchor="middle" class="small">The interface stays the same. The selected value can differ.</text>
+</svg>

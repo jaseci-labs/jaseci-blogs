@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="908" viewBox="0 0 620 908" role="img" aria-labelledby="title desc">
+  <title id="title">The same Jac agent with two model execution paths</title>
+  <desc id="desc">The agent asks whether a topic answers the question or which neighbor to visit. byLLM uses the program's meaning, inputs and allowed answers. Claude receives messages and an output contract, generates a response, and byLLM decodes it to a typed value. Jev receives state, questions and allowed answers, scores those answers, and byLLM maps the scores to a typed value. The same walker then stops, continues or visits a neighbor.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#637287" stroke-width="1.5"/></marker>
+    <style>
+      text { font-family: Inter, Arial, sans-serif; fill: #182c43; }
+      .heading { font-size: 27px; font-weight: 700; }
+      .label { font-size: 22px; font-weight: 700; }
+      .body { font-size: 22px; }
+      .line { fill: none; stroke: #637287; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="620" height="908" rx="18" fill="#f7f9fc"/>
+  <rect x="24" y="24" width="572" height="126" rx="14" fill="#fff" stroke="#bfccdb"/>
+  <text x="310" y="63" text-anchor="middle" class="heading">Same Jac agent</text>
+  <text x="310" y="100" text-anchor="middle" class="body">Answer check → Boolean</text>
+  <text x="310" y="130" text-anchor="middle" class="body">Next step → one neighbor</text>
+  <path d="M310 150 V180" class="line"/>
+  <rect x="24" y="190" width="572" height="102" rx="14" fill="#eaf0f8" stroke="#bfccdb"/>
+  <text x="310" y="230" text-anchor="middle" class="heading">byLLM</text>
+  <text x="310" y="268" text-anchor="middle" class="body">Meaning + inputs + allowed answers</text>
+  <path d="M310 292 V314 H159 V340" class="line"/>
+  <path d="M310 314 H461 V340" class="line"/>
+  <rect x="24" y="350" width="270" height="380" rx="14" fill="#fff8ec" stroke="#d9b36f"/>
+  <rect x="326" y="350" width="270" height="380" rx="14" fill="#eaf9f5" stroke="#81bdad"/>
+  <text x="159" y="386" text-anchor="middle" class="label">Chat model</text>
+  <text x="461" y="386" text-anchor="middle" class="label">System One</text>
+  <text x="159" y="418" text-anchor="middle" class="heading">Claude Haiku</text>
+  <text x="461" y="418" text-anchor="middle" class="heading">Jev</text>
+  <text x="159" y="464" text-anchor="middle" class="body">Messages +</text>
+  <text x="159" y="494" text-anchor="middle" class="body">output contract</text>
+  <text x="461" y="464" text-anchor="middle" class="body">State + questions</text>
+  <text x="461" y="494" text-anchor="middle" class="body">+ allowed answers</text>
+  <path d="M159 510 V534" class="line"/>
+  <path d="M461 510 V534" class="line"/>
+  <text x="159" y="568" text-anchor="middle" class="label">Generate a</text>
+  <text x="159" y="598" text-anchor="middle" class="label">response</text>
+  <text x="461" y="568" text-anchor="middle" class="label">Score each</text>
+  <text x="461" y="598" text-anchor="middle" class="label">possible answer</text>
+  <path d="M159 613 V637" class="line"/>
+  <path d="M461 613 V637" class="line"/>
+  <text x="159" y="674" text-anchor="middle" class="body">Decode response</text>
+  <text x="159" y="704" text-anchor="middle" class="body">to a typed value</text>
+  <text x="461" y="674" text-anchor="middle" class="body">Map scores</text>
+  <text x="461" y="704" text-anchor="middle" class="body">to a typed value</text>
+  <path d="M159 730 V757 H310 V783" class="line"/>
+  <path d="M461 730 V757 H310" fill="none" stroke="#637287" stroke-width="2"/>
+  <rect x="24" y="794" width="572" height="90" rx="14" fill="#182c43"/>
+  <text x="310" y="830" text-anchor="middle" class="heading" style="fill:#fff">The same walker continues</text>
+  <text x="310" y="862" text-anchor="middle" class="body" style="fill:#dae5f1">Stop, continue, or visit a neighbor</text>
+</svg>
